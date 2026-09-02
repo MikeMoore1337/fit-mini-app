@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { ApiSchemas, ProgressSummary, TrainingAnalytics } from '../../shared/api/types';
 import { queryKeys } from '../../shared/queryKeys';
@@ -174,8 +174,8 @@ function LatestMeasurementPoints({ summary }: { summary: ProgressSummary }) {
         </ul>
       ) : (
         <p className="progress-note">
-          Добавьте фактический замер, чтобы увидеть первую точку истории. Одна точка ещё не
-          образует тренд.
+          Добавьте фактический замер, чтобы увидеть первую точку истории. Одна точка ещё не образует
+          тренд.
         </p>
       )}
     </article>
@@ -235,10 +235,7 @@ function SummaryOverview({ summary }: { summary: ProgressSummary }) {
           {weight ? (
             <>
               <BodyChart trend={weight} />
-              <DataConfidence
-                kind="weight"
-                signal={summary.data_sufficiency.weight_trend}
-              />
+              <DataConfidence kind="weight" signal={summary.data_sufficiency.weight_trend} />
             </>
           ) : (
             <EmptyState
@@ -694,7 +691,9 @@ function BodySection({
                         </div>
                       </header>
                       {weightChartInOverview && trend.metric === 'weight_kg' ? (
-                        <p className="progress-note">График веса вынесен в сводку выбранного периода.</p>
+                        <p className="progress-note">
+                          График веса вынесен в сводку выбранного периода.
+                        </p>
                       ) : (
                         <BodyChart trend={trend} />
                       )}
@@ -954,9 +953,7 @@ function ProgressPeriodControls({
         />
       </div>
       <div className="progress-period-controls__meta" aria-live="polite">
-        <strong>
-          Период: {periodDateLabel(range.dateFrom, range.dateTo)}
-        </strong>
+        <strong>Период: {periodDateLabel(range.dateFrom, range.dateTo)}</strong>
         <span>Часовой пояс: {timeZone}</span>
       </div>
       {customOpen && (
@@ -1018,6 +1015,7 @@ function useTrainingAnalytics(selection: ProgressSelection) {
       api<TrainingAnalytics>(
         `/api/v1/workouts/progress/training-analytics${progressApiQuery(selection)}`,
       ),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -1034,9 +1032,8 @@ export function ProgressExperience({
   const summary = useQuery({
     queryKey: queryKeys.progress.summary(selectionKey),
     queryFn: () =>
-      api<ProgressSummary>(
-        `/api/v1/workouts/progress/summary${progressApiQuery(selection)}`,
-      ),
+      api<ProgressSummary>(`/api/v1/workouts/progress/summary${progressApiQuery(selection)}`),
+    placeholderData: keepPreviousData,
   });
   const analytics = useTrainingAnalytics(selection);
   const controlledNutritionPeriod = useMemo<ControlledNutritionPeriod>(
@@ -1044,12 +1041,19 @@ export function ProgressExperience({
     [selection],
   );
 
+  function navigateWithinProgress(to: string): void {
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    navigate(to);
+    window.scrollTo({ left: scrollX, top: scrollY, behavior: 'instant' });
+  }
+
   function selectPreset(days: 7 | 30 | 90): void {
-    navigate(progressPath(search, { kind: 'preset', days }));
+    navigateWithinProgress(progressPath(search, { kind: 'preset', days }));
   }
 
   function applyCustom(nextSelection: Extract<ProgressSelection, { kind: 'custom' }>): void {
-    navigate(progressPath(search, nextSelection));
+    navigateWithinProgress(progressPath(search, nextSelection));
   }
 
   return (
@@ -1105,7 +1109,10 @@ export function ProgressExperience({
               weightChartInOverview
             />
             <NutritionSection summary={summary.data} />
-            <NutritionPeriodReport controlledPeriod={controlledNutritionPeriod} showSelector={false} />
+            <NutritionPeriodReport
+              controlledPeriod={controlledNutritionPeriod}
+              showSelector={false}
+            />
             <AdherenceSection summary={summary.data} />
           </div>
         </>

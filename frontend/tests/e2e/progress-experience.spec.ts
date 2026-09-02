@@ -1400,9 +1400,7 @@ test('dark progress keeps the bento adherence score readable on lime', async ({ 
   expect(colors.adherence).toBe(colors.accent);
 });
 
-test('light progress keeps the bento adherence score readable on lime', async ({
-  page,
-}) => {
+test('light progress keeps the bento adherence score readable on lime', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('app-theme', 'light'));
   await mockProgress(page);
   await page.goto('/app?section=progress');
@@ -1568,9 +1566,7 @@ test('progress bento keeps matching light and dark visual forms for the same dat
       await expect(
         page.locator('.progress-period-controls').getByRole('tab', { name: '30 дней' }),
       ).toHaveAttribute('aria-selected', 'true');
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
-        surface.width,
-      );
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(surface.width);
       await page.screenshot({
         path: `../.artifacts/screenshots/task-111/progress-bento-${surface.name}-${theme}.png`,
       });

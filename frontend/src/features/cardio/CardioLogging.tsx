@@ -681,8 +681,7 @@ export function CardioHistory({
   timeZone?: string;
 }) {
   const dateTo = requestedDateTo ?? dateInputValue(new Date(), timeZone);
-  const dateFrom =
-    requestedDateFrom ?? addCalendarDays(dateTo, -((periodDays ?? 30) - 1));
+  const dateFrom = requestedDateFrom ?? addCalendarDays(dateTo, -((periodDays ?? 30) - 1));
   const sessions = useQuery({
     queryKey: queryKeys.cardio.range(dateFrom, dateTo),
     queryFn: () =>
