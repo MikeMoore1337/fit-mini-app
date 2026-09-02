@@ -38,20 +38,23 @@ def test_current_pass_rejects_head_base_and_contract_drift(
     )
     path = pre_push_gate.evidence_path(context)
     path.parent.mkdir(parents=True)
-    path.write_text(
-        json.dumps(
-            {
-                "terminal_result": "PRE_PUSH_CI_PASS",
-                "head_sha": "a" * 40,
-                "base_sha": "b" * 40,
-                "branch": "task/135-gate",
-                "task_id": "135",
-                "target_base_branch": "master",
-                "contract_digest": pre_push_gate.contract_digest(),
-            }
-        ),
-        encoding="utf-8",
-    )
+    payload = {
+        "evidence_version": 1,
+        "contract_version": pre_push_gate.CONTRACT_VERSION,
+        "terminal_result": "PRE_PUSH_CI_PASS",
+        "head_sha": "a" * 40,
+        "base_sha": "b" * 40,
+        "branch": "task/135-gate",
+        "task_id": "135",
+        "target_base_branch": "master",
+        "contract_digest": pre_push_gate.contract_digest(),
+        "clean_worktree": True,
+        "started_at": "2026-09-03T10:00:00Z",
+        "finished_at": "2026-09-03T10:01:00Z",
+        "gates": [{"group": "quality", "applicable": True, "status": "SUCCESS"}],
+    }
+    payload["evidence_digest"] = pre_push_gate._evidence_digest(payload)
+    path.write_text(json.dumps(payload), encoding="utf-8")
     monkeypatch.setattr(pre_push_gate, "_status", lambda root: [])
     assert pre_push_gate.current_pass(context) is not None
     drifted = context.__class__(**{**context.__dict__, "head_sha": "c" * 40})

@@ -199,7 +199,7 @@ generic owner prompts.
 Если текущая task не объявляет `OWNER_CHECKPOINT`, `HUMAN_EVIDENCE`, `MANUAL_VISUAL_APPROVAL`,
 `LEGAL_COUNSEL_REQUIRED`, `EXTERNAL_AUTHORIZATION`, `DESTRUCTIVE_ACTION` или terminal blocker,
 controller/lifecycle после terminal success автоматически продолжает применимые review, QA,
-commit, task PR, serial integration, `dev` CI и normal release без дополнительного owner prompt.
+commit, task PR в `master`, required CI и normal release без дополнительного owner prompt.
 Тишина владельца не является gate. Следующая product task автоматически не запускается.
 
 Do not read completed tasks or historical changelogs unless the current task explicitly requires
@@ -243,15 +243,15 @@ Before changing files for a backlog task, verify the branch with:
 The current backlog's `GLOBAL_RULES.md` defines the expected branch.
 
 For `codex-backlog/tasks/`, `codex-backlog/bugs/pending/` and
-`codex-backlog/telegram-core-release-backlog/tasks/`, `dev` is the permanent integration branch.
+`codex-backlog/telegram-core-release-backlog/tasks/`, `master` is the protected release branch.
 Every executable task uses exactly one `task/<ID>-<slug>` branch and one separate worktree created
-from a clean, verified exact `origin/dev` SHA. The main `dev` worktree is integration-only; feature
-implementation directly in it is forbidden. Delete a task branch/worktree only after merge/close
-and proof that it has no unique commits or unowned changes.
+from a clean, verified exact `origin/master` SHA. Feature implementation directly in the canonical
+controller worktree is forbidden. Delete a task branch/worktree only after production closeout and
+proof that it has no unique commits or unowned changes.
 
 Unless the current backlog rules or user explicitly permit otherwise:
 
-- do not edit implementation files in the main `dev` worktree;
+- do not edit implementation files in the canonical controller worktree;
 - do not create a second branch/worktree for the same task;
 - do not merge or rebase unrelated branches;
 - do not modify another worktree;
@@ -260,17 +260,17 @@ Unless the current backlog rules or user explicitly permit otherwise:
 
 If the expected branch is not active, stop before tracked changes and report the mismatch.
 
-Use `python scripts/task_session.py doctor/start/status/prepare-integration/finish/recover` as the
+Use `python scripts/task_session.py doctor/start/status/finish/recover` as the
 repository-native coordination boundary. Runtime leases live only in the shared Git common dir;
-missing/corrupted state is a blocker. Task PRs target only `dev`, preserve `[Task <ID>]` in branch,
-commit and PR provenance, and merge only as the current integration queue head after exact-head
-`checks`. A release lease or open `dev -> master` PR freezes every mutation of `dev`.
+missing/corrupted state is a blocker. Task PRs target only `master`, preserve `[Task <ID>]` in branch,
+commit and PR provenance, and merge only after exact-head `checks` against the current base. A
+production deployment run freezes controller mutations until its terminal result is known.
 The normal owner-facing entry is `python scripts/run_task_delivery.py <ID>`; direct controller
 commands are low-level implementation and recovery operations.
 
 Parallel read-only/research sessions are allowed only when task metadata permits them and each has
 its own lease. Parallel write branches may be prepared only when dependency/concurrency metadata
-explicitly marks them compatible; merge into `dev` is always serialized. Without explicit
+explicitly marks them compatible; merge into `master` remains protected and serialized. Without explicit
 compatibility, keep one active writer and stop before creating another write lease.
 
 # Dependencies
@@ -376,35 +376,30 @@ Treat schema migrations, deployment configuration and infrastructure changes as
 production-sensitive.
 
 Repository-specific release entry: product work is implemented in task branches/worktrees and
-serially integrated into permanent `dev`; every new production revision must enter remote `master`
-only as the result of a checked pull request from `dev` (or a narrowly justified temporary
-hotfix/recovery branch). Direct pushes, force-pushes and
-branch deletion are prohibited by the `master` ruleset. The required post-merge CI run intentionally starts
-`.github/workflows/deploy.yml` through `workflow_run`; the workflow additionally verifies that the
-exact SHA is associated with a merged pull request into `master` and is still the current
-`origin/master` head. Its final `sync-dev` job runs only after successful deployment and
-fast-forwards `dev` with the narrow GitHub App. A successful PR merge is the release authorization:
-deployment, backup, migrations, blue/green switch, smoke checks, automatic failure rollback and
-exact deployed ref sync continue without a separate human approval. The `production` environment
-must therefore not require reviewers or a wait timer. Manual workflow dispatch is not part of the
-normal release path.
+enters protected remote `master` only through a checked task pull request. Direct pushes,
+force-pushes and branch deletion are prohibited by the `master` ruleset. The required post-merge
+CI run starts `.github/workflows/deploy.yml` through `workflow_run`; the workflow verifies the
+exact SHA is associated with one merged task pull request into `master`, resolves both application
+images through `scripts/deployment_contract.py`, and transfers an immutable commit bundle to the
+host. The host runs that bundle by SHA and keeps deployment state outside the bundle; it never
+depends on a VPS Git checkout. A successful PR merge is the release authorization: deployment,
+backup, migrations, slot switch, smoke checks and automatic failure rollback continue without a
+separate generic approval. The `production` environment must therefore not require reviewers or a
+wait timer. Manual workflow dispatch is not part of the normal release path.
 
 For an `AUTO_RELEASE_ELIGIBLE` task, no additional owner prompt is required for task branch push,
 task PR serial integration, release PR creation, checked exact-head merge or the resulting automatic
 production deployment. Eligibility requires a
 tracked logical commit, completed implementation/review/QA/final verification, zero unresolved
-`BLOCKER`, `HIGH` and `MEDIUM`, synchronized findings, current `master` ancestry in `dev`, a clean
-scoped worktree and no mandatory owner/human/visual gate. The agent must monitor required check
-`checks`, exact merged-dev push CI, post-merge CI and deployment to terminal success. Canonical
-same-repository `dev -> master` PR checks reuse the terminal successful exact merged-dev full CI and
-run only release-sequence/provenance aggregation; exceptional master PRs still run the full suite. The narrow
-deployed-sync GitHub App then fast-forwards `dev` to the exact successful current `master`; ordinary
-direct user/PAT push remains forbidden. The resulting App push runs only lightweight
-actor/current-master/successful-deployment provenance if its two-dot tree diff contains changed
-files; a normal content-equivalent ref sync creates no CI run. Full CI remains mandatory for
-ordinary `dev` updates with changed files. После exact ref sync normal post-deploy closeout без нового
-owner prompt выполняет controller `finish` из canonical `dev` worktree, безопасный cleanup exact
-matching clean task worktree и merged local branch, archive task и rebuild/check backlog manifests.
+`BLOCKER`, `HIGH` and `MEDIUM`, synchronized findings, current `master` ancestry, a clean scoped
+worktree and no mandatory owner/human/visual gate. The agent must monitor required check `checks`,
+post-merge CI and deployment to terminal success. PR-triggered CI runs the full regression profile;
+the post-merge `master` run performs only exact merge provenance, immutable image publication and
+deployment-source checks because the PR already validated the same tree. After terminal production
+success the controller performs safe closeout, archive and manifest checks from the canonical
+worktree. Dirty/interrupted/unique/ambiguous state, divergence refs or archive/check error stop
+closeout fail-closed without `--force` and preserve data. Any failed gate stops the backlog sequence
+fail-closed.
 Dirty/interrupted/unique/ambiguous state, divergence refs или archive/check error останавливают
 closeout fail-closed без `--force` и с сохранением данных. Any failed gate stops the backlog sequence
 fail-closed.
@@ -449,9 +444,9 @@ Before declaring tracked backlog implementation complete:
 - confirm every new or changed `MEDIUM/LOW` is synchronized in
   `codex-backlog/bugs/FINDINGS.md` and cite its ID/status in the final report;
 - create the task's one logical commit only after successful applicable verification;
-- after a successful normal production deploy and exact deployed `master -> dev` sync, finish the
-  controller lease, automatically clean only the exact safe task worktree/local branch, archive the
-  task and validate backlog manifests without another generic owner confirmation;
+- after a successful normal production deploy, finish the controller lease, automatically clean
+  only the exact safe task worktree/local branch, archive the task and validate backlog manifests
+  without another generic owner confirmation;
 - do not start the next task.
 
 For backlog tasks, follow the current `TASK_EXECUTION_LIFECYCLE.md` final-report contract.

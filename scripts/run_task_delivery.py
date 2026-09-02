@@ -33,7 +33,7 @@ TASK_ID_RE = re.compile(r"^[0-9]+[A-Z]?$", re.IGNORECASE)
 TRANSIENT_START_MARKERS = (
     "lane is occupied",
     "blocks mutation",
-    "active dev/master ci, deploy or sync run blocks mutation",
+    "active production deployment blocks controller mutation",
 )
 
 
@@ -170,7 +170,7 @@ def _worker_prompt(task_id: str, started: dict[str, Any]) -> str:
     return (
         f"Выполни только Task {task_id}: {started['lease']['canonical_task_path']}.\n"
         "Один исходный owner launch является standing authorization для normal delivery path: "
-        "task branch -> PR dev -> exact dev checks -> PR master -> production -> safe closeout.\n"
+        "task branch -> local PRE_PUSH_CI_PASS -> PR master -> exact master CI -> production -> safe closeout.\n"
         "Не запрашивай generic approval для commit, push, PR, merge, normal release, deploy "
         "monitoring, exact ref sync, finish, cleanup или archive. Внутренние controller stages "
         "выполняй автоматически и сообщай только компактный status или точный terminal blocker.\n"

@@ -54,7 +54,10 @@ def test_worker_prompt_carries_one_launch_delivery_contract() -> None:
     prompt = delivery._worker_prompt("131", started)
 
     assert "standing authorization" in prompt
-    assert "task branch -> PR dev -> exact dev checks -> PR master -> production" in prompt
+    assert (
+        "task branch -> local PRE_PUSH_CI_PASS -> PR master -> exact master CI -> production"
+        in prompt
+    )
     assert "BLOCKER/HIGH/MEDIUM" in prompt
     assert "Не запрашивай generic approval" in prompt
     assert "Не запускай следующую product task" in prompt
@@ -65,7 +68,7 @@ def test_only_live_lane_contention_is_retried() -> None:
         "task session error: An incompatible write/integration/release lane is occupied"
     )
     assert delivery._is_transient_start_error(
-        "doctor blockers: active dev/master CI, deploy or sync run blocks mutation"
+        "doctor blockers: active production deployment blocks controller mutation"
     )
     assert not delivery._is_transient_start_error("main dev worktree is dirty")
     assert not delivery._is_transient_start_error("missing task document")

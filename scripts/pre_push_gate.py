@@ -192,6 +192,8 @@ def load_context(root: Path | None = None, *, base_sha: str | None = None) -> Re
     match = TASK_BRANCH_RE.fullmatch(branch)
     if match is None:
         raise GateError(f"Pre-push gate requires task/<ID>-<slug>; received {branch!r}")
+    if branch.split("-", maxsplit=1)[1] != branch.split("-", maxsplit=1)[1].lower():
+        raise GateError(f"Pre-push gate requires task/<ID>-<slug>; received {branch!r}")
     task_id = match.group("task_id").upper()
     lease = _load_lease(common_dir, task_id)
     if lease.get("task_id") != task_id or lease.get("branch") != branch:
@@ -207,6 +209,14 @@ def load_context(root: Path | None = None, *, base_sha: str | None = None) -> Re
     if base_sha is not None and base_sha != declared_base:
         raise GateError(
             f"Requested base {base_sha} differs from lease-bound master base {declared_base}"
+        )
+    current_origin_master = _run(
+        ["git", "rev-parse", "origin/master"], cwd=worktree_root
+    ).stdout.strip()
+    if current_origin_master != declared_base:
+        raise GateError(
+            "origin/master changed since the task lease was created; refresh the task base "
+            "before pushing"
         )
     _task_document(lease, task_id)
     head_sha = _head(worktree_root)
@@ -252,6 +262,8 @@ def current_pass(context: RepositoryContext) -> dict[str, Any] | None:
         return None
     if not isinstance(payload, dict):
         return None
+    if payload.get("evidence_version") != 1 or payload.get("contract_version") != CONTRACT_VERSION:
+        return None
     if payload.get("terminal_result") != "PRE_PUSH_CI_PASS":
         return None
     if payload.get("head_sha") != context.head_sha or payload.get("base_sha") != context.base_sha:
@@ -260,7 +272,31 @@ def current_pass(context: RepositoryContext) -> dict[str, Any] | None:
         return None
     if payload.get("target_base_branch") != "master":
         return None
-    if payload.get("contract_digest") != contract_digest():
+    if (
+        payload.get("contract_digest") != contract_digest()
+        or payload.get("clean_worktree") is not True
+    ):
+        return None
+    if not payload.get("started_at") or not payload.get("finished_at"):
+        return None
+    gates = payload.get("gates")
+    if (
+        not isinstance(gates, list)
+        or not gates
+        or any(
+            not isinstance(gate, dict)
+            or gate.get("applicable") is not True
+            or gate.get("status") != "SUCCESS"
+            for gate in gates
+        )
+    ):
+        return None
+    evidence_digest = payload.get("evidence_digest")
+    unsigned_payload = dict(payload)
+    unsigned_payload.pop("evidence_digest", None)
+    if not isinstance(evidence_digest, str) or evidence_digest != _evidence_digest(
+        unsigned_payload
+    ):
         return None
     if _status(context.root):
         return None

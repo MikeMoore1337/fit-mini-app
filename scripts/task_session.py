@@ -1,12 +1,15 @@
-"""Fail-closed task worktree, lease, integration and provenance controller.
+"""Fail-closed task worktree, provenance and trunk-based release controller.
 
-Runtime coordination state lives in the shared Git common directory.  The state is
-therefore visible from every worktree but is never part of a commit.
+The normal lifecycle is deliberately small: a task branch is based on master,
+passes the local exact-HEAD gate, enters a PR into master, and is closed only
+after the merged master revision is deployed successfully.  Coordination state
+lives in the shared Git common directory and is never committed.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -26,25 +29,17 @@ except ModuleNotFoundError:
     from artifact_manager import ArtifactError, ArtifactManager
 
 TASK_ID_PATTERN = r"[0-9]+[A-Z]?"
-TASK_ID_RE = re.compile(rf"^{TASK_ID_PATTERN}$")
+TASK_ID_RE = re.compile(rf"^{TASK_ID_PATTERN}$", re.IGNORECASE)
 TASK_BRANCH_RE = re.compile(
-    rf"^task/(?P<task_id>{TASK_ID_PATTERN})-(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)$"
+    rf"^task/(?P<task_id>{TASK_ID_PATTERN})-(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)$",
+    re.IGNORECASE,
 )
-TASK_COMMIT_RE = re.compile(rf"\[Task (?P<task_id>{TASK_ID_PATTERN})\]")
-TASK_FILE_RE = re.compile(rf"^(?P<task_id>{TASK_ID_PATTERN})-(?P<slug>.+)\.md$")
-TASK_STATE_VERSION = 1
+TASK_COMMIT_RE = re.compile(rf"\[Task (?P<task_id>{TASK_ID_PATTERN})\]", re.IGNORECASE)
+TASK_FILE_RE = re.compile(rf"^(?P<task_id>{TASK_ID_PATTERN})-(?P<slug>.+)\.md$", re.IGNORECASE)
+TASK_STATE_VERSION = 2
 STATE_DIRECTORY_NAME = "codex-task-sessions-v1"
-SYNC_APP_CONFIG_PATH = Path(".github/deployed-sync-app.json")
+TARGET_BASE_BRANCH = "master"
 VALID_CHECK_CONCLUSIONS = {"SUCCESS"}
-FAILED_CHECK_CONCLUSIONS = {
-    "ACTION_REQUIRED",
-    "CANCELLED",
-    "FAILURE",
-    "SKIPPED",
-    "STALE",
-    "STARTUP_FAILURE",
-    "TIMED_OUT",
-}
 UMBRELLA_TASK_IDS = {"90", "92", "93", "94", "95", "99", "100", "126"}
 
 
@@ -67,7 +62,9 @@ def task_id_from_branch(branch: str) -> str:
     match = TASK_BRANCH_RE.fullmatch(branch)
     if match is None:
         raise TaskSessionError(f"Branch {branch!r} must match task/<ID>-<lowercase-kebab-slug>")
-    return match.group("task_id")
+    if match.group("slug") != match.group("slug").lower():
+        raise TaskSessionError(f"Branch {branch!r} must match task/<ID>-<lowercase-kebab-slug>")
+    return match.group("task_id").upper()
 
 
 def normalize_concurrency_class(value: str) -> str:
@@ -88,7 +85,7 @@ def validate_task_commit_messages(task_id: str, messages: Sequence[str]) -> None
     if not messages:
         raise TaskSessionError("Task branch contains no task commits")
     for message in messages:
-        ids = {match.group("task_id") for match in TASK_COMMIT_RE.finditer(message)}
+        ids = {match.group("task_id").upper() for match in TASK_COMMIT_RE.finditer(message)}
         if ids != {expected}:
             headline = message.splitlines()[0] if message else "<empty>"
             raise TaskSessionError(f"Commit {headline!r} must contain exactly [Task {expected}]")
@@ -103,11 +100,14 @@ def _run(
 ) -> subprocess.CompletedProcess[str]:
     command = list(args)
     if command and command[0] == "git":
-        safe_directory = cwd.resolve().as_posix()
-        git_config = ["-c", f"safe.directory={safe_directory}"]
-        if os.name == "nt":
-            git_config.extend(["-c", "core.longpaths=true"])
-        command = ["git", *git_config, *command[1:]]
+        command = [
+            "git",
+            "-c",
+            f"safe.directory={cwd.resolve().as_posix()}",
+            "-c",
+            "core.longpaths=true",
+            *command[1:],
+        ]
     completed = subprocess.run(
         command,
         cwd=cwd,
@@ -151,9 +151,13 @@ class GitRepository:
         self.current_worktree = Path(top).resolve()
         common = _run(
             ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
-            cwd=self.start,
+            cwd=self.current_worktree,
         ).stdout.strip()
         self.common_dir = Path(common).resolve()
+
+    @property
+    def repository_root(self) -> Path:
+        return self.common_dir.parent
 
     def git(self, *args: str, cwd: Path | None = None, check: bool = True) -> str:
         return _run(["git", *args], cwd=cwd or self.current_worktree, check=check).stdout.strip()
@@ -181,12 +185,6 @@ class GitRepository:
             current = {}
         return records
 
-    def canonical_dev_worktree(self) -> Worktree:
-        matches = [item for item in self.worktrees() if item.branch == "dev"]
-        if len(matches) != 1:
-            raise TaskSessionError(f"Expected exactly one main dev worktree, found {len(matches)}")
-        return matches[0]
-
     def ref(self, name: str) -> str:
         return self.git("rev-parse", "--verify", name)
 
@@ -194,12 +192,12 @@ class GitRepository:
         return self.git("rev-parse", "--verify", "--quiet", name, check=False) != ""
 
     def is_ancestor(self, ancestor: str, descendant: str) -> bool:
-        completed = _run(
+        result = _run(
             ["git", "merge-base", "--is-ancestor", ancestor, descendant],
             cwd=self.current_worktree,
             check=False,
         )
-        return completed.returncode == 0
+        return result.returncode == 0
 
     def status(self, path: Path) -> list[str]:
         output = self.git("status", "--porcelain=v1", "--untracked-files=all", cwd=path)
@@ -231,7 +229,7 @@ class GitRepository:
         output = self.git("log", "--format=%B%x00", revision_range, check=False)
         return [message.strip() for message in output.split("\x00") if message.strip()]
 
-    def unique_commits(self, branch: str, base: str = "origin/dev") -> list[str]:
+    def unique_commits(self, branch: str, base: str = "origin/master") -> list[str]:
         output = self.git("log", "--oneline", f"{base}..{branch}", check=False)
         return output.splitlines() if output else []
 
@@ -240,26 +238,18 @@ class GitRepository:
         return output.splitlines() if output else []
 
     def remove_worktree(self, path: Path) -> None:
-        canonical = self.canonical_dev_worktree().path
-        self.git("worktree", "remove", "--", str(path), cwd=canonical)
+        self.git("worktree", "remove", "--", str(path), cwd=self.current_worktree)
 
-    def delete_merged_branch(self, branch: str) -> None:
-        canonical = self.canonical_dev_worktree().path
-        self.git("branch", "--delete", "--", branch, cwd=canonical)
+    def delete_local_branch(self, branch: str) -> None:
+        self.git("branch", "--delete", "--", branch, cwd=self.current_worktree)
 
     def upstream(self, branch: str) -> str | None:
-        completed = _run(
-            [
-                "git",
-                "rev-parse",
-                "--abbrev-ref",
-                "--symbolic-full-name",
-                f"{branch}@{{upstream}}",
-            ],
+        result = _run(
+            ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", f"{branch}@{{upstream}}"],
             cwd=self.current_worktree,
             check=False,
         )
-        return completed.stdout.strip() if completed.returncode == 0 else None
+        return result.stdout.strip() if result.returncode == 0 else None
 
     def local_branches(self) -> list[dict[str, str | None]]:
         output = self.git(
@@ -293,9 +283,9 @@ def _legacy_dependencies(text: str, current_task_id: str) -> tuple[str, ...]:
     if not value:
         return ()
     candidates = {
-        match.group(0)
+        match.group(0).upper()
         for match in re.finditer(TASK_ID_PATTERN, value.upper())
-        if match.group(0) != current_task_id
+        if match.group(0).upper() != current_task_id.upper()
     }
     return tuple(sorted(candidates))
 
@@ -340,26 +330,23 @@ def find_task_document(canonical_root: Path, task_id: str) -> TaskDocument:
     status = _extract_bold_field(text, "Статус")
     task_type = _extract_bold_field(text, "Тип").lower()
     executable_default = expected not in UMBRELLA_TASK_IDS and "umbrella" not in task_type
-    executable = metadata.get("executable", str(executable_default)).lower() == "true"
-    dependencies_value = metadata.get("dependencies")
-    dependencies = (
-        tuple(normalize_task_id(item) for item in dependencies_value.split(",") if item.strip())
-        if dependencies_value is not None
-        else _legacy_dependencies(text, expected)
-    )
-    slug = re.sub(r"[^a-z0-9]+", "-", filename_match.group("slug").lower()).strip("-")
     return TaskDocument(
         task_id=expected,
         path=path,
-        slug=slug,
+        slug=re.sub(r"[^a-z0-9]+", "-", filename_match.group("slug").lower()).strip("-"),
         status=status,
-        dependencies=dependencies,
-        executable=executable,
+        dependencies=tuple(
+            normalize_task_id(item)
+            for item in metadata.get("dependencies", "").split(",")
+            if item.strip()
+        )
+        or _legacy_dependencies(text, expected),
+        executable=metadata.get("executable", str(executable_default)).lower() == "true",
         concurrency_class=normalize_concurrency_class(
             metadata.get("concurrency", "exclusive-write")
         ),
         owner_gate=metadata.get("owner_gate", "explicit-launch"),
-        integration_policy=metadata.get("integration", "task-pr-to-dev"),
+        integration_policy=metadata.get("integration", "task-pr-to-master"),
     )
 
 
@@ -368,7 +355,6 @@ class StateStore:
         self.root = common_dir / STATE_DIRECTORY_NAME
         self.leases = self.root / "leases"
         self.history = self.root / "history"
-        self.queue_path = self.root / "integration-queue.json"
         self.lock_path = self.root / "state.lock"
 
     def initialize(self) -> None:
@@ -376,10 +362,7 @@ class StateStore:
         self.history.mkdir(parents=True, exist_ok=True)
         contract = self.root / "contract.json"
         if not contract.exists():
-            self.create_json(
-                contract,
-                {"version": TASK_STATE_VERSION, "created_at": utc_now()},
-            )
+            self.create_json(contract, {"version": TASK_STATE_VERSION, "created_at": utc_now()})
 
     @contextmanager
     def lock(self) -> Iterator[None]:
@@ -434,9 +417,6 @@ class StateStore:
     def task_lease_path(self, task_id: str) -> Path:
         return self.leases / f"task-{normalize_task_id(task_id)}.json"
 
-    def mode_lease_path(self, mode: str) -> Path:
-        return self.leases / f"{mode}.json"
-
     def all_leases(self) -> list[dict[str, Any]]:
         if not self.leases.exists():
             return []
@@ -466,8 +446,7 @@ class GitHubClient:
             raise TaskSessionError(f"GitHub returned invalid JSON for {endpoint}") from error
 
     def open_pull_requests(self) -> list[dict[str, Any]]:
-        payload = self.api("pulls?state=open&per_page=100")
-        return list(payload)
+        return list(self.api("pulls?state=open&per_page=100"))
 
     def pull_request(self, number: int) -> dict[str, Any]:
         return dict(self.api(f"pulls/{number}"))
@@ -493,16 +472,6 @@ class GitHubClient:
         payload = self.api(f"actions/workflows/{workflow}/runs?head_sha={sha}&per_page=100")
         return list(payload.get("workflow_runs", []))
 
-    def has_successful_deployment(self, sha: str, environment: str) -> bool:
-        deployments = self.api(f"deployments?sha={sha}&environment={environment}&per_page=100")
-        for deployment in deployments:
-            if deployment.get("sha") != sha or deployment.get("environment") != environment:
-                continue
-            statuses = self.api(f"deployments/{deployment['id']}/statuses?per_page=1")
-            if statuses and statuses[0].get("state") == "success":
-                return True
-        return False
-
     def branch_head(self, branch: str) -> str:
         payload = self.api(f"git/ref/heads/{branch}")
         return str(payload["object"]["sha"])
@@ -520,6 +489,16 @@ class GitHubClient:
         summaries = self.api("rulesets?per_page=100")
         return [dict(self.api(f"rulesets/{item['id']}")) for item in summaries]
 
+    def has_successful_deployment(self, sha: str, environment: str) -> bool:
+        deployments = self.api(f"deployments?sha={sha}&environment={environment}&per_page=100")
+        for deployment in deployments:
+            if deployment.get("sha") != sha or deployment.get("environment") != environment:
+                continue
+            statuses = self.api(f"deployments/{deployment['id']}/statuses?per_page=1")
+            if statuses and statuses[0].get("state") == "success":
+                return True
+        return False
+
 
 def _successful_exact_check(checks: Sequence[Mapping[str, Any]], name: str, sha: str) -> bool:
     return any(
@@ -536,18 +515,21 @@ def validate_task_pull_request(
     commits: Sequence[Mapping[str, Any]],
     checks: Sequence[Mapping[str, Any]],
     *,
-    expected_dev_sha: str,
+    expected_base_sha: str,
+    expected_base_branch: str = TARGET_BASE_BRANCH,
     require_checks: bool = True,
 ) -> str:
     base = pull_request.get("base", {})
     head = pull_request.get("head", {})
-    if base.get("ref") != "dev":
-        raise TaskSessionError("Task pull request base must be dev")
+    if base.get("ref") != expected_base_branch:
+        raise TaskSessionError(
+            f"Task pull request base must be {expected_base_branch}, found {base.get('ref')}"
+        )
     branch = str(head.get("ref", ""))
     task_id = task_id_from_branch(branch)
-    if base.get("sha") != expected_dev_sha:
+    if base.get("sha") != expected_base_sha:
         raise TaskSessionError(
-            f"Task PR is stale: base {base.get('sha')} != current dev {expected_dev_sha}"
+            f"Task PR is stale: base {base.get('sha')} != current {expected_base_sha}"
         )
     if head.get("repo", {}).get("full_name") != base.get("repo", {}).get("full_name"):
         raise TaskSessionError("Task PR must originate from the same repository")
@@ -581,8 +563,7 @@ def validate_task_pull_request_files(
         filename = str(item.get("filename", "")).replace("\\", "/")
         lowered = filename.lower()
         if (
-            filename.startswith(".artifacts/")
-            or filename.startswith(".git/")
+            filename.startswith((".artifacts/", ".git/"))
             or (Path(filename).name.startswith(".env") and Path(filename).name != ".env.example")
             or lowered.endswith((".pem", ".key", ".p12", ".pfx"))
         ):
@@ -593,119 +574,91 @@ def validate_task_pull_request_files(
         )
 
 
-def expected_sync_app_config(root: Path) -> dict[str, Any]:
-    path = root / SYNC_APP_CONFIG_PATH
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        app_id = int(payload["app_id"])
-        app_slug = str(payload["app_slug"])
-    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
-        raise TaskSessionError(f"Invalid deployed-sync App config {path}: {error}") from error
-    if app_id <= 0:
-        raise TaskSessionError(f"Invalid deployed-sync App ID in {path}")
-    if re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", app_slug) is None:
-        raise TaskSessionError(f"Invalid deployed-sync App slug in {path}")
-    return {"app_id": app_id, "app_slug": app_slug}
-
-
-def expected_sync_app_id(root: Path) -> int:
-    return int(expected_sync_app_config(root)["app_id"])
-
-
-def expected_sync_actor(root: Path) -> str:
-    return f"{expected_sync_app_config(root)['app_slug']}[bot]"
-
-
-def validate_dev_ruleset(
-    rulesets: Sequence[Mapping[str, Any]], *, expected_app_id: int
-) -> list[str]:
+def validate_master_ruleset(rulesets: Sequence[Mapping[str, Any]]) -> list[str]:
     matching = [
         item
         for item in rulesets
         if item.get("target") == "branch"
         and item.get("enforcement") == "active"
-        and "refs/heads/dev" in item.get("conditions", {}).get("ref_name", {}).get("include", [])
+        and "refs/heads/master" in item.get("conditions", {}).get("ref_name", {}).get("include", [])
     ]
     if len(matching) != 1:
-        return [f"expected exactly one active dev Ruleset, found {len(matching)}"]
+        return [f"expected exactly one active master Ruleset, found {len(matching)}"]
     rules = list(matching[0].get("rules", []))
     types = {item.get("type") for item in rules}
-    issues = []
-    for required in ("deletion", "non_fast_forward", "pull_request", "required_status_checks"):
-        if required not in types:
-            issues.append(f"dev Ruleset is missing {required}")
+    issues = [
+        f"master Ruleset is missing {required}"
+        for required in ("deletion", "non_fast_forward", "pull_request", "required_status_checks")
+        if required not in types
+    ]
     status_rules = [item for item in rules if item.get("type") == "required_status_checks"]
     if status_rules:
         parameters = status_rules[0].get("parameters", {})
         contexts = {item.get("context") for item in parameters.get("required_status_checks", [])}
         if parameters.get("strict_required_status_checks_policy") is not True:
-            issues.append("dev Ruleset required checks are not strict-current-base")
+            issues.append("master Ruleset required checks are not strict-current-base")
         if "checks" not in contexts:
-            issues.append("dev Ruleset does not require aggregate checks")
-    bypass_actors = list(matching[0].get("bypass_actors", []))
-    if len(bypass_actors) != 1:
-        issues.append(
-            f"dev Ruleset must have exactly one deployed-sync App bypass actor, found {len(bypass_actors)}"
-        )
-    elif (
-        bypass_actors[0].get("actor_type") != "Integration"
-        or bypass_actors[0].get("bypass_mode") != "always"
-    ):
-        issues.append("dev Ruleset bypass must be one Integration actor in always mode")
-    elif bypass_actors[0].get("actor_id") != expected_app_id:
-        issues.append(
-            "dev Ruleset bypass App does not match deployed-sync App: "
-            f"expected {expected_app_id}, found {bypass_actors[0].get('actor_id')}"
-        )
+            issues.append("master Ruleset does not require aggregate checks")
     return issues
 
 
-def classify_dev_provenance(
-    *,
-    sha: str,
-    master_sha: str,
-    associated_pulls: Sequence[Mapping[str, Any]],
-    sync_actor: str = "",
-    expected_actor: str = "",
-    successful_production_deployment: bool = False,
-    approved_recovery_sha: str = "",
+def validate_pr_event(
+    repository: GitRepository, github: GitHubClient, event_path: Path
 ) -> dict[str, Any]:
-    for pull_request in associated_pulls:
+    del repository
+    event = json.loads(event_path.read_text(encoding="utf-8"))
+    pull_request = event.get("pull_request")
+    if not isinstance(pull_request, dict):
+        return {"kind": "not-pull-request"}
+    if pull_request.get("base", {}).get("ref") != TARGET_BASE_BRANCH:
+        raise TaskSessionError(
+            f"Unsupported pull request base: {pull_request.get('base', {}).get('ref')}"
+        )
+    number = int(pull_request["number"])
+    commits = github.pull_request_commits(number)
+    files = github.pull_request_files(number)
+    task_id = validate_task_pull_request(
+        pull_request,
+        commits,
+        [],
+        expected_base_sha=str(pull_request["base"]["sha"]),
+        require_checks=False,
+    )
+    validate_task_pull_request_files(
+        files, expected_count=int(pull_request.get("changed_files", len(files)))
+    )
+    return {"kind": "task-pr", "task_id": task_id, "head_sha": pull_request["head"]["sha"]}
+
+
+def verify_master_merge(
+    repository: GitRepository, github: GitHubClient, *, sha: str
+) -> dict[str, Any]:
+    if github.branch_head(TARGET_BASE_BRANCH) != sha:
+        raise TaskSessionError(f"Master head is not the requested merge SHA {sha}")
+    associated = github.api(f"commits/{sha}/pulls")
+    matches: list[dict[str, Any]] = []
+    for pull_request in associated:
         base = pull_request.get("base", {})
         head = pull_request.get("head", {})
         if (
             pull_request.get("merged_at")
             and pull_request.get("merge_commit_sha") == sha
-            and base.get("ref") == "dev"
+            and base.get("ref") == TARGET_BASE_BRANCH
+            and TASK_BRANCH_RE.fullmatch(str(head.get("ref", "")))
+            and str(pull_request.get("title", "")).startswith("[Task ")
         ):
-            branch = str(head.get("ref", ""))
-            task_id = task_id_from_branch(branch)
-            title = str(pull_request.get("title", ""))
-            if not title.startswith(f"[Task {task_id}]"):
-                raise TaskSessionError(f"Merged task PR title does not preserve [Task {task_id}]")
-            return {"kind": "task-pr-merge", "task_id": task_id, "pr": pull_request.get("number")}
-    if (
-        sha == master_sha
-        and sync_actor
-        and sync_actor == expected_actor
-        and successful_production_deployment
-    ):
-        return {"kind": "deployed-master-sync", "sha": sha}
-    if approved_recovery_sha and sha == approved_recovery_sha:
-        return {"kind": "owner-approved-recovery", "sha": sha}
-    raise TaskSessionError(
-        "Unauthorized dev update: expected merged task PR, exact successfully deployed master sync "
-        "by the configured GitHub App, or recorded owner-approved recovery SHA"
-    )
+            matches.append(
+                {"number": pull_request.get("number"), "title": pull_request.get("title")}
+            )
+    if len(matches) != 1:
+        raise TaskSessionError(
+            f"Master revision {sha} is not exactly one merged task PR result: found {len(matches)}"
+        )
+    return {"kind": "task-pr-merge", "sha": sha, "pull_request": matches[0]}
 
 
 class TaskController:
-    def __init__(
-        self,
-        repository: GitRepository,
-        *,
-        github: GitHubClient | None = None,
-    ) -> None:
+    def __init__(self, repository: GitRepository, *, github: GitHubClient | None = None) -> None:
         self.repository = repository
         self.store = StateStore(repository.common_dir)
         self.github = github
@@ -715,16 +668,8 @@ class TaskController:
             self.github = GitHubClient(self.repository)
         return self.github
 
-    def _release_prs(self) -> list[dict[str, Any]]:
-        return [
-            item
-            for item in self._github().open_pull_requests()
-            if item.get("base", {}).get("ref") == "master"
-            and item.get("head", {}).get("ref") == "dev"
-        ]
-
     def _canonical_root(self) -> Path:
-        return self.repository.canonical_dev_worktree().path
+        return self.repository.repository_root
 
     def _completed_dependency_ids(self) -> set[str]:
         roots = (
@@ -742,56 +687,49 @@ class TaskController:
                 for path in root.glob("*.md"):
                     match = TASK_FILE_RE.fullmatch(path.name)
                     if match:
-                        result.add(match.group("task_id"))
+                        result.add(match.group("task_id").upper())
         return result
 
     def doctor(self, *, offline: bool = False) -> dict[str, Any]:
-        dev = self.repository.canonical_dev_worktree()
+        root = self._canonical_root()
         issues: list[str] = []
-        dirty = self.repository.status(dev.path)
+        dirty = self.repository.status(root)
         if dirty:
-            issues.append("main dev worktree is dirty")
-        operations = self.repository.operation_issues(dev.path)
+            issues.append("controller worktree is dirty")
+        operations = self.repository.operation_issues(root)
         if operations:
-            issues.append(f"main dev has active Git operation/lock: {', '.join(operations)}")
+            issues.append(
+                f"controller worktree has active Git operation/lock: {', '.join(operations)}"
+            )
         try:
-            local_dev = self.repository.ref("dev")
-            origin_dev = self.repository.ref("origin/dev")
+            local_master = self.repository.ref("master")
             origin_master = self.repository.ref("origin/master")
         except TaskSessionError as error:
             issues.append(str(error))
-            local_dev = origin_dev = origin_master = "unknown"
+            local_master = origin_master = "unknown"
         else:
-            if local_dev != origin_dev:
-                ahead, behind = self.repository.ahead_behind("dev", "origin/dev")
-                issues.append(f"local dev differs from origin/dev: ahead={ahead} behind={behind}")
-            if not self.repository.is_ancestor("origin/master", "origin/dev"):
-                issues.append("origin/dev does not contain origin/master")
+            if local_master != origin_master:
+                ahead, behind = self.repository.ahead_behind("master", "origin/master")
+                issues.append(
+                    f"local master differs from origin/master: ahead={ahead} behind={behind}"
+                )
         leases: list[dict[str, Any]] = []
         try:
             leases = self.store.all_leases()
         except TaskSessionError as error:
             issues.append(str(error))
-        release_prs: list[dict[str, Any]] | str = "offline"
-        open_task_prs: list[dict[str, Any]] | str = "offline"
         active_runs: list[dict[str, Any]] | str = "offline"
+        open_task_prs: list[dict[str, Any]] | str = "offline"
         rulesets: list[dict[str, Any]] | str = "offline"
-        live_dev = "offline"
+        live_master = "offline"
         if not offline:
             try:
-                live_dev = self._github().branch_head("dev")
-                if live_dev != origin_dev:
+                live_master = self._github().branch_head(TARGET_BASE_BRANCH)
+                if live_master != origin_master:
                     issues.append(
-                        "local origin/dev is stale: "
-                        f"tracking={origin_dev} live={live_dev}; fetch and normalize canonical dev"
+                        "local origin/master is stale: "
+                        f"tracking={origin_master}; live={live_master}; fetch current master"
                     )
-                all_pull_requests = self._github().open_pull_requests()
-                release_prs = [
-                    {"number": item.get("number"), "title": item.get("title")}
-                    for item in all_pull_requests
-                    if item.get("base", {}).get("ref") == "master"
-                    and item.get("head", {}).get("ref") == "dev"
-                ]
                 open_task_prs = [
                     {
                         "number": item.get("number"),
@@ -799,11 +737,9 @@ class TaskController:
                         "head": item.get("head", {}).get("ref"),
                         "base": item.get("base", {}).get("ref"),
                     }
-                    for item in all_pull_requests
+                    for item in self._github().open_pull_requests()
                     if str(item.get("head", {}).get("ref", "")).startswith("task/")
                 ]
-                if release_prs:
-                    issues.append("open dev -> master release PR blocks dev mutation")
                 active_runs = [
                     {
                         "id": item.get("id"),
@@ -815,6 +751,11 @@ class TaskController:
                     }
                     for item in self._github().active_workflow_runs()
                 ]
+                if any(
+                    item.get("name") in {"Release production", "Deploy production"}
+                    for item in active_runs
+                ):
+                    issues.append("active production deployment blocks controller mutation")
                 rulesets = [
                     {
                         "id": item.get("id"),
@@ -827,65 +768,33 @@ class TaskController:
                     }
                     for item in self._github().rulesets()
                 ]
-                release_critical_runs = [
-                    item
-                    for item in active_runs
-                    if item.get("name")
-                    in {"Release production", "Deploy production", "Sync deployed master to dev"}
-                    or item.get("head_branch") in {"dev", "master"}
-                ]
-                if release_critical_runs:
-                    issues.append("active dev/master CI, deploy or sync run blocks mutation")
-                issues.extend(
-                    validate_dev_ruleset(
-                        rulesets,
-                        expected_app_id=expected_sync_app_id(self.repository.current_worktree),
-                    )
-                )
+                issues.extend(validate_master_ruleset(rulesets))
             except TaskSessionError as error:
                 issues.append(f"GitHub state unavailable: {error}")
-                release_prs = "unavailable"
-                open_task_prs = "unavailable"
-                active_runs = "unavailable"
-                rulesets = "unavailable"
-        active_task_ids = {
-            item.get("task_id")
-            for item in leases
-            if item.get("mode") in {"write", "research-readonly"}
-        }
-        inventory = []
+                active_runs = open_task_prs = rulesets = "unavailable"
+        active_task_ids = {item.get("task_id") for item in leases if item.get("mode") == "write"}
+        if any(item.get("mode") in {"integration", "release"} for item in leases):
+            issues.append("obsolete integration/release lease requires explicit recovery")
+        inventory: list[dict[str, Any]] = []
         for worktree in self.repository.worktrees():
             status = self.repository.status(worktree.path)
+            task_id = None
+            if worktree.branch and TASK_BRANCH_RE.fullmatch(worktree.branch):
+                task_id = task_id_from_branch(worktree.branch)
             unique = (
                 self.repository.unique_commits(worktree.branch)
-                if worktree.branch and worktree.branch not in {"dev", "master"}
+                if worktree.branch and worktree.branch not in {"master", "dev"}
                 else self.repository.detached_unique_commits(worktree.path)
                 if worktree.detached
                 else []
             )
-            operation_issues = self.repository.operation_issues(worktree.path)
-            upstream = self.repository.upstream(worktree.branch) if worktree.branch else None
-            ahead_behind = (
-                self.repository.ahead_behind(worktree.branch, upstream)
-                if worktree.branch and upstream
-                else None
-            )
-            branch_task_id = None
-            if worktree.branch and TASK_BRANCH_RE.fullmatch(worktree.branch):
-                branch_task_id = task_id_from_branch(worktree.branch)
-            classification = "ACTIVE"
-            if branch_task_id in active_task_ids:
-                classification = "ACTIVE"
-            elif status or operation_issues:
+            classification = "ACTIVE" if task_id in active_task_ids else "SAFE_TO_REMOVE"
+            if status or self.repository.operation_issues(worktree.path):
                 classification = "DIRTY_NEEDS_OWNER"
-            elif (worktree.branch in {"dev", "master"} and ahead_behind != (0, 0)) or (
-                worktree.detached and unique
-            ):
+            elif unique:
                 classification = "RECOVERY_ANCHOR"
-            elif worktree.detached or (worktree.branch not in {"dev", "master"} and not unique):
-                classification = "SAFE_TO_REMOVE"
-            elif worktree.branch not in {"dev", "master"} and unique:
-                classification = "RECOVERY_ANCHOR"
+            elif worktree.branch == "dev":
+                classification = "LEGACY_NOT_NORMAL"
             inventory.append(
                 {
                     "path": str(worktree.path),
@@ -895,31 +804,6 @@ class TaskController:
                     "dirty": status,
                     "unique_commits_count": len(unique),
                     "unique_commits_preview": unique[:5],
-                    "upstream": upstream,
-                    "ahead_behind": ahead_behind,
-                    "classification": classification,
-                    "operation_issues": operation_issues,
-                }
-            )
-        attached_branches = {item.branch for item in self.repository.worktrees() if item.branch}
-        local_branches = []
-        for branch in self.repository.local_branches():
-            name = str(branch["branch"])
-            upstream = branch["upstream"]
-            unique = self.repository.unique_commits(name)
-            classification = "ACTIVE" if name in attached_branches else "UNKNOWN_OWNER"
-            if name not in attached_branches and unique:
-                classification = "RECOVERY_ANCHOR"
-            elif name not in attached_branches and not unique:
-                classification = "SAFE_TO_REMOVE"
-            local_branches.append(
-                {
-                    **branch,
-                    "ahead_behind": self.repository.ahead_behind(name, str(upstream))
-                    if upstream and self.repository.ref_exists(str(upstream))
-                    else None,
-                    "unique_commits_vs_origin_dev_count": len(unique),
-                    "unique_commits_vs_origin_dev_preview": unique[:5],
                     "classification": classification,
                 }
             )
@@ -927,31 +811,29 @@ class TaskController:
             issues.append("coordination state lock exists; recovery is required")
         return {
             "ok": not issues,
-            "canonical_dev_worktree": str(dev.path),
+            "canonical_worktree": str(root),
             "current_worktree": str(self.repository.current_worktree),
             "git_common_dir": str(self.repository.common_dir),
             "refs": {
-                "dev": local_dev,
-                "origin/dev": origin_dev,
+                "master": local_master,
                 "origin/master": origin_master,
-                "live/dev": live_dev,
+                "live/master": live_master,
             },
             "leases": leases,
-            "release_prs": release_prs,
             "open_task_prs": open_task_prs,
             "active_workflow_runs": active_runs,
             "rulesets": rulesets,
             "inventory": inventory,
-            "local_branches": local_branches,
             "issues": issues,
         }
 
     def status(self) -> dict[str, Any]:
-        queue = self.store.read_json(self.store.queue_path, {"version": 1, "candidates": []})
         return {
             "state_root": str(self.store.root),
             "leases": self.store.all_leases(),
-            "queue": queue,
+            "history": sorted(path.name for path in self.store.history.glob("*.json"))
+            if self.store.history.exists()
+            else [],
         }
 
     def validate_metadata(self) -> dict[str, Any]:
@@ -970,7 +852,7 @@ class TaskController:
                 match = TASK_FILE_RE.fullmatch(path.name)
                 if match is None:
                     continue
-                task_id = match.group("task_id")
+                task_id = match.group("task_id").upper()
                 task_ids.append(task_id)
                 try:
                     document = find_task_document(self._canonical_root(), task_id)
@@ -992,8 +874,10 @@ class TaskController:
                         else "legacy-inferred",
                     }
                 )
-        duplicates = sorted({task_id for task_id in task_ids if task_ids.count(task_id) > 1})
-        errors.extend(f"Duplicate pending task ID: {task_id}" for task_id in duplicates)
+        errors.extend(
+            f"Duplicate pending task ID: {task_id}"
+            for task_id in sorted({item for item in task_ids if task_ids.count(item) > 1})
+        )
         return {"ok": not errors, "tasks": records, "errors": errors}
 
     def start(
@@ -1009,26 +893,22 @@ class TaskController:
         expected = normalize_task_id(task_id)
         if not owner_launch:
             raise TaskSessionError("start requires explicit --owner-launch evidence")
-        if mode not in {"write", "research-readonly"}:
-            raise TaskSessionError(f"Unsupported task lease mode: {mode}")
+        if mode != "write":
+            raise TaskSessionError("research-readonly sessions are not part of normal delivery")
         report = self.doctor(offline=offline)
         if report["issues"]:
             raise TaskSessionError("doctor blockers: " + "; ".join(report["issues"]))
         document = find_task_document(self._canonical_root(), expected)
         if not document.executable:
             raise TaskSessionError(f"Task {expected} is umbrella/non-executable")
-        lowered_status = document.status.lower()
-        if "blocked" in lowered_status or "заблок" in lowered_status:
+        if "blocked" in document.status.lower() or "заблок" in document.status.lower():
             raise TaskSessionError(f"Task {expected} status is blocked: {document.status}")
         missing = sorted(set(document.dependencies) - self._completed_dependency_ids())
         if missing:
             raise TaskSessionError(
                 f"Task {expected} has incomplete dependencies: {', '.join(missing)}"
             )
-        if self.store.task_lease_path(expected).exists():
-            raise TaskSessionError(f"Task {expected} already has an active lease")
-        branch_slug = slug or document.slug
-        branch = f"task/{expected}-{branch_slug}"
+        branch = f"task/{expected}-{slug or document.slug}"
         task_id_from_branch(branch)
         target = self._canonical_root() / ".artifacts" / "worktrees" / branch.removeprefix("task/")
         if target.exists() or self.repository.ref_exists(f"refs/heads/{branch}"):
@@ -1039,50 +919,32 @@ class TaskController:
             existing = self.store.all_leases()
             if any(item.get("task_id") == expected for item in existing):
                 raise TaskSessionError(f"Task {expected} already has an active lease")
-            if mode == "write" and any(
-                item.get("mode") in {"integration", "release"}
-                or (
-                    item.get("mode") == "write"
-                    and not write_lanes_compatible(
-                        document.concurrency_class,
-                        str(item.get("concurrency_class", "exclusive-write")),
-                    )
-                )
-                for item in existing
-            ):
-                raise TaskSessionError("An incompatible write/integration/release lane is occupied")
-            if mode == "research-readonly" and any(
-                item.get("mode") in {"integration", "release"} for item in existing
-            ):
-                raise TaskSessionError("Research cannot start during integration/release mutation")
-            base_sha = self.repository.ref("origin/dev")
-            if not offline:
-                live_dev_sha = self._github().branch_head("dev")
-                if live_dev_sha != base_sha:
-                    raise TaskSessionError(
-                        "origin/dev changed while start was acquiring its lease: "
-                        f"tracking={base_sha} live={live_dev_sha}"
-                    )
+            if any(item.get("mode") == "write" for item in existing):
+                raise TaskSessionError("An active task write lease is occupied")
+            base_sha = self.repository.ref("origin/master")
+            if not offline and self._github().branch_head(TARGET_BASE_BRANCH) != base_sha:
+                raise TaskSessionError("origin/master changed while start was acquiring its lease")
             lease = {
                 "version": TASK_STATE_VERSION,
                 "task_id": expected,
                 "canonical_task_path": str(document.path),
                 "branch": branch,
                 "worktree": str(target.resolve()),
-                "base_origin_dev_sha": base_sha,
-                "mode": mode,
+                "base_origin_master_sha": base_sha,
+                "target_base_branch": TARGET_BASE_BRANCH,
+                "mode": "write",
                 "created_at": utc_now(),
                 "updated_at": utc_now(),
                 "lifecycle_state": "starting",
                 "session_label": session_label,
                 "concurrency_class": document.concurrency_class,
-                "integration_policy": document.integration_policy,
+                "integration_policy": "task-pr-to-master",
+                "owner_launch": True,
             }
             self.store.create_json(lease_path, lease)
         try:
             self.repository.create_task_worktree(branch, target, base_sha)
         except Exception:
-            lease = self.store.read_json(lease_path)
             lease["lifecycle_state"] = "start-failed-recovery-required"
             lease["updated_at"] = utc_now()
             StateStore.replace_json(lease_path, lease)
@@ -1090,17 +952,16 @@ class TaskController:
         lease["lifecycle_state"] = "implementation"
         lease["updated_at"] = utc_now()
         StateStore.replace_json(lease_path, lease)
-        prompt = (
-            f"Worktree: {target.resolve()}\n"
-            f"Branch: {branch}\nBase origin/dev: {base_sha}\n"
-            f"Task: {expected} ({document.path})\n"
-            f"Dependencies: {', '.join(document.dependencies) or 'none'}\n"
-            f"Concurrency: {document.concurrency_class}; integration: {document.integration_policy}\n"
-            "Do not edit the main dev worktree or another worktree. Do not merge, push, release, "
-            "or start another task outside this task lifecycle. Approval for a later task is not inherited.\n"
-            f"Recovery: python scripts/task_session.py recover {expected}\n"
-        )
-        return {"lease": lease, "prompt": prompt}
+        return {
+            "lease": lease,
+            "prompt": (
+                f"Worktree: {target.resolve()}\nBranch: {branch}\n"
+                f"Base origin/master: {base_sha}\nTask: {expected} ({document.path})\n"
+                "Normal path: local PRE_PUSH_CI_PASS -> PR master -> merged master -> production.\n"
+                "Do not merge, push master directly, release, or start another task outside this lease.\n"
+                f"Recovery: python scripts/task_session.py recover {expected}\n"
+            ),
+        }
 
     def adopt_current(
         self, task_id: str, *, owner_launch: bool, session_label: str
@@ -1111,58 +972,113 @@ class TaskController:
         branch = self.repository.git("branch", "--show-current")
         if not branch or task_id_from_branch(branch) != expected:
             raise TaskSessionError(f"Current branch {branch!r} does not match Task {expected}")
-        if self.repository.current_worktree == self._canonical_root():
-            raise TaskSessionError("Cannot adopt the main integration-only dev worktree")
-        matching_worktrees = [
+        matches = [
             item
             for item in self.repository.worktrees()
-            if item.branch and item.branch.startswith(f"task/{expected}-")
+            if item.path == self.repository.current_worktree
         ]
-        if len(matching_worktrees) != 1:
-            raise TaskSessionError(
-                f"Expected exactly one existing Task {expected} worktree, found {len(matching_worktrees)}"
-            )
+        if len(matches) != 1 or self.repository.current_worktree == self._canonical_root():
+            raise TaskSessionError("Cannot adopt the controller worktree")
+        base_sha = self.repository.ref("origin/master")
         head_sha = self.repository.ref("HEAD")
-        origin_dev_sha = self.repository.ref("origin/dev")
-        if head_sha != origin_dev_sha and not self.repository.is_ancestor(origin_dev_sha, head_sha):
-            raise TaskSessionError("Existing task branch is not based on current origin/dev")
-        if self._release_prs():
-            raise TaskSessionError("Open dev -> master release PR blocks adoption")
+        if not self.repository.is_ancestor(base_sha, head_sha):
+            raise TaskSessionError("Existing task branch is not based on current origin/master")
         document = find_task_document(self._canonical_root(), expected)
         self.store.initialize()
-        lease_path = self.store.task_lease_path(expected)
         lease = {
             "version": TASK_STATE_VERSION,
             "task_id": expected,
             "canonical_task_path": str(document.path),
             "branch": branch,
             "worktree": str(self.repository.current_worktree),
-            "base_origin_dev_sha": origin_dev_sha,
+            "base_origin_master_sha": base_sha,
+            "target_base_branch": TARGET_BASE_BRANCH,
             "mode": "write",
             "created_at": utc_now(),
             "updated_at": utc_now(),
             "lifecycle_state": "implementation",
             "session_label": session_label,
             "concurrency_class": document.concurrency_class,
-            "integration_policy": document.integration_policy,
+            "integration_policy": "task-pr-to-master",
+            "owner_launch": True,
             "adopted_existing_session": True,
         }
         with self.store.lock():
-            existing = self.store.all_leases()
-            if any(
-                item.get("mode") in {"integration", "release"}
-                or (
-                    item.get("mode") == "write"
-                    and not write_lanes_compatible(
-                        document.concurrency_class,
-                        str(item.get("concurrency_class", "exclusive-write")),
-                    )
-                )
-                for item in existing
-            ):
-                raise TaskSessionError("An incompatible write/integration/release lane is occupied")
-            self.store.create_json(lease_path, lease)
+            if any(item.get("mode") == "write" for item in self.store.all_leases()):
+                raise TaskSessionError("An active task write lease is occupied")
+            self.store.create_json(self.store.task_lease_path(expected), lease)
         return lease
+
+    @staticmethod
+    def _gate_evidence_path(canonical_root: Path, task_id: str) -> Path:
+        return (
+            canonical_root
+            / ".artifacts"
+            / "tasks"
+            / normalize_task_id(task_id)
+            / "evidence"
+            / "pre-push"
+            / "gate.json"
+        )
+
+    def _current_gate_evidence(
+        self, task_id: str, lease: Mapping[str, Any], head_sha: str
+    ) -> dict[str, Any]:
+        path = self._gate_evidence_path(self._canonical_root(), task_id)
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise TaskSessionError(
+                f"Current PRE_PUSH_CI_PASS evidence is missing or invalid: {path}"
+            ) from error
+        if not isinstance(payload, dict):
+            raise TaskSessionError(f"Invalid pre-push evidence payload: {path}")
+        if payload.get("evidence_version") != 1:
+            raise TaskSessionError("Pre-push evidence version is invalid")
+        if payload.get("terminal_result") != "PRE_PUSH_CI_PASS":
+            raise TaskSessionError("Readiness requires terminal PRE_PUSH_CI_PASS")
+        expected = {
+            "task_id": task_id,
+            "branch": lease.get("branch"),
+            "head_sha": head_sha,
+            "base_sha": lease.get("base_origin_master_sha"),
+            "target_base_branch": TARGET_BASE_BRANCH,
+        }
+        for key, value in expected.items():
+            if payload.get(key) != value:
+                raise TaskSessionError(f"Pre-push evidence {key} does not match current lease/HEAD")
+        try:
+            from scripts.ci_contract import CONTRACT_VERSION, contract_digest
+        except ModuleNotFoundError:
+            from ci_contract import CONTRACT_VERSION, contract_digest
+        if payload.get("contract_version") != CONTRACT_VERSION:
+            raise TaskSessionError("Pre-push evidence contract version is stale")
+        if payload.get("contract_digest") != contract_digest():
+            raise TaskSessionError("Pre-push evidence contract digest is stale")
+        if payload.get("clean_worktree") is not True:
+            raise TaskSessionError("Pre-push evidence does not prove a clean worktree")
+        gates = payload.get("gates")
+        if not isinstance(gates, list) or any(
+            not isinstance(gate, dict)
+            or gate.get("applicable") is not True
+            or gate.get("status") != "SUCCESS"
+            for gate in gates
+        ):
+            raise TaskSessionError("Pre-push evidence does not contain successful applicable gates")
+        unsigned_payload = dict(payload)
+        evidence_digest = unsigned_payload.pop("evidence_digest", None)
+        encoded = json.dumps(
+            unsigned_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode()
+        if (
+            not isinstance(evidence_digest, str)
+            or evidence_digest != hashlib.sha256(encoded).hexdigest()
+        ):
+            raise TaskSessionError("Pre-push evidence digest is invalid")
+        worktree = Path(str(lease["worktree"]))
+        if self.repository.status(worktree):
+            raise TaskSessionError("Task worktree is dirty; PRE_PUSH_CI_PASS is stale")
+        return payload
 
     def mark_ready(
         self,
@@ -1180,45 +1096,104 @@ class TaskController:
         lease_path = self.store.task_lease_path(expected)
         lease = self.store.read_json(lease_path)
         if lease is None or lease.get("mode") != "write":
-            raise TaskSessionError("Only an active write lease can become integration-ready")
-        if lease.get("lifecycle_state") not in {"implementation", "ready-integration"}:
+            raise TaskSessionError("Only an active write lease can become PR-ready")
+        if lease.get("lifecycle_state") not in {"implementation", "ready-for-pr"}:
             raise TaskSessionError(
-                f"Task {expected} cannot become ready from {lease.get('lifecycle_state')}"
+                f"Task {expected} cannot become PR-ready from {lease.get('lifecycle_state')}"
             )
         worktree = Path(str(lease["worktree"]))
         if self.repository.status(worktree):
-            raise TaskSessionError("Task worktree must be clean before integration readiness")
+            raise TaskSessionError("Task worktree must be clean before PR readiness")
         actual_branch = self.repository.git("branch", "--show-current", cwd=worktree)
-        if actual_branch != lease.get("branch") or task_id_from_branch(actual_branch) != expected:
+        if actual_branch != lease.get("branch"):
             raise TaskSessionError("Task worktree branch does not match its lease")
         actual_head = self.repository.git("rev-parse", "HEAD", cwd=worktree)
         if actual_head != head_sha:
             raise TaskSessionError(f"Task HEAD {actual_head} != declared ready SHA {head_sha}")
-        base_sha = str(lease["base_origin_dev_sha"])
+        base_sha = str(lease["base_origin_master_sha"])
+        if self.repository.ref("origin/master") != base_sha:
+            raise TaskSessionError(
+                "Task base is stale: origin/master changed after the task lease was created"
+            )
         if not self.repository.is_ancestor(base_sha, head_sha):
-            raise TaskSessionError("Task HEAD does not descend from leased origin/dev base")
+            raise TaskSessionError("Task HEAD does not descend from leased origin/master base")
         validate_task_commit_messages(expected, self.repository.commits(f"{base_sha}..{head_sha}"))
+        gate = self._current_gate_evidence(expected, lease, head_sha)
         with self.store.lock():
             current = self.store.read_json(lease_path)
             if current.get("updated_at") != lease.get("updated_at"):
                 raise TaskSessionError("Task lease changed while readiness was validated")
-            if current.get("lifecycle_state") == "ready-integration":
-                queue = self.store.read_json(
-                    self.store.queue_path, {"version": 1, "candidates": []}
-                )
-                if any(item.get("task_id") == expected for item in queue["candidates"]):
-                    raise TaskSessionError(
-                        "Queued task readiness is immutable; remove it only through explicit recovery"
-                    )
-                if self.store.mode_lease_path("integration").exists():
-                    raise TaskSessionError("Integration lease blocks task readiness replacement")
-            current["lifecycle_state"] = "ready-integration"
-            current["ready_head_sha"] = head_sha
-            current["review_verdict"] = review_verdict
-            current["qa_verdict"] = qa_verdict
-            current["updated_at"] = utc_now()
+            current.update(
+                {
+                    "lifecycle_state": "ready-for-pr",
+                    "ready_head_sha": head_sha,
+                    "review_verdict": review_verdict,
+                    "qa_verdict": qa_verdict,
+                    "pre_push_ci_pass": gate,
+                    "updated_at": utc_now(),
+                }
+            )
             StateStore.replace_json(lease_path, current)
         return current
+
+    def record_production_success(
+        self,
+        task_id: str,
+        *,
+        pr_number: int,
+        merge_sha: str,
+        deployed_sha: str,
+    ) -> dict[str, Any]:
+        expected = normalize_task_id(task_id)
+        lease_path = self.store.task_lease_path(expected)
+        lease = self.store.read_json(lease_path)
+        if lease is None or lease.get("lifecycle_state") != "ready-for-pr":
+            raise TaskSessionError("Production completion requires an exact PR-ready task lease")
+        if merge_sha != deployed_sha:
+            raise TaskSessionError("Deployed revision must equal the exact merged master SHA")
+        if self.repository.ref("origin/master") != deployed_sha:
+            raise TaskSessionError(
+                "Production completion requires current origin/master at deployed SHA"
+            )
+        pull_request = self._github().pull_request(pr_number)
+        commits = self._github().pull_request_commits(pr_number)
+        checks = self._github().check_runs(str(pull_request["head"]["sha"]))
+        files = self._github().pull_request_files(pr_number)
+        actual = validate_task_pull_request(
+            pull_request,
+            commits,
+            checks,
+            expected_base_sha=str(pull_request["base"]["sha"]),
+            require_checks=True,
+        )
+        if actual != expected or pull_request.get("merge_commit_sha") != merge_sha:
+            raise TaskSessionError("Merged PR does not match the task lease and deployed SHA")
+        validate_task_pull_request_files(
+            files, expected_count=int(pull_request.get("changed_files", len(files)))
+        )
+        if not self._github().has_successful_deployment(deployed_sha, "production"):
+            raise TaskSessionError(
+                "Production deployment is not terminal-success for the exact SHA"
+            )
+        history = {
+            "version": TASK_STATE_VERSION,
+            "task_id": expected,
+            "state": "production-success",
+            "head_sha": lease.get("ready_head_sha"),
+            "merge_sha": merge_sha,
+            "deployed_sha": deployed_sha,
+            "pr_number": pr_number,
+            "completed_at": utc_now(),
+        }
+        with self.store.lock():
+            self.store.create_json(self.store.history / f"task-{expected}.json", history)
+            lease = self.store.read_json(lease_path)
+            lease["lifecycle_state"] = "production-success"
+            lease["merge_sha"] = merge_sha
+            lease["deployed_sha"] = deployed_sha
+            lease["updated_at"] = utc_now()
+            StateStore.replace_json(lease_path, lease)
+        return history
 
     def recover(self, task_id: str) -> dict[str, Any]:
         expected = normalize_task_id(task_id)
@@ -1237,19 +1212,18 @@ class TaskController:
             ).splitlines()
             if line
         ]
-        details = []
-        for worktree in matches:
-            details.append(
-                {
-                    **asdict(worktree),
-                    "path": str(worktree.path),
-                    "dirty": self.repository.status(worktree.path),
-                    "operation_issues": self.repository.operation_issues(worktree.path),
-                    "unique_commits": self.repository.unique_commits(worktree.branch)
-                    if worktree.branch
-                    else [],
-                }
-            )
+        details = [
+            {
+                **asdict(worktree),
+                "path": str(worktree.path),
+                "dirty": self.repository.status(worktree.path),
+                "operation_issues": self.repository.operation_issues(worktree.path),
+                "unique_commits": self.repository.unique_commits(worktree.branch)
+                if worktree.branch
+                else [],
+            }
+            for worktree in matches
+        ]
         issues: list[str] = []
         if lease is None:
             issues.append("missing task lease")
@@ -1271,232 +1245,6 @@ class TaskController:
             "mutation_performed": False,
         }
 
-    def enqueue_integration(self, task_id: str, *, pr_number: int) -> dict[str, Any]:
-        expected = normalize_task_id(task_id)
-        self.store.initialize()
-        lease = self.store.read_json(self.store.task_lease_path(expected))
-        if lease is None:
-            raise TaskSessionError(f"Task {expected} has no active lease")
-        if lease.get("mode") != "write":
-            raise TaskSessionError("Research-readonly lease cannot enter integration queue")
-        if lease.get("lifecycle_state") != "ready-integration":
-            raise TaskSessionError("Task must pass mark-ready before integration queue")
-        if self.store.mode_lease_path("release").exists() or self._release_prs():
-            raise TaskSessionError("Release freeze blocks integration queue mutation")
-        pull_request = self._github().pull_request(pr_number)
-        commits = self._github().pull_request_commits(pr_number)
-        files = self._github().pull_request_files(pr_number)
-        checks = self._github().check_runs(str(pull_request["head"]["sha"]))
-        actual = validate_task_pull_request(
-            pull_request,
-            commits,
-            checks,
-            expected_dev_sha=self._github().branch_head("dev"),
-            require_checks=False,
-        )
-        if actual != expected:
-            raise TaskSessionError(f"PR task ID {actual} does not match lease {expected}")
-        if pull_request["head"]["sha"] != lease.get("ready_head_sha"):
-            raise TaskSessionError("PR head does not match the review/QA-ready task SHA")
-        validate_task_pull_request_files(
-            files, expected_count=int(pull_request.get("changed_files", len(files)))
-        )
-        with self.store.lock():
-            queue = self.store.read_json(self.store.queue_path, {"version": 1, "candidates": []})
-            if any(item["task_id"] == expected for item in queue["candidates"]):
-                raise TaskSessionError(f"Task {expected} is already queued")
-            queue["candidates"].append(
-                {
-                    "task_id": expected,
-                    "pr_number": pr_number,
-                    "head_sha": pull_request["head"]["sha"],
-                    "base_sha": pull_request["base"]["sha"],
-                    "state": "queued",
-                    "queued_at": utc_now(),
-                }
-            )
-            StateStore.replace_json(self.store.queue_path, queue)
-        return queue
-
-    def prepare_integration(self, task_id: str) -> dict[str, Any]:
-        expected = normalize_task_id(task_id)
-        if self.store.mode_lease_path("release").exists() or self._release_prs():
-            raise TaskSessionError("Release freeze blocks integration")
-        queue = self.store.read_json(self.store.queue_path, {"version": 1, "candidates": []})
-        candidates = queue["candidates"]
-        if not candidates or candidates[0]["task_id"] != expected:
-            head = candidates[0]["task_id"] if candidates else "<empty>"
-            raise TaskSessionError(f"Only queue head may integrate; current head is {head}")
-        candidate = candidates[0]
-        pull_request = self._github().pull_request(int(candidate["pr_number"]))
-        commits = self._github().pull_request_commits(int(candidate["pr_number"]))
-        files = self._github().pull_request_files(int(candidate["pr_number"]))
-        head_sha = str(pull_request["head"]["sha"])
-        checks = self._github().check_runs(head_sha)
-        task_id_from_pr = validate_task_pull_request(
-            pull_request,
-            commits,
-            checks,
-            expected_dev_sha=self._github().branch_head("dev"),
-            require_checks=True,
-        )
-        if task_id_from_pr != expected or head_sha != candidate["head_sha"]:
-            raise TaskSessionError("Queued candidate changed; enqueue fresh exact-head evidence")
-        validate_task_pull_request_files(
-            files, expected_count=int(pull_request.get("changed_files", len(files)))
-        )
-        integration_lease = {
-            "version": 1,
-            "task_id": expected,
-            "canonical_task_path": self.store.read_json(self.store.task_lease_path(expected))[
-                "canonical_task_path"
-            ],
-            "branch": pull_request["head"]["ref"],
-            "worktree": self.store.read_json(self.store.task_lease_path(expected))["worktree"],
-            "base_origin_dev_sha": pull_request["base"]["sha"],
-            "mode": "integration",
-            "created_at": utc_now(),
-            "updated_at": utc_now(),
-            "lifecycle_state": "eligible-exact-head",
-            "session_label": f"pr-{candidate['pr_number']}",
-            "pr_number": candidate["pr_number"],
-            "head_sha": head_sha,
-        }
-        with self.store.lock():
-            if self.store.mode_lease_path("release").exists():
-                raise TaskSessionError("Release freeze acquired while integration was validated")
-            current_queue = self.store.read_json(
-                self.store.queue_path, {"version": 1, "candidates": []}
-            )
-            if (
-                not current_queue["candidates"]
-                or current_queue["candidates"][0].get("task_id") != expected
-                or current_queue["candidates"][0].get("head_sha") != head_sha
-                or current_queue["candidates"][0].get("state") != "queued"
-            ):
-                raise TaskSessionError(
-                    "Integration queue head changed while eligibility was validated"
-                )
-            self.store.create_json(self.store.mode_lease_path("integration"), integration_lease)
-            current_queue["candidates"][0]["state"] = "eligible"
-            current_queue["candidates"][0]["eligible_at"] = utc_now()
-            StateStore.replace_json(self.store.queue_path, current_queue)
-        return integration_lease
-
-    def withdraw_integration(self, task_id: str, *, reason: str) -> dict[str, Any]:
-        expected = normalize_task_id(task_id)
-        if not reason.strip():
-            raise TaskSessionError("withdraw-integration requires a non-empty reason")
-        integration_path = self.store.mode_lease_path("integration")
-        integration = self.store.read_json(integration_path)
-        queue = self.store.read_json(self.store.queue_path, {"version": 1, "candidates": []})
-        if not queue["candidates"] or queue["candidates"][0].get("task_id") != expected:
-            raise TaskSessionError(f"Task {expected} is not the integration queue head")
-        candidate = queue["candidates"][0]
-        if integration is None:
-            if candidate.get("state") != "queued":
-                raise TaskSessionError(
-                    f"Task {expected} has no integration lease and is not queued"
-                )
-        elif (
-            integration.get("task_id") != expected
-            or candidate.get("state") != "eligible"
-            or candidate.get("head_sha") != integration.get("head_sha")
-            or candidate.get("pr_number") != integration.get("pr_number")
-        ):
-            raise TaskSessionError(f"Task {expected} does not own matching integration state")
-        pull_request = self._github().pull_request(int(candidate["pr_number"]))
-        if pull_request.get("merged_at"):
-            raise TaskSessionError("Merged integration cannot be withdrawn; verify exact dev CI")
-        with self.store.lock():
-            current = self.store.read_json(integration_path)
-            if current != integration:
-                raise TaskSessionError("Integration lease changed while withdrawal was validated")
-            current_queue = self.store.read_json(
-                self.store.queue_path, {"version": 1, "candidates": []}
-            )
-            if not current_queue["candidates"] or current_queue["candidates"][0] != candidate:
-                raise TaskSessionError("Integration queue head changed before withdrawal")
-            withdrawn = current_queue["candidates"].pop(0)
-            withdrawn.update(
-                {
-                    "state": "withdrawn-for-fix",
-                    "withdrawn_at": utc_now(),
-                    "reason": reason.strip(),
-                }
-            )
-            task_lease_path = self.store.task_lease_path(expected)
-            task_lease = self.store.read_json(task_lease_path)
-            if task_lease is None:
-                raise TaskSessionError("Task lease is missing during integration withdrawal")
-            task_lease["lifecycle_state"] = "implementation"
-            task_lease["updated_at"] = utc_now()
-            task_lease["last_integration_withdrawal"] = withdrawn
-            for field in ("ready_head_sha", "review_verdict", "qa_verdict"):
-                task_lease.pop(field, None)
-            StateStore.replace_json(self.store.queue_path, current_queue)
-            StateStore.replace_json(task_lease_path, task_lease)
-            if integration is not None:
-                integration_path.unlink()
-        return {"withdrawn": withdrawn, "task_lease": task_lease}
-
-    def complete_integration(self, task_id: str, *, merge_sha: str) -> dict[str, Any]:
-        expected = normalize_task_id(task_id)
-        integration_path = self.store.mode_lease_path("integration")
-        integration = self.store.read_json(integration_path)
-        if integration is None or integration.get("task_id") != expected:
-            raise TaskSessionError(f"Task {expected} does not own integration lease")
-        dev_head = self._github().branch_head("dev")
-        if dev_head != merge_sha:
-            raise TaskSessionError(f"origin/dev {dev_head} != expected merge SHA {merge_sha}")
-        pull_request = self._github().pull_request(int(integration["pr_number"]))
-        if (
-            not pull_request.get("merged_at")
-            or pull_request.get("merge_commit_sha") != merge_sha
-            or pull_request.get("head", {}).get("sha") != integration.get("head_sha")
-            or pull_request.get("base", {}).get("ref") != "dev"
-        ):
-            raise TaskSessionError(
-                "Current dev SHA is not the exact merge result of the leased task PR/head"
-            )
-        runs = self._github().workflow_runs("ci.yml", merge_sha)
-        successful = [
-            run
-            for run in runs
-            if run.get("event") == "push"
-            and run.get("head_branch") == "dev"
-            and run.get("head_sha") == merge_sha
-            and run.get("status") == "completed"
-            and run.get("conclusion") == "success"
-        ]
-        if not successful:
-            raise TaskSessionError(f"No terminal successful exact-SHA dev push CI for {merge_sha}")
-        with self.store.lock():
-            queue = self.store.read_json(self.store.queue_path)
-            if not queue["candidates"] or queue["candidates"][0]["task_id"] != expected:
-                raise TaskSessionError("Integration queue head changed unexpectedly")
-            completed = queue["candidates"].pop(0)
-            completed.update(
-                {
-                    "state": "dev-ci-success",
-                    "merge_sha": merge_sha,
-                    "dev_ci_run_id": successful[0].get("id"),
-                    "completed_at": utc_now(),
-                }
-            )
-            StateStore.replace_json(self.store.queue_path, queue)
-            history_path = self.store.history / f"task-{expected}.json"
-            self.store.create_json(history_path, completed)
-            integration_path.unlink()
-            task_lease_path = self.store.task_lease_path(expected)
-            task_lease = self.store.read_json(task_lease_path)
-            task_lease["lifecycle_state"] = "dev-ci-success"
-            task_lease["updated_at"] = utc_now()
-            task_lease["merge_sha"] = merge_sha
-            task_lease["dev_ci_run_id"] = successful[0].get("id")
-            StateStore.replace_json(task_lease_path, task_lease)
-        return completed
-
     def finish(self, task_id: str) -> dict[str, Any]:
         expected = normalize_task_id(task_id)
         lease_path = self.store.task_lease_path(expected)
@@ -1504,136 +1252,81 @@ class TaskController:
         history_path = self.store.history / f"task-{expected}.json"
         history = self.store.read_json(history_path)
         if lease is None or history is None:
-            raise TaskSessionError("finish requires task lease and completed integration history")
-        if lease.get("task_id") != expected:
-            raise TaskSessionError("finish task lease does not match the requested task ID")
-        if history.get("task_id") != expected or history.get("state") != "dev-ci-success":
-            raise TaskSessionError(
-                "finish integration history does not match the requested terminal task state"
-            )
-        if lease.get("lifecycle_state") != "dev-ci-success":
-            raise TaskSessionError("finish requires terminal dev-ci-success state")
-
+            raise TaskSessionError("finish requires task lease and production success history")
+        if lease.get("task_id") != expected or history.get("task_id") != expected:
+            raise TaskSessionError("finish task lease/history does not match requested task ID")
+        if (
+            lease.get("lifecycle_state") != "production-success"
+            or history.get("state") != "production-success"
+        ):
+            raise TaskSessionError("finish requires terminal production-success state")
         branch = str(lease.get("branch", ""))
         worktree_path = Path(str(lease.get("worktree", ""))).resolve()
-        expected_head = str(history.get("head_sha", ""))
-        merge_sha = str(history.get("merge_sha", ""))
-        canonical = self.repository.canonical_dev_worktree().path
-        if self.repository.current_worktree != canonical:
-            raise TaskSessionError("finish cleanup must run from the canonical dev worktree")
-        if worktree_path == canonical:
-            raise TaskSessionError("finish cleanup refuses to remove the canonical dev worktree")
-        expected_parent = (canonical / ".artifacts" / "worktrees").resolve()
+        expected_head = str(lease.get("ready_head_sha", ""))
+        deployed_sha = str(history.get("deployed_sha", ""))
+        root = self._canonical_root()
+        expected_parent = (root / ".artifacts" / "worktrees").resolve()
         if worktree_path.parent != expected_parent:
             raise TaskSessionError(
-                "finish cleanup worktree is outside the canonical task worktree directory"
+                "finish cleanup worktree is outside canonical task worktree directory"
             )
         if task_id_from_branch(branch) != expected:
-            raise TaskSessionError("finish cleanup branch does not match the task lease")
-        if not expected_head or expected_head != lease.get("ready_head_sha"):
-            raise TaskSessionError("finish cleanup head does not match integration-ready evidence")
-        if not merge_sha:
-            raise TaskSessionError("finish cleanup requires an exact integration merge SHA")
-
-        origin_dev = self.repository.ref("origin/dev")
-        origin_master = self.repository.ref("origin/master")
-        if origin_dev != origin_master:
-            raise TaskSessionError(
-                "finish cleanup requires exact deployed master -> dev sync: "
-                f"origin/dev {origin_dev} != origin/master {origin_master}"
-            )
-        if not self.repository.is_ancestor(merge_sha, origin_dev):
-            raise TaskSessionError(
-                "finish cleanup integration merge is not contained in synchronized origin/dev"
-            )
-
-        matching_branches = [
+            raise TaskSessionError("finish cleanup branch does not match task lease")
+        if not expected_head or not deployed_sha:
+            raise TaskSessionError("finish requires exact ready and deployed SHAs")
+        if self.repository.current_worktree != root:
+            raise TaskSessionError("finish cleanup must run from the canonical repository worktree")
+        if self.repository.ref("origin/master") != deployed_sha:
+            raise TaskSessionError("finish requires current origin/master at deployed SHA")
+        branches = [
             line.removeprefix("refs/heads/")
             for line in self.repository.git(
                 "for-each-ref", "--format=%(refname)", f"refs/heads/task/{expected}-*"
             ).splitlines()
             if line
         ]
-        matching_worktrees = [
+        matches = [
             item
             for item in self.repository.worktrees()
             if item.path == worktree_path
             or (item.branch and item.branch.startswith(f"task/{expected}-"))
         ]
-        if matching_branches != [branch] or len(matching_worktrees) != 1:
+        if branches != [branch] or len(matches) != 1 or matches[0].branch != branch:
             raise TaskSessionError(
-                "finish cleanup requires exactly one matching task branch and worktree"
+                "finish cleanup requires exactly one matching task branch/worktree"
             )
-        worktree = matching_worktrees[0]
-        if worktree.path != worktree_path or worktree.branch != branch:
-            raise TaskSessionError("finish cleanup worktree does not exactly match the task lease")
-        branch_head = self.repository.ref(branch)
-        if branch_head != expected_head or worktree.head != expected_head:
-            raise TaskSessionError("finish cleanup branch/worktree head changed after integration")
-
-        dirty = self.repository.status(worktree_path)
+        if self.repository.ref(branch) != expected_head or matches[0].head != expected_head:
+            raise TaskSessionError("finish cleanup branch/worktree head changed after readiness")
+        if self.repository.status(worktree_path):
+            raise TaskSessionError(f"finish cleanup refuses dirty task worktree {worktree_path}")
         operations = self.repository.operation_issues(worktree_path)
-        unique_commits = self.repository.unique_commits(branch)
-        if dirty:
-            raise TaskSessionError(
-                f"finish cleanup refuses dirty task worktree {worktree_path}: {dirty}"
-            )
         if operations:
             raise TaskSessionError(
-                f"finish cleanup refuses interrupted Git operation in {worktree_path}: {operations}"
+                f"finish cleanup refuses interrupted Git operation: {operations}"
             )
-        if unique_commits:
-            raise TaskSessionError(
-                f"finish cleanup refuses task branch with unique commits: {unique_commits}"
-            )
-
-        upstream = self.repository.upstream(branch)
-        if upstream is not None:
-            ahead, behind = self.repository.ahead_behind(branch, upstream)
-            if ahead or behind:
-                raise TaskSessionError(
-                    "finish cleanup refuses divergent task branch/upstream: "
-                    f"ahead={ahead}, behind={behind}"
-                )
-
+        if not self.repository.is_ancestor(expected_head, deployed_sha):
+            raise TaskSessionError("finish cleanup refuses task head absent from deployed master")
+        if self.repository.unique_commits(branch):
+            raise TaskSessionError("finish cleanup refuses task branch with unique commits")
+        artifact_cleanup: dict[str, Any] = {"status": "noop", "removed_count": 0}
         try:
             artifact_cleanup = ArtifactManager(
-                canonical / ".artifacts",
-                repo_root=canonical,
-                controller_state_dir=self.store.root,
-            ).cleanup_task(
-                expected,
-                terminal_state=str(lease["lifecycle_state"]),
-                exclude_prefixes=("temporary/delivery",),
-            )
+                root / ".artifacts", repo_root=root, controller_state_dir=self.store.root
+            ).cleanup_task(expected, terminal_state="finished")
         except ArtifactError as error:
             raise TaskSessionError(f"finish artifact cleanup failed closed: {error}") from error
-        if artifact_cleanup["status"] not in {"completed", "noop"} or artifact_cleanup.get(
+        if artifact_cleanup.get("status") not in {"completed", "noop"} or artifact_cleanup.get(
             "cleanup_errors"
         ):
-            errors = "; ".join(
-                f"{item.get('path', 'temporary')}: {item.get('reason', 'unknown error')}"
-                for item in artifact_cleanup.get("cleanup_errors", [])
-            )
-            raise TaskSessionError(
-                "finish artifact cleanup stopped fail-closed" + (f": {errors}" if errors else "")
-            )
-        artifact_cleanup["excluded_prefixes"] = ["temporary/delivery"]
-
+            raise TaskSessionError("finish artifact cleanup stopped fail-closed")
         self.repository.remove_worktree(worktree_path)
         if self.repository.ref(branch) != expected_head:
-            raise TaskSessionError(
-                "finish cleanup branch changed after worktree removal; local branch was preserved"
-            )
-        self.repository.delete_merged_branch(branch)
+            raise TaskSessionError("finish cleanup branch changed after worktree removal")
+        self.repository.delete_local_branch(branch)
         with self.store.lock():
             history["state"] = "finished"
             history["finished_at"] = utc_now()
-            history["cleanup"] = {
-                "worktree": str(worktree_path),
-                "branch": branch,
-                "performed_at": history["finished_at"],
-            }
+            history["cleanup"] = {"worktree": str(worktree_path), "branch": branch}
             history["artifact_cleanup"] = artifact_cleanup
             StateStore.replace_json(history_path, history)
             lease_path.unlink()
@@ -1644,110 +1337,8 @@ class TaskController:
             "deleted_local_branch": branch,
         }
 
-    def release_freeze(self, action: str, *, sha: str, session_label: str) -> dict[str, Any]:
-        path = self.store.mode_lease_path("release")
-        self.store.initialize()
-        if action == "start":
-            payload = {
-                "version": 1,
-                "task_id": "release",
-                "canonical_task_path": "release-lifecycle",
-                "branch": "dev",
-                "worktree": str(self._canonical_root()),
-                "base_origin_dev_sha": sha,
-                "mode": "release",
-                "created_at": utc_now(),
-                "updated_at": utc_now(),
-                "lifecycle_state": "release-freeze",
-                "session_label": session_label,
-            }
-            with self.store.lock():
-                if self.store.mode_lease_path("integration").exists():
-                    raise TaskSessionError("Cannot start release while integration lease is active")
-                self.store.create_json(path, payload)
-            return payload
-        if action != "finish":
-            raise TaskSessionError(f"Unknown release-freeze action: {action}")
-        payload = self.store.read_json(path)
-        if payload is None:
-            raise TaskSessionError("No active release lease")
-        if payload.get("base_origin_dev_sha") != sha:
-            raise TaskSessionError("Release finish SHA does not match lease")
-        with self.store.lock():
-            path.unlink()
-        return {"released": True, "sha": sha}
-
-
-def verify_dev_provenance(
-    repository: GitRepository,
-    github: GitHubClient,
-    *,
-    sha: str,
-    actor: str,
-    approved_recovery_sha: str,
-) -> dict[str, Any]:
-    associated = github.api(f"commits/{sha}/pulls")
-    master_sha = github.branch_head("master")
-    configured_actor = expected_sync_actor(repository.current_worktree)
-    successful_production_deployment = False
-    if sha == master_sha and actor == configured_actor:
-        successful_production_deployment = github.has_successful_deployment(sha, "production")
-    return classify_dev_provenance(
-        sha=sha,
-        master_sha=master_sha,
-        associated_pulls=associated,
-        sync_actor=actor,
-        expected_actor=configured_actor,
-        successful_production_deployment=successful_production_deployment,
-        approved_recovery_sha=approved_recovery_sha,
-    )
-
-
-def validate_pr_event(
-    repository: GitRepository, github: GitHubClient, event_path: Path
-) -> dict[str, Any]:
-    event = json.loads(event_path.read_text(encoding="utf-8"))
-    pull_request = event.get("pull_request")
-    if not isinstance(pull_request, dict):
-        return {"kind": "not-pull-request"}
-    base_ref = pull_request.get("base", {}).get("ref")
-    if base_ref == "master":
-        head_ref = str(pull_request.get("head", {}).get("ref", ""))
-        if head_ref == "dev":
-            return {"kind": "release-pr", "head_sha": pull_request["head"]["sha"]}
-        if head_ref.startswith(("hotfix/", "recovery/")) and str(
-            pull_request.get("title", "")
-        ).startswith("[Recovery approved]"):
-            return {
-                "kind": "owner-approved-exceptional-pr",
-                "head_ref": head_ref,
-                "head_sha": pull_request["head"]["sha"],
-            }
-        raise TaskSessionError(
-            "Normal release PR into master must have head dev; exceptional hotfix/recovery "
-            "requires an owner-approved branch and [Recovery approved] title"
-        )
-    if base_ref != "dev":
-        raise TaskSessionError(f"Unsupported pull request base: {base_ref}")
-    number = int(pull_request["number"])
-    commits = github.pull_request_commits(number)
-    files = github.pull_request_files(number)
-    task_id = validate_task_pull_request(
-        pull_request,
-        commits,
-        [],
-        expected_dev_sha=str(pull_request["base"]["sha"]),
-        require_checks=False,
-    )
-    validate_task_pull_request_files(
-        files, expected_count=int(pull_request.get("changed_files", len(files)))
-    )
-    return {"kind": "task-pr", "task_id": task_id, "head_sha": pull_request["head"]["sha"]}
-
 
 def archive_guard(backlog_root: Path, task_id: str) -> None:
-    """Require controller finalization when the new contract is active locally."""
-
     repository_root = next(
         (
             candidate
@@ -1758,17 +1349,19 @@ def archive_guard(backlog_root: Path, task_id: str) -> None:
     )
     if repository_root is None:
         return
-    git_marker = repository_root / ".git"
-    if git_marker.is_dir() and not (git_marker / STATE_DIRECTORY_NAME / "contract.json").exists():
-        return
-    repository = GitRepository(backlog_root)
-    store = StateStore(repository.common_dir)
+    common_dir = Path(
+        _run(
+            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+            cwd=repository_root,
+        ).stdout.strip()
+    ).resolve()
+    store = StateStore(common_dir)
     if not (store.root / "contract.json").exists():
         return
     history = store.read_json(store.history / f"task-{normalize_task_id(task_id)}.json")
     if history is None or history.get("state") != "finished":
         raise TaskSessionError(
-            f"Task {task_id} cannot be archived before controller finish and terminal dev CI"
+            f"Task {task_id} cannot be archived before controller finish and terminal production success"
         )
 
 
@@ -1781,26 +1374,21 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--github-repository")
     subparsers = parser.add_subparsers(dest="command", required=True)
-
     doctor = subparsers.add_parser("doctor")
     doctor.add_argument("--offline", action="store_true")
-
     subparsers.add_parser("status")
     subparsers.add_parser("validate-metadata")
-
     start = subparsers.add_parser("start")
     start.add_argument("task_id")
     start.add_argument("--owner-launch", action="store_true")
     start.add_argument("--session-label", required=True)
-    start.add_argument("--mode", choices=("write", "research-readonly"), default="write")
+    start.add_argument("--mode", choices=("write",), default="write")
     start.add_argument("--slug")
     start.add_argument("--offline", action="store_true")
-
     adopt = subparsers.add_parser("adopt-current")
     adopt.add_argument("task_id")
     adopt.add_argument("--owner-launch", action="store_true")
     adopt.add_argument("--session-label", required=True)
-
     ready = subparsers.add_parser("mark-ready")
     ready.add_argument("task_id")
     ready.add_argument("--head-sha", required=True)
@@ -1810,40 +1398,19 @@ def _parser() -> argparse.ArgumentParser:
         required=True,
     )
     ready.add_argument("--qa-verdict", choices=("PASS",), required=True)
-
+    production = subparsers.add_parser("complete-production")
+    production.add_argument("task_id")
+    production.add_argument("--pr", type=int, required=True)
+    production.add_argument("--merge-sha", required=True)
+    production.add_argument("--deployed-sha", required=True)
     recover = subparsers.add_parser("recover")
     recover.add_argument("task_id")
-
-    enqueue = subparsers.add_parser("enqueue-integration")
-    enqueue.add_argument("task_id")
-    enqueue.add_argument("--pr", type=int, required=True)
-
-    prepare = subparsers.add_parser("prepare-integration")
-    prepare.add_argument("task_id")
-
-    withdraw = subparsers.add_parser("withdraw-integration")
-    withdraw.add_argument("task_id")
-    withdraw.add_argument("--reason", required=True)
-
-    complete = subparsers.add_parser("complete-integration")
-    complete.add_argument("task_id")
-    complete.add_argument("--merge-sha", required=True)
-
     finish = subparsers.add_parser("finish")
     finish.add_argument("task_id")
-
-    freeze = subparsers.add_parser("release-freeze")
-    freeze.add_argument("action", choices=("start", "finish"))
-    freeze.add_argument("--sha", required=True)
-    freeze.add_argument("--session-label", default="integration-release")
-
     validate_pr = subparsers.add_parser("validate-pr")
     validate_pr.add_argument("--event", type=Path, required=True)
-
-    provenance = subparsers.add_parser("verify-dev-provenance")
-    provenance.add_argument("--sha", required=True)
-    provenance.add_argument("--actor", default="")
-    provenance.add_argument("--approved-recovery-sha", default="")
+    merge = subparsers.add_parser("verify-master-merge")
+    merge.add_argument("--sha", required=True)
     return parser
 
 
@@ -1879,9 +1446,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "adopt-current":
             _print(
                 controller.adopt_current(
-                    args.task_id,
-                    owner_launch=args.owner_launch,
-                    session_label=args.session_label,
+                    args.task_id, owner_launch=args.owner_launch, session_label=args.session_label
                 )
             )
             return 0
@@ -1895,44 +1460,27 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
             )
             return 0
+        if args.command == "complete-production":
+            _print(
+                controller.record_production_success(
+                    args.task_id,
+                    pr_number=args.pr,
+                    merge_sha=args.merge_sha,
+                    deployed_sha=args.deployed_sha,
+                )
+            )
+            return 0
         if args.command == "recover":
             _print(controller.recover(args.task_id))
-            return 0
-        if args.command == "enqueue-integration":
-            _print(controller.enqueue_integration(args.task_id, pr_number=args.pr))
-            return 0
-        if args.command == "prepare-integration":
-            _print(controller.prepare_integration(args.task_id))
-            return 0
-        if args.command == "withdraw-integration":
-            _print(controller.withdraw_integration(args.task_id, reason=args.reason))
-            return 0
-        if args.command == "complete-integration":
-            _print(controller.complete_integration(args.task_id, merge_sha=args.merge_sha))
             return 0
         if args.command == "finish":
             _print(controller.finish(args.task_id))
             return 0
-        if args.command == "release-freeze":
-            _print(
-                controller.release_freeze(
-                    args.action, sha=args.sha, session_label=args.session_label
-                )
-            )
-            return 0
         if args.command == "validate-pr":
             _print(validate_pr_event(repository, github, args.event))
             return 0
-        if args.command == "verify-dev-provenance":
-            _print(
-                verify_dev_provenance(
-                    repository,
-                    github,
-                    sha=args.sha,
-                    actor=args.actor,
-                    approved_recovery_sha=args.approved_recovery_sha,
-                )
-            )
+        if args.command == "verify-master-merge":
+            _print(verify_master_merge(repository, github, sha=args.sha))
             return 0
         raise AssertionError(f"Unhandled command: {args.command}")
     except (TaskSessionError, OSError, json.JSONDecodeError) as error:
