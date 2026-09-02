@@ -66,6 +66,19 @@ jobs:
       - name: Run shared quality group
         run: python scripts/ci_contract.py run-group quality
 
+  policy:
+    name: Delivery policy
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Run shared delivery policy group
+        run: python scripts/ci_contract.py run-group policy
+
   frontend:
     name: Frontend
     if: github.event_name == 'pull_request'
@@ -312,7 +325,7 @@ jobs:
     name: ${{ github.event_name == 'pull_request' && 'checks' || 'branch-checks' }}
     if: always()
     needs:
-      [task-provenance, merge-provenance, quality, frontend, frontend-smoke, python-tests, migrated-stack, dependency-audit, containers]
+      [task-provenance, merge-provenance, quality, policy, frontend, frontend-smoke, python-tests, migrated-stack, dependency-audit, containers]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -322,6 +335,7 @@ jobs:
           TASK_PROVENANCE_RESULT: ${{ needs.task-provenance.result }}
           MERGE_PROVENANCE_RESULT: ${{ needs.merge-provenance.result }}
           QUALITY_RESULT: ${{ needs.quality.result }}
+          POLICY_RESULT: ${{ needs.policy.result }}
           FRONTEND_RESULT: ${{ needs.frontend.result }}
           FRONTEND_SMOKE_RESULT: ${{ needs.frontend-smoke.result }}
           PYTHON_TESTS_RESULT: ${{ needs.python-tests.result }}
@@ -333,6 +347,7 @@ jobs:
           if [ "$EVENT_NAME" = pull_request ]; then
             test "$TASK_PROVENANCE_RESULT" = success
             test "$QUALITY_RESULT" = success
+            test "$POLICY_RESULT" = success
             test "$FRONTEND_RESULT" = success
             test "$FRONTEND_SMOKE_RESULT" = success
             test "$PYTHON_TESTS_RESULT" = success

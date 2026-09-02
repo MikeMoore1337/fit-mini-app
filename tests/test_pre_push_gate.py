@@ -16,6 +16,10 @@ def test_scope_classification_is_deterministic() -> None:
         pre_push_gate.classify_scope(["frontend/src/App.tsx", "backend/app.py"])["profile"]
         == "cross-stack"
     )
+    cross_stack = pre_push_gate.classify_scope(
+        ["frontend/src/App.tsx", "backend/app.py", ".github/workflows/ci.yml"]
+    )
+    assert {"policy", "workflow-config", "deployment-contract"} <= set(cross_stack["groups"])
 
 
 def test_scope_classification_is_conservative_for_unknown_files() -> None:

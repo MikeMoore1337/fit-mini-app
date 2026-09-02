@@ -40,6 +40,7 @@ def test_workflow_calls_group_entrypoint_instead_of_inline_command_copy() -> Non
     workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     for group in (
         "quality",
+        "policy",
         "frontend-checks",
         "frontend-e2e",
         "python-tests",
@@ -51,3 +52,8 @@ def test_workflow_calls_group_entrypoint_instead_of_inline_command_copy() -> Non
     assert "npm run typecheck" not in workflow
     assert "npm run e2e:ci" not in workflow
     assert "scripts/run_pytest.py backend/tests" not in workflow
+
+
+def test_cross_stack_profile_includes_delivery_policy_gates() -> None:
+    groups = set(ci_contract.PROFILE_GROUPS["cross-stack"])
+    assert {"policy", "workflow-config", "deployment-contract"} <= groups
