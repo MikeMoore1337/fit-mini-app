@@ -91,6 +91,10 @@ def _label(value: Any) -> str:
         "sufficient": "достаточно данных",
         "limited": "данные ограничены",
         "insufficient": "недостаточно данных",
+        "improving": "заметно выше в конце периода",
+        "declining": "заметно ниже в конце периода",
+        "stable": "без заметной разницы",
+        "insufficient_data": "недостаточно точек",
     }.get(str(value), str(value))
 
 
@@ -107,6 +111,26 @@ def _body_metric(metric: str) -> tuple[str, str]:
         "biceps_cm": ("Бицепс", " см"),
         "thigh_cm": ("Бедро", " см"),
     }.get(metric, (metric, ""))
+
+
+def _wellbeing_value(value: int, metric: str) -> str:
+    labels = {
+        "sleep": {
+            1: "Очень плохо",
+            2: "Плохо",
+            3: "Обычно",
+            4: "Хорошо",
+            5: "Отлично",
+        },
+        "mood": {
+            1: "Очень тяжело",
+            2: "Тяжеловато",
+            3: "Обычно",
+            4: "Хорошо",
+            5: "Отлично",
+        },
+    }
+    return labels.get(metric, {}).get(value, str(value))
 
 
 def build_progress_report_pdf(report: dict[str, Any]) -> bytes:
@@ -321,6 +345,37 @@ def build_progress_report_pdf(report: dict[str, Any]) -> bytes:
             )
         )
         story.extend([Spacer(1, 2 * mm), trend_table])
+
+    wellbeing = report.get("wellbeing")
+    if wellbeing:
+        story.extend(
+            [
+                Paragraph("Сон и настроение", heading),
+                Paragraph(
+                    f"Заполнено: {wellbeing['recorded_days']} из {wellbeing['eligible_days']} дней "
+                    f"({_number(wellbeing['coverage_percent'], '%')}). "
+                    "Показываются только фактические отметки; заметки в этот отчёт не входят.",
+                    body,
+                ),
+            ]
+        )
+        for key, title_text in (("sleep", "Качество сна"), ("mood", "Настроение")):
+            metric = wellbeing[key]
+            distribution = (
+                ", ".join(
+                    f"{_wellbeing_value(item['value'], key)}: {item['count']}"
+                    for item in metric["distribution"]
+                    if item["count"]
+                )
+                or "Нет отдельных отметок"
+            )
+            story.append(
+                Paragraph(
+                    f"<b>{_safe(title_text)}</b>: {distribution}. "
+                    f"Тренд: {_safe(_label(metric['trend']))}.",
+                    body,
+                )
+            )
 
     adherence = report["adherence"]
     story.extend(

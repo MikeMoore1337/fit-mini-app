@@ -38,6 +38,11 @@ export const queryKeys = {
   notifications: {
     all: ['notifications'] as const,
   },
+  wellbeing: {
+    all: ['daily-wellbeing'] as const,
+    daily: (userId: number | 'anonymous', localDate: string) =>
+      ['daily-wellbeing', userId, localDate] as const,
+  },
 };
 
 export async function invalidateMeasurementMutation(

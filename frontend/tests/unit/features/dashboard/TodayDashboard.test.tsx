@@ -269,6 +269,14 @@ function auxiliaryResponse(
       summary: {},
     });
   }
+  if (path.startsWith('/api/v1/check-ins/daily?')) {
+    return Promise.resolve({
+      local_date: '2030-01-10',
+      today: '2030-01-10',
+      timezone: 'Europe/Moscow',
+      record: null,
+    });
+  }
   if (/\/api\/v1\/workouts\/\d+\/comments$/.test(path)) {
     return Promise.resolve(options.comments ?? []);
   }
@@ -330,6 +338,7 @@ describe('TodayDashboard', () => {
     expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeInTheDocument();
     expect(screen.getByText('Записей за день пока нет')).toBeInTheDocument();
     expect(screen.getByText(/последний вес 68,4 кг/)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Добавить отметку' })).toBeVisible();
     expect(screen.queryByText('84%')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Начать тренировку' }));

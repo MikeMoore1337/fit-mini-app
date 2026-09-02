@@ -11,6 +11,7 @@ from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, L
 from fitminiapp_api.models.billing import Payment, Subscription
 from fitminiapp_api.models.cardio import CardioSession
 from fitminiapp_api.models.check_in import WeeklyCheckIn
+from fitminiapp_api.models.daily_wellbeing import DailyWellbeingCheckIn
 from fitminiapp_api.models.exercise import (
     Exercise,
     ExerciseAlternative,
@@ -293,6 +294,9 @@ def delete_user_cascade(db: Session, user: User) -> None:
         synchronize_session=False
     )
     db.query(WeeklyCheckIn).filter(WeeklyCheckIn.user_id == user.id).delete(
+        synchronize_session=False
+    )
+    db.query(DailyWellbeingCheckIn).filter(DailyWellbeingCheckIn.user_id == user.id).delete(
         synchronize_session=False
     )
     db.query(NutritionTarget).filter(NutritionTarget.user_id == user.id).delete(

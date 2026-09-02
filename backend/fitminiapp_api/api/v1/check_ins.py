@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.api.dependencies.auth import require_user
+from fitminiapp_api.core.timezone import today_for_user
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.user import User
 from fitminiapp_api.schemas.check_in import (
@@ -9,6 +12,19 @@ from fitminiapp_api.schemas.check_in import (
     WeeklyCheckInHistoryResponse,
     WeeklyCheckInResponse,
     WeeklyCheckInSubmitRequest,
+)
+from fitminiapp_api.schemas.daily_wellbeing import (
+    DailyWellbeingCheckInResponse,
+    DailyWellbeingCheckInSaveRequest,
+    DailyWellbeingCurrentResponse,
+)
+from fitminiapp_api.services.daily_wellbeing import (
+    DailyWellbeingConflictError,
+    DailyWellbeingValidationError,
+    delete_daily_wellbeing,
+    get_daily_wellbeing,
+    save_daily_wellbeing,
+    serialize_daily_wellbeing,
 )
 from fitminiapp_api.services.weekly_check_ins import (
     WeeklyCheckInConflictError,
@@ -19,6 +35,51 @@ from fitminiapp_api.services.weekly_check_ins import (
 )
 
 router = APIRouter()
+
+
+@router.get("/daily", response_model=DailyWellbeingCurrentResponse)
+def current_daily_wellbeing(
+    local_date: date | None = Query(default=None),
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    requested_date = local_date or today_for_user(current_user)
+    try:
+        return get_daily_wellbeing(db, current_user, requested_date)
+    except DailyWellbeingValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.put(
+    "/daily/{local_date}",
+    response_model=DailyWellbeingCheckInResponse,
+)
+def update_daily_wellbeing(
+    local_date: date,
+    payload: DailyWellbeingCheckInSaveRequest,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        row = save_daily_wellbeing(db, current_user, local_date, payload)
+    except DailyWellbeingValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DailyWellbeingConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return serialize_daily_wellbeing(row)
+
+
+@router.delete("/daily/{local_date}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_daily_wellbeing(
+    local_date: date,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        delete_daily_wellbeing(db, current_user, local_date)
+    except DailyWellbeingValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/weekly/current", response_model=WeeklyCheckInCurrentResponse)

@@ -94,6 +94,7 @@ def test_export_job_is_current_user_only_zip_and_replaces_previous_artifact(clie
     with zipfile.ZipFile(io.BytesIO(downloaded.content)) as archive:
         assert set(archive.namelist()) == {
             "account.json",
+            "daily-wellbeing-check-ins.csv",
             "food-diary.csv",
             "manifest.json",
             "measurements.csv",

@@ -3108,6 +3108,390 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
   }
 }
 
+/* Task 82: optional daily wellbeing, with facts kept separate from interpretation. */
+.daily-wellbeing-card {
+  min-width: 0;
+}
+
+.daily-wellbeing-card--saved {
+  margin-top: 0;
+}
+
+.daily-wellbeing-card--state {
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+}
+
+.daily-wellbeing-card--state .empty-state {
+  min-height: 168px;
+}
+
+.daily-wellbeing-card.semantic-card--section {
+  display: grid;
+  gap: var(--v2-space-4);
+  padding: var(--v2-space-4);
+  border: 1px solid color-mix(in srgb, var(--semantic-line) 72%, var(--v2-border));
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+}
+
+.daily-wellbeing-card.card-disclosure {
+  display: block;
+  padding: 0;
+}
+
+.daily-wellbeing-card.card-disclosure > summary {
+  padding: var(--v2-space-4);
+}
+
+.daily-wellbeing-card.card-disclosure > summary h2 {
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+}
+
+.daily-wellbeing-card.card-disclosure > summary .semantic-card__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--v2-space-2);
+}
+
+.app-section--design-v2 .daily-wellbeing-card.card-disclosure > .card-disclosure__body {
+  margin-inline: 0;
+  padding: var(--v2-space-4);
+  background: transparent;
+  color: inherit;
+}
+
+.daily-wellbeing-card.card-disclosure[open]::before {
+  inset: -76px -48px auto auto;
+  width: clamp(190px, 54vw, 250px);
+}
+
+.daily-wellbeing__actions,
+.daily-wellbeing__saved-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--v2-space-2);
+}
+
+.daily-wellbeing__context {
+  margin: 0;
+  color: var(--v2-text-secondary);
+  max-width: 62ch;
+  line-height: 1.5;
+}
+
+.daily-wellbeing__hint,
+.daily-wellbeing__offline,
+.daily-wellbeing__inline-error {
+  color: var(--v2-text-secondary);
+}
+
+.daily-wellbeing__form {
+  display: grid;
+  gap: var(--v2-space-4);
+}
+
+.daily-wellbeing__form > .ui-field {
+  max-width: 28rem;
+}
+
+.daily-wellbeing__options {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.daily-wellbeing__options legend {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: var(--v2-space-2);
+  padding: 0;
+  color: var(--v2-text-primary);
+  font-weight: 750;
+}
+
+.daily-wellbeing__options legend small,
+.daily-wellbeing__note summary small {
+  color: var(--v2-text-secondary);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+.daily-wellbeing__option-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.daily-wellbeing__option {
+  position: relative;
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+  text-align: center;
+  cursor: pointer;
+}
+
+.daily-wellbeing__option input {
+  width: 18px;
+  height: 18px;
+  margin: 0 6px 0 0;
+  accent-color: var(--v2-lime);
+}
+
+.daily-wellbeing__option:has(input:checked) {
+  border-color: var(--semantic-line);
+  background: color-mix(in srgb, var(--semantic-tint) 76%, var(--v2-surface));
+  box-shadow: inset 0 -3px var(--semantic-accent);
+}
+
+.daily-wellbeing__option:has(input:focus-visible) {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.daily-wellbeing__note {
+  border-block: 1px solid var(--v2-border);
+}
+
+.daily-wellbeing__note summary {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 6px;
+  color: var(--v2-text-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.daily-wellbeing__note .ui-field {
+  max-width: 42rem;
+  padding: 0 0 var(--v2-space-3);
+}
+
+.daily-wellbeing__offline,
+.daily-wellbeing__inline-error,
+.daily-wellbeing__hint {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--v2-border);
+  background: var(--v2-surface-secondary);
+}
+
+.daily-wellbeing__offline {
+  border-left-color: var(--v2-accent-text);
+}
+
+.daily-wellbeing__inline-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--v2-space-2);
+  border-left-color: var(--v2-danger);
+  background: var(--v2-danger-surface);
+}
+
+.daily-wellbeing__inline-error .ui-button {
+  flex: 0 0 auto;
+}
+
+.daily-wellbeing__actions {
+  flex-wrap: wrap;
+}
+
+.daily-wellbeing__actions .ui-button {
+  min-height: 44px;
+}
+
+.daily-wellbeing__saved-meta {
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+}
+
+.progress-report-section--wellbeing > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--v2-space-4);
+}
+
+.progress-report-section--wellbeing > header > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.progress-report-section--wellbeing > header :where(h2, p) {
+  margin: 0;
+}
+
+.progress-report-wellbeing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--v2-space-3);
+  margin-block: var(--v2-space-4);
+}
+
+.progress-report-wellbeing-metric {
+  min-width: 0;
+  padding: var(--v2-space-3);
+  border: 1px solid var(--v2-border);
+  border-left: 3px solid var(--semantic-wellbeing-line);
+  background: var(--v2-surface-secondary);
+}
+
+.progress-report-wellbeing-metric > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--v2-space-2);
+  margin-bottom: var(--v2-space-3);
+}
+
+.progress-report-wellbeing-metric :where(h3, p) {
+  margin: 0;
+}
+
+.progress-report-wellbeing-metric h3 {
+  font-size: 1rem;
+}
+
+.progress-report-wellbeing-metric p,
+.progress-report-wellbeing-metric > header > span {
+  color: var(--v2-text-secondary);
+  font-size: 0.78rem;
+}
+
+.progress-report-wellbeing-metric > header > span {
+  max-width: 15ch;
+  text-align: right;
+}
+
+.progress-report-wellbeing-metric ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progress-report-wellbeing-metric li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(70px, 1.2fr) 2ch;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+
+.progress-report-wellbeing-metric__bar {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--v2-surface-strong);
+}
+
+.progress-report-wellbeing-metric__bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--semantic-wellbeing-accent);
+}
+
+.progress-report-wellbeing-metric li strong {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.progress-report-wellbeing-days {
+  border-block: 1px solid var(--v2-border);
+}
+
+.progress-report-wellbeing-days summary {
+  min-height: 48px;
+  padding-block: 12px;
+  color: var(--v2-text-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.progress-report-wellbeing-days__table-wrap {
+  overflow-x: auto;
+  padding-bottom: var(--v2-space-3);
+}
+
+.progress-report-wellbeing-days table {
+  min-width: 620px;
+}
+
+@media (max-width: 640px) {
+  .progress-report-section--wellbeing > header {
+    display: grid;
+  }
+
+  .daily-wellbeing__option-grid,
+  .progress-report-wellbeing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .daily-wellbeing__option {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .progress-report-wellbeing-metric > header {
+    display: grid;
+  }
+
+  .progress-report-wellbeing-metric > header > span {
+    max-width: none;
+    text-align: left;
+  }
+}
+
+@media (max-width: 899px) {
+  /* A long inline form gets the viewport while the persistent dock stays available elsewhere. */
+  body:has(.app-shell--design-v2 #appBottomNav):has(.daily-wellbeing-card.card-disclosure[open]) {
+    padding-bottom: max(18px, var(--yfc-layout-safe-bottom));
+  }
+
+  body:has(.daily-wellbeing-card.card-disclosure[open]) .app-shell--design-v2 .app-bottom-nav {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+@media print {
+  .daily-wellbeing-card,
+  .progress-report-section--wellbeing {
+    border-color: #d9ded2 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .progress-report-section--wellbeing {
+    break-inside: avoid;
+  }
+
+  .progress-report-wellbeing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .progress-report-wellbeing-days__table-wrap {
+    overflow: visible;
+  }
+}
+
 /* Design V2.1 shared Mobile Web/TMA viewport and safe-area contract. */
 :root {
   --yfc-viewport-height: 100dvh;

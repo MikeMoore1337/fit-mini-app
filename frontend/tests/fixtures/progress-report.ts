@@ -336,5 +336,88 @@ export function makeProgressReportFixture(state: ReportState = 'full'): Progress
           },
         ]
       : [],
+    wellbeing: populated
+      ? {
+          period_start: '2026-07-26',
+          period_end: '2026-08-24',
+          eligible_days: 30,
+          recorded_days: full ? 6 : 2,
+          coverage_percent: full ? 20 : 6.7,
+          sleep: {
+            recorded_days: full ? 5 : 2,
+            distribution: [
+              { value: 1, count: 0 },
+              { value: 2, count: full ? 1 : 0 },
+              { value: 3, count: full ? 1 : 1 },
+              { value: 4, count: full ? 2 : 1 },
+              { value: 5, count: full ? 1 : 0 },
+            ],
+            trend: full ? 'improving' : 'insufficient_data',
+          },
+          mood: {
+            recorded_days: full ? 5 : 2,
+            distribution: [
+              { value: 1, count: 0 },
+              { value: 2, count: full ? 1 : 0 },
+              { value: 3, count: full ? 2 : 2 },
+              { value: 4, count: full ? 1 : 0 },
+              { value: 5, count: full ? 1 : 0 },
+            ],
+            trend: full ? 'stable' : 'insufficient_data',
+          },
+          daily: [
+            {
+              local_date: '2026-08-19',
+              sleep_quality: 3,
+              sleep_duration_minutes: 390,
+              mood: 3,
+              source: 'manual',
+            },
+            ...(full
+              ? [
+                  {
+                    local_date: '2026-08-20',
+                    sleep_quality: null,
+                    sleep_duration_minutes: 420,
+                    mood: null,
+                    source: 'manual' as const,
+                  },
+                ]
+              : []),
+            {
+              local_date: '2026-08-21',
+              sleep_quality: 4,
+              sleep_duration_minutes: 450,
+              mood: 4,
+              source: 'manual',
+            },
+            ...(full
+              ? [
+                  {
+                    local_date: '2026-08-22',
+                    sleep_quality: 4,
+                    sleep_duration_minutes: 420,
+                    mood: 3,
+                    source: 'manual' as const,
+                  },
+                  {
+                    local_date: '2026-08-23',
+                    sleep_quality: 5,
+                    sleep_duration_minutes: 480,
+                    mood: 5,
+                    source: 'manual' as const,
+                  },
+                  {
+                    local_date: '2026-08-24',
+                    sleep_quality: 4,
+                    sleep_duration_minutes: 420,
+                    mood: 3,
+                    source: 'manual' as const,
+                  },
+                ]
+              : []),
+          ],
+        }
+      : null,
   };
 }
