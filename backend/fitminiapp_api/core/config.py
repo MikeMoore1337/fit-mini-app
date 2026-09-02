@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(gt=0, le=24 * 60)
     refresh_token_expire_days: int = Field(gt=0, le=365)
     refresh_cookie_name: str = "fit_refresh_token"
+    oauth_session_cookie_name: str = "fit_oauth_session"
+    oauth_transaction_ttl_seconds: int = Field(default=600, ge=60, le=3600)
 
     database_url: str
     db_pool_size: int = Field(default=10, ge=1, le=100)

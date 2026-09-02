@@ -36,6 +36,7 @@ from fitminiapp_api.models.news import (
 )
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
+from fitminiapp_api.models.oauth_transaction import OAuthTransaction
 from fitminiapp_api.models.program import (
     HiddenProgramTemplate,
     ProgramRevision,
@@ -113,6 +114,7 @@ __all__ = [
     "Notification",
     "NotificationSetting",
     "NutritionTarget",
+    "OAuthTransaction",
     "Payment",
     "Plan",
     "ProgramRevision",

@@ -15,6 +15,7 @@ AUTH_ERROR_CODES = frozenset(
         "provider_failure",
     }
 )
+OAUTH_PROVIDERS = frozenset({"telegram", "google", "yandex", "vk", "apple"})
 
 
 def safe_auth_next_path(value: str | None) -> str | None:
