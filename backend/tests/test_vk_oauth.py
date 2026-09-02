@@ -78,7 +78,7 @@ def _start_vk(client, path: str = "/api/v1/auth/oauth/vk/start") -> str:
     query = parse_qs(authorization_url.query)
     assert query["client_id"] == ["vk-client"]
     assert query["scope"] == ["email"]
-    assert query["code_challenge_method"] == ["s256"]
+    assert query["code_challenge_method"] == ["S256"]
     assert len(query["code_challenge"][0]) == 43
     return query["state"][0]
 
@@ -168,7 +168,9 @@ def test_vk_oauth_rejects_callback_with_wrong_state_without_network_call(client,
     callback = _finish_vk(client, "attacker-state")
 
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/login?next=%2Fapp&auth_error=invalid_state"
+    assert callback.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=invalid_state&oauth_provider=vk"
+    )
     assert requests == []
 
 
@@ -223,7 +225,9 @@ def test_vk_oauth_rejects_missing_device_without_network_call(client, monkeypatc
     )
 
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/login?next=%2Fapp&auth_error=provider_failure"
+    assert callback.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=provider_failure&oauth_provider=vk"
+    )
     assert requests == []
 
 
@@ -249,7 +253,9 @@ def test_vk_oauth_rejects_conflicting_flat_and_payload_state(client, monkeypatch
     )
 
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/login?next=%2Fapp&auth_error=invalid_state"
+    assert callback.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=invalid_state&oauth_provider=vk"
+    )
     assert requests == []
 
 
@@ -262,7 +268,9 @@ def test_vk_oauth_rejects_mismatched_token_state(client, monkeypatch):
     callback = _finish_vk(client, state)
 
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/login?next=%2Fapp&auth_error=invalid_state"
+    assert callback.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=invalid_state&oauth_provider=vk"
+    )
     assert [request.url.path for request in requests] == ["/oauth2/auth"]
 
 
@@ -270,14 +278,16 @@ def test_vk_oauth_json_payload_cancel_is_normalized(client, monkeypatch):
     monkeypatch.setattr(settings, "enable_web_auth", True)
     monkeypatch.setattr(settings, "vk_oauth_client_id", "vk-client")
     requests = _vk_transport(monkeypatch)
-    _start_vk(client)
+    state = _start_vk(client)
 
     callback = client.get(
         "/api/v1/auth/oauth/vk/callback",
-        params={"payload": json.dumps({"error": "access_denied"})},
+        params={"payload": json.dumps({"error": "access_denied", "state": state})},
         follow_redirects=False,
     )
 
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/login?next=%2Fapp&auth_error=denied"
+    assert callback.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=denied&oauth_provider=vk"
+    )
     assert requests == []

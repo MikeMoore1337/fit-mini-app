@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 import httpx
 import pytest
@@ -102,15 +103,38 @@ def test_telegram_tunnel_failure_is_controlled_and_retryable(client, monkeypatch
     leaked_proxy = "socks5://proxy-user:proxy-password@telegram-proxy.test:1081"
 
     class UnavailableTunnelClient:
-        async def authorize_redirect(self, request, redirect_uri):
-            del request, redirect_uri
+        async def create_authorization_url(self, redirect_uri):
+            del redirect_uri
             raise httpx.ConnectError(f"tunnel unavailable: {leaked_proxy}")
 
         async def authorize_access_token(self, request):
             del request
             raise httpx.ProxyError(f"tunnel unavailable: {leaked_proxy}")
 
+    class CallbackFailureClient:
+        async def create_authorization_url(self, redirect_uri):
+            state = "telegram-callback-failure-state"
+            return {
+                "url": f"https://telegram.example/authorize?state={state}",
+                "state": state,
+                "code_verifier": "telegram-callback-failure-verifier",
+                "redirect_uri": redirect_uri,
+            }
+
+        async def authorize_access_token(self, request):
+            del request
+            raise httpx.ProxyError(f"tunnel unavailable: {leaked_proxy}")
+
     class RecoveredTunnelClient:
+        async def create_authorization_url(self, redirect_uri):
+            state = "telegram-recovered-state"
+            return {
+                "url": f"https://telegram.example/authorize?state={state}",
+                "state": state,
+                "code_verifier": "telegram-recovered-verifier",
+                "redirect_uri": redirect_uri,
+            }
+
         async def authorize_access_token(self, request):
             del request
             return {
@@ -138,9 +162,13 @@ def test_telegram_tunnel_failure_is_controlled_and_retryable(client, monkeypatch
     failed = client.get("/api/v1/auth/oauth/telegram/callback", follow_redirects=False)
 
     assert started.status_code == 303
-    assert started.headers["location"] == "/login?next=%2Fapp&auth_error=unavailable"
+    assert started.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=unavailable&oauth_provider=telegram"
+    )
     assert failed.status_code == 303
-    assert failed.headers["location"] == "/login?next=%2Fapp&auth_error=provider_failure"
+    assert failed.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=invalid_state&oauth_provider=telegram"
+    )
     assert settings.refresh_cookie_name not in failed.headers.get("set-cookie", "")
     assert leaked_proxy not in caplog.text
     assert "proxy-password" not in caplog.text
@@ -154,9 +182,37 @@ def test_telegram_tunnel_failure_is_controlled_and_retryable(client, monkeypatch
     monkeypatch.setattr(
         auth_api,
         "configured_oauth_client",
+        lambda provider: CallbackFailureClient() if provider == "telegram" else None,
+    )
+    started = client.get("/api/v1/auth/oauth/telegram/start", follow_redirects=False)
+    state = parse_qs(urlparse(started.headers["location"]).query)["state"][0]
+    failed = client.get(
+        "/api/v1/auth/oauth/telegram/callback",
+        params={"code": "telegram-code", "state": state},
+        follow_redirects=False,
+    )
+
+    assert started.status_code == 302
+    assert failed.status_code == 303
+    assert failed.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=provider_failure&oauth_provider=telegram"
+    )
+    assert settings.refresh_cookie_name not in failed.headers.get("set-cookie", "")
+    assert leaked_proxy not in caplog.text
+    assert "proxy-password" not in caplog.text
+
+    monkeypatch.setattr(
+        auth_api,
+        "configured_oauth_client",
         lambda provider: RecoveredTunnelClient() if provider == "telegram" else None,
     )
-    recovered = client.get("/api/v1/auth/oauth/telegram/callback", follow_redirects=False)
+    started = client.get("/api/v1/auth/oauth/telegram/start", follow_redirects=False)
+    state = parse_qs(urlparse(started.headers["location"]).query)["state"][0]
+    recovered = client.get(
+        "/api/v1/auth/oauth/telegram/callback",
+        params={"code": "telegram-code", "state": state},
+        follow_redirects=False,
+    )
 
     assert recovered.status_code == 303
     assert recovered.headers["location"] == "/app"

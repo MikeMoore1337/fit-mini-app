@@ -27,10 +27,36 @@ def safe_auth_next_path(value: str | None) -> str | None:
     return None
 
 
-def auth_error_redirect(code: str, *, next_path: str | None = None) -> str:
+def _link_error_code(code: str) -> str:
+    return {
+        "conflict": "oauth_link_conflict",
+        "invalid_state": "oauth_link_invalid_state",
+        "denied": "oauth_link_denied",
+        "provider_failure": "oauth_link_provider_failure",
+        "unavailable": "oauth_link_unavailable",
+        "blocked": "oauth_link_blocked",
+    }.get(code, "oauth_link_provider_failure")
+
+
+def auth_error_redirect(
+    code: str,
+    *,
+    next_path: str | None = None,
+    provider: str | None = None,
+    link: bool = False,
+) -> str:
     normalized_code = code if code in AUTH_ERROR_CODES else "provider_failure"
-    target = safe_auth_next_path(next_path) or "/app"
-    return f"/login?{urlencode({'next': target, 'auth_error': normalized_code})}"
+    params = {
+        "auth_error": _link_error_code(normalized_code) if link else normalized_code,
+    }
+    if provider in OAUTH_PROVIDERS:
+        params["oauth_provider"] = provider
+    if not link:
+        params = {
+            "next": safe_auth_next_path(next_path) or "/app",
+            **params,
+        }
+    return f"/{'app' if link else 'login'}?{urlencode(params)}"
 
 
 def account_link_error_redirect(code: str) -> str:
