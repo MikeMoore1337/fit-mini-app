@@ -30,6 +30,7 @@ import { Badge, Button, SemanticArtwork, SemanticCard, Skeleton } from '../../sh
 import { Icon } from '../../shared/ui/Icon';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { CardioQuickLog } from '../cardio/CardioLogging';
+import { DailyWellbeingCheckIn } from '../wellbeing/DailyWellbeingCheckIn';
 import {
   TRAINING_WEEK_LEGEND,
   WeekStrip,
@@ -640,7 +641,13 @@ function useCalendarDay(timeZone: string): string {
   return day;
 }
 
-export function TodayDashboard() {
+export function TodayDashboard({
+  initialWellbeingDate,
+  initialWellbeingOpen = false,
+}: {
+  initialWellbeingDate?: string;
+  initialWellbeingOpen?: boolean;
+} = {}) {
   const { user } = useAuth();
   const { toast } = useFeedback();
   const queryClient = useQueryClient();
@@ -941,6 +948,17 @@ export function TodayDashboard() {
         <div className="today-dashboard__facts">
           <NutritionSummary date={selectedDate} />
           <ProgressSummaryPanel summary={progress} />
+          {user && (
+            <DailyWellbeingCheckIn
+              autoFocus={initialWellbeingOpen}
+              initialDate={initialWellbeingDate || selectedDate}
+              key={`${user.id}:${initialWellbeingDate || selectedDate}:${
+                initialWellbeingOpen ? 'open' : 'closed'
+              }`}
+              timeZone={timeZone}
+              userId={user.id}
+            />
+          )}
         </div>
       </div>
 

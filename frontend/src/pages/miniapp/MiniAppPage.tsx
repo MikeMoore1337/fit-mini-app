@@ -99,6 +99,11 @@ function requestedNutritionDate(search: string): string | undefined {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
 }
 
+function requestedWellbeingDate(search: string): string | undefined {
+  const value = new URLSearchParams(search).get('wellbeing_date');
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
+}
+
 function requestedProgramStart(search: string): 'create' | 'templates' | null {
   const value = new URLSearchParams(search).get('start');
   return value === 'create' || value === 'templates' ? value : null;
@@ -183,6 +188,8 @@ export default function MiniAppPage() {
   const historicalProgramWorkout = requestedHistoricalProgramWorkout(search);
   const workoutReturnPath = requestedFeedback ? focusedContextReturn(search) : null;
   const focusWeeklyReview = new URLSearchParams(search).get('weekly_review') === '1';
+  const focusDailyWellbeing = new URLSearchParams(search).get('wellbeing') === '1';
+  const dailyWellbeingDate = requestedWellbeingDate(search);
   const [focusedWorkout, setFocusedWorkout] = useState<{
     id: number;
     target: WorkoutNavigationTarget;
@@ -319,7 +326,12 @@ export default function MiniAppPage() {
               </p>
             }
           >
-            {section === 'today' && <TodayDashboard />}
+            {section === 'today' && (
+              <TodayDashboard
+                initialWellbeingDate={dailyWellbeingDate}
+                initialWellbeingOpen={focusDailyWellbeing}
+              />
+            )}
             {section === 'progress' && (
               <>
                 {workoutReturnPath?.includes('section=programs') && (

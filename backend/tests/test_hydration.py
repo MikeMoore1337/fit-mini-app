@@ -12,7 +12,10 @@ from fitminiapp_api.models.hydration import HydrationEntry, HydrationGoal, Hydra
 from fitminiapp_api.models.user import User
 from fitminiapp_api.schemas.hydration import HydrationEntryCreate, HydrationGoalSave
 from fitminiapp_api.services import hydration as hydration_service
-from fitminiapp_api.services.account_export import build_account_export
+from fitminiapp_api.services.account_export import (
+    ACCOUNT_EXPORT_SCHEMA_VERSION,
+    build_account_export,
+)
 
 
 def _auth(client, telegram_user_id: int) -> dict[str, str]:
@@ -315,7 +318,7 @@ def test_hydration_is_exported_and_removed_with_account(client) -> None:
         user = db.query(User).filter(User.telegram_user_id == telegram_user_id).one()
         user_id = user.id
         exported = build_account_export(db, user)
-        assert exported["schema_version"] == 6
+        assert exported["schema_version"] == ACCOUNT_EXPORT_SCHEMA_VERSION
         assert exported["hydration"]["entries"][0]["volume_ml"] == 420
         assert exported["hydration"]["goals"][0]["target_ml"] == 1800
         assert exported["hydration"]["presets"][0]["label"] == "Термокружка"

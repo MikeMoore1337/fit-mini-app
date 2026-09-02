@@ -10,6 +10,7 @@ from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.auth_identity import AuthIdentity, LocalCredential
 from fitminiapp_api.models.cardio import CardioSession
 from fitminiapp_api.models.check_in import WeeklyCheckIn
+from fitminiapp_api.models.daily_wellbeing import DailyWellbeingCheckIn
 from fitminiapp_api.models.exercise import (
     Exercise,
     ExerciseAlternative,
@@ -51,7 +52,7 @@ if TYPE_CHECKING:
     from fitminiapp_api.models.recipe import RecipeIngredient
 
 
-ACCOUNT_EXPORT_SCHEMA_VERSION = 6
+ACCOUNT_EXPORT_SCHEMA_VERSION = 7
 
 # Every ORM table whose rows can be reached from users through ownership or actor FKs must be
 # classified here. Tests compare this inventory with SQLAlchemy metadata so a new persistent user
@@ -70,6 +71,7 @@ ACCOUNT_EXPORT_DATA_INVENTORY: dict[str, str] = {
     "hydration_presets": "hydration",
     "energy_calibrations": "energy_calibrations",
     "weekly_check_ins": "weekly_check_ins",
+    "daily_wellbeing_check_ins": "daily_wellbeing_check_ins",
     "foods": "private_foods",
     "food_favorites": "food_favorites",
     "recipes": "recipes",
@@ -237,6 +239,19 @@ WEEKLY_CHECK_IN_FIELDS = (
     "adherence_difficulty",
     "note",
     "created_at",
+)
+
+DAILY_WELLBEING_FIELDS = (
+    "id",
+    "local_date",
+    "timezone_at_entry",
+    "sleep_quality",
+    "sleep_duration_minutes",
+    "mood",
+    "note",
+    "source",
+    "created_at",
+    "updated_at",
 )
 
 MEASUREMENT_FIELDS = (
@@ -524,6 +539,12 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
         .order_by(WeeklyCheckIn.week_start.asc(), WeeklyCheckIn.id.asc())
         .all()
     )
+    daily_wellbeing_check_ins = (
+        db.query(DailyWellbeingCheckIn)
+        .filter(DailyWellbeingCheckIn.user_id == user.id)
+        .order_by(DailyWellbeingCheckIn.local_date.asc(), DailyWellbeingCheckIn.id.asc())
+        .all()
+    )
     auth_identities = (
         db.query(AuthIdentity)
         .filter(AuthIdentity.user_id == user.id)
@@ -808,6 +829,9 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
             _fields(row, ENERGY_CALIBRATION_FIELDS) for row in energy_calibrations
         ],
         "weekly_check_ins": [_fields(row, WEEKLY_CHECK_IN_FIELDS) for row in weekly_check_ins],
+        "daily_wellbeing_check_ins": [
+            _fields(row, DAILY_WELLBEING_FIELDS) for row in daily_wellbeing_check_ins
+        ],
         "measurements": [_fields(row, MEASUREMENT_FIELDS) for row in measurements],
         "cardio_sessions": [
             _fields(

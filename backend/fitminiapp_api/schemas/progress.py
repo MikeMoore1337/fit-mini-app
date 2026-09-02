@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from fitminiapp_api.schemas.daily_wellbeing import DailyWellbeingReport
 from fitminiapp_api.schemas.data_quality import ProgressDataSufficiency
 from fitminiapp_api.schemas.user import BodyPriorityPreference
 
@@ -350,6 +351,7 @@ class ProgressReportResponse(BaseModel):
     data_sufficiency: ProgressDataSufficiency
     program: ProgressReportProgram | None = None
     check_ins: list[ProgressReportCheckIn]
+    wellbeing: DailyWellbeingReport | None = None
 
 
 class ProgressReportDownloadLinkResponse(BaseModel):

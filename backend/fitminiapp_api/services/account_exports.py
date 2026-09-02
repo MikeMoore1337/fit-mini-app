@@ -219,6 +219,21 @@ def build_account_export_archive(db: Session, user: User) -> tuple[bytes, str]:
                 "created_at",
             ),
         ),
+        "daily-wellbeing-check-ins.csv": _csv_bytes(
+            _rows(payload.get("daily_wellbeing_check_ins")),
+            (
+                "id",
+                "local_date",
+                "timezone_at_entry",
+                "sleep_quality",
+                "sleep_duration_minutes",
+                "mood",
+                "note",
+                "source",
+                "created_at",
+                "updated_at",
+            ),
+        ),
         "food-diary.csv": _csv_bytes(
             _rows(payload.get("food_diary_entries")),
             (

@@ -1810,6 +1810,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/check-ins/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Current Daily Wellbeing */
+        get: operations["current_daily_wellbeing_api_v1_check_ins_daily_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/check-ins/daily/{local_date}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Daily Wellbeing */
+        put: operations["update_daily_wellbeing_api_v1_check_ins_daily__local_date__put"];
+        post?: never;
+        /** Remove Daily Wellbeing */
+        delete: operations["remove_daily_wellbeing_api_v1_check_ins_daily__local_date__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/check-ins/weekly/current": {
         parameters: {
             query?: never;
@@ -4197,6 +4232,131 @@ export interface components {
             superset_order?: number | null;
             /** Reason */
             reason?: string | null;
+        };
+        /** DailyWellbeingCheckInResponse */
+        DailyWellbeingCheckInResponse: {
+            /** Id */
+            id: number;
+            /** User Id */
+            user_id: number;
+            /**
+             * Local Date
+             * Format: date
+             */
+            local_date: string;
+            /** Timezone At Entry */
+            timezone_at_entry: string;
+            /** Sleep Quality */
+            sleep_quality?: number | null;
+            /** Sleep Duration Minutes */
+            sleep_duration_minutes?: number | null;
+            /** Mood */
+            mood?: number | null;
+            /** Note */
+            note?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "manual" | "future_import";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** DailyWellbeingCheckInSaveRequest */
+        DailyWellbeingCheckInSaveRequest: {
+            /** Sleep Quality */
+            sleep_quality?: number | null;
+            /** Sleep Duration Minutes */
+            sleep_duration_minutes?: number | null;
+            /** Mood */
+            mood?: number | null;
+            /** Note */
+            note?: string | null;
+        };
+        /** DailyWellbeingCurrentResponse */
+        DailyWellbeingCurrentResponse: {
+            /**
+             * Local Date
+             * Format: date
+             */
+            local_date: string;
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            /** Timezone */
+            timezone: string;
+            record?: components["schemas"]["DailyWellbeingCheckInResponse"] | null;
+        };
+        /** DailyWellbeingDistributionItem */
+        DailyWellbeingDistributionItem: {
+            /** Value */
+            value: number;
+            /** Count */
+            count: number;
+        };
+        /** DailyWellbeingMetric */
+        DailyWellbeingMetric: {
+            /** Recorded Days */
+            recorded_days: number;
+            /** Distribution */
+            distribution: components["schemas"]["DailyWellbeingDistributionItem"][];
+            /**
+             * Trend
+             * @enum {string}
+             */
+            trend: "improving" | "declining" | "stable" | "insufficient_data";
+        };
+        /** DailyWellbeingPoint */
+        DailyWellbeingPoint: {
+            /**
+             * Local Date
+             * Format: date
+             */
+            local_date: string;
+            /** Sleep Quality */
+            sleep_quality?: number | null;
+            /** Sleep Duration Minutes */
+            sleep_duration_minutes?: number | null;
+            /** Mood */
+            mood?: number | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "manual" | "future_import";
+        };
+        /** DailyWellbeingReport */
+        DailyWellbeingReport: {
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /** Eligible Days */
+            eligible_days: number;
+            /** Recorded Days */
+            recorded_days: number;
+            /** Coverage Percent */
+            coverage_percent: number;
+            sleep: components["schemas"]["DailyWellbeingMetric"];
+            mood: components["schemas"]["DailyWellbeingMetric"];
+            /** Daily */
+            daily: components["schemas"]["DailyWellbeingPoint"][];
         };
         /** DataSufficiencySignal */
         DataSufficiencySignal: {
@@ -6652,6 +6812,7 @@ export interface components {
             program?: components["schemas"]["ProgressReportProgram"] | null;
             /** Check Ins */
             check_ins: components["schemas"]["ProgressReportCheckIn"][];
+            wellbeing?: components["schemas"]["DailyWellbeingReport"] | null;
         };
         /** ProgressReportSubject */
         ProgressReportSubject: {
@@ -12106,6 +12267,101 @@ export interface operations {
             header?: never;
             path: {
                 measurement_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    current_daily_wellbeing_api_v1_check_ins_daily_get: {
+        parameters: {
+            query?: {
+                local_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyWellbeingCurrentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_daily_wellbeing_api_v1_check_ins_daily__local_date__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                local_date: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyWellbeingCheckInSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyWellbeingCheckInResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_daily_wellbeing_api_v1_check_ins_daily__local_date__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                local_date: string;
             };
             cookie?: never;
         };
