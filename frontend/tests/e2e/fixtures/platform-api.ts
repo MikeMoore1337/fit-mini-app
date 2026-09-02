@@ -1659,6 +1659,16 @@ export async function installPlatformApi(
         headers: { 'Content-Disposition': 'attachment; filename="nutrition-report.csv"' },
       });
     }
+    if (path.endsWith('/check-ins/daily') && request.method() === 'GET') {
+      return route.fulfill({
+        json: {
+          local_date: url.searchParams.get('local_date') ?? today,
+          today,
+          timezone: 'Europe/Moscow',
+          record: null,
+        },
+      });
+    }
     if (path.endsWith('/check-ins/weekly/current')) {
       return route.fulfill({
         json: {
