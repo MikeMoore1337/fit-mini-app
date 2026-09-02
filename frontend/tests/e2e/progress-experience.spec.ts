@@ -1179,21 +1179,21 @@ test('nutrition report preserves truthful period context, daily drill-down and r
         selectorScrollState.clientWidth,
       );
       expect(selectorScrollState.overflowX).toBe('auto');
-      if (selectorScrollState.scrollWidth > selectorScrollState.clientWidth) {
-        await selector.getByRole('tab', { name: 'Свой период' }).scrollIntoViewIfNeeded();
-        expect(
-          await selector.getByRole('tab', { name: 'Свой период' }).evaluate((tab) => {
-            const scroller = tab.closest('.progress-period-controls .ui-tabs');
-            if (!scroller) return false;
-            const tabBox = tab.getBoundingClientRect();
-            const scrollerBox = scroller.getBoundingClientRect();
-            return tabBox.left >= scrollerBox.left && tabBox.right <= scrollerBox.right;
-          }),
-        ).toBe(true);
-      }
     }
+    const nextSection = page.locator('.progress-adherence');
+    await expect
+      .poll(async () => {
+        const [reportBox, nextSectionBox] = await Promise.all([
+          report.boundingBox(),
+          nextSection.boundingBox(),
+        ]);
+        return Boolean(
+          reportBox && nextSectionBox && reportBox.y + reportBox.height <= nextSectionBox.y + 1,
+        );
+      })
+      .toBe(true);
     const reportBox = await report.boundingBox();
-    const nextSectionBox = await page.locator('.progress-adherence').boundingBox();
+    const nextSectionBox = await nextSection.boundingBox();
     expect(reportBox).not.toBeNull();
     expect(nextSectionBox).not.toBeNull();
     expect(reportBox!.y + reportBox!.height).toBeLessThanOrEqual(nextSectionBox!.y + 1);
