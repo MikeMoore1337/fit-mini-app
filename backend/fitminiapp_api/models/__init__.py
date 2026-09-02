@@ -4,6 +4,7 @@ from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, L
 from fitminiapp_api.models.billing import Payment, Plan, Subscription
 from fitminiapp_api.models.cardio import CardioSession
 from fitminiapp_api.models.check_in import WeeklyCheckIn
+from fitminiapp_api.models.daily_wellbeing import DailyWellbeingCheckIn
 from fitminiapp_api.models.exercise import (
     Equipment,
     Exercise,
@@ -80,6 +81,7 @@ __all__ = [
     "CoachClient",
     "CoachClientInvite",
     "CoachRoleApplication",
+    "DailyWellbeingCheckIn",
     "EnergyCalibration",
     "Equipment",
     "Exercise",

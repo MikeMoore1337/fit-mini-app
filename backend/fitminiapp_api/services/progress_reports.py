@@ -14,6 +14,7 @@ from fitminiapp_api.models.program import UserProgram
 from fitminiapp_api.models.user import User
 from fitminiapp_api.schemas.progress import NutritionReportPeriod, ProgressReportResponse
 from fitminiapp_api.services.analytics import build_training_analytics_for_range
+from fitminiapp_api.services.daily_wellbeing import build_daily_wellbeing_report
 from fitminiapp_api.services.nutrition_reports import build_nutrition_report, resolve_report_bounds
 from fitminiapp_api.services.progress import build_progress_summary_for_range
 
@@ -197,6 +198,12 @@ def build_progress_report(
             period_end=bounds.end,
         ),
         "check_ins": _check_ins(
+            db,
+            user,
+            period_start=bounds.start,
+            period_end=bounds.end,
+        ),
+        "wellbeing": build_daily_wellbeing_report(
             db,
             user,
             period_start=bounds.start,

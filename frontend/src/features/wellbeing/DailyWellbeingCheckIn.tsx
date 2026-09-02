@@ -1,0 +1,520 @@
+import { useEffect, useId, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api, type ApiError } from '../../shared/api/client';
+import type {
+  DailyWellbeingCheckIn as DailyWellbeingRecord,
+  DailyWellbeingCurrent,
+  DailyWellbeingSave,
+} from '../../shared/api/types';
+import {
+  addCalendarDays,
+  dateInputValue,
+  detectedTimeZone,
+  formatCalendarDate,
+} from '../../shared/dateTime';
+import { queryKeys } from '../../shared/queryKeys';
+import {
+  Badge,
+  Button,
+  Card,
+  ErrorState,
+  Field,
+  Input,
+  LoadingState,
+  SemanticCard,
+} from '../../shared/ui/common';
+import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { useOnlineStatus } from '../../shared/ui/OnlineStatus';
+import { DateInput } from '../../shared/ui/PickerInput';
+
+const sleepOptions = [
+  { value: 1, label: 'Очень плохо' },
+  { value: 2, label: 'Плохо' },
+  { value: 3, label: 'Обычно' },
+  { value: 4, label: 'Хорошо' },
+  { value: 5, label: 'Отлично' },
+] as const;
+
+const moodOptions = [
+  { value: 1, label: 'Очень тяжело' },
+  { value: 2, label: 'Тяжеловато' },
+  { value: 3, label: 'Обычно' },
+  { value: 4, label: 'Хорошо' },
+  { value: 5, label: 'Отлично' },
+] as const;
+
+type WellbeingForm = {
+  sleepQuality: string;
+  sleepDurationMinutes: string;
+  mood: string;
+  note: string;
+};
+
+const emptyForm: WellbeingForm = {
+  sleepQuality: '',
+  sleepDurationMinutes: '',
+  mood: '',
+  note: '',
+};
+
+function formFromRecord(record: DailyWellbeingRecord | null | undefined): WellbeingForm {
+  return {
+    sleepQuality: record?.sleep_quality == null ? '' : String(record.sleep_quality),
+    sleepDurationMinutes:
+      record?.sleep_duration_minutes == null ? '' : String(record.sleep_duration_minutes),
+    mood: record?.mood == null ? '' : String(record.mood),
+    note: record?.note ?? '',
+  };
+}
+
+function selectedLabel(
+  options: readonly { value: number; label: string }[],
+  value: number | null | undefined,
+): string {
+  return options.find((option) => option.value === value)?.label ?? 'Не заполнено';
+}
+
+function numericOrNull(value: string): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
+function formatDay(value: string): string {
+  return formatCalendarDate(value, { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function formatDuration(minutes: number | null | undefined): string {
+  if (minutes == null) return 'не заполнено';
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (!hours) return `${rest} мин`;
+  if (!rest) return `${hours} ч`;
+  return `${hours} ч ${rest} мин`;
+}
+
+function errorMessage(reason: unknown): string {
+  if ((reason as ApiError)?.status === 0) {
+    return 'Нет связи с сервером. Поля останутся на экране — повторите отправку после подключения.';
+  }
+  return reason instanceof Error
+    ? reason.message
+    : 'Не удалось сохранить отметку. Попробуйте ещё раз.';
+}
+
+function OptionField({
+  id,
+  legend,
+  name,
+  options,
+  value,
+  onChange,
+}: {
+  id: string;
+  legend: string;
+  name: string;
+  options: readonly { value: number; label: string }[];
+  value: string;
+  onChange(value: string): void;
+}) {
+  return (
+    <fieldset className="daily-wellbeing__options">
+      <legend>
+        {legend} <small>необязательно</small>
+      </legend>
+      <div className="daily-wellbeing__option-grid">
+        {options.map((option) => {
+          const optionId = `${id}-${option.value}`;
+          return (
+            <label className="daily-wellbeing__option" key={option.value} htmlFor={optionId}>
+              <input
+                checked={value === String(option.value)}
+                id={optionId}
+                name={name}
+                onChange={(event) => onChange(event.target.value)}
+                type="radio"
+                value={option.value}
+              />
+              <span>{option.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function SavedWellbeingCard({ record, onEdit }: { record: DailyWellbeingRecord; onEdit(): void }) {
+  return (
+    <SemanticCard
+      action={
+        <Button onClick={onEdit} type="button" variant="secondary">
+          Изменить
+        </Button>
+      }
+      className="today-panel daily-wellbeing-card daily-wellbeing-card--saved"
+      family="wellbeing"
+      icon="nav-today"
+      summary={
+        <>
+          <span>{selectedLabel(sleepOptions, record.sleep_quality)}</span>
+          <span> · {formatDuration(record.sleep_duration_minutes)}</span>
+          <span> · настроение: {selectedLabel(moodOptions, record.mood).toLowerCase()}</span>
+        </>
+      }
+      title="Сон и настроение"
+      variant="action"
+    >
+      <div className="daily-wellbeing__saved-meta">
+        <Badge>{formatDay(record.local_date)}</Badge>
+        {record.note && <span className="muted">Заметка сохранена отдельно</span>}
+      </div>
+    </SemanticCard>
+  );
+}
+
+function EmptyWellbeingCard({ onStart }: { onStart(): void }) {
+  return (
+    <SemanticCard
+      action={
+        <Button onClick={onStart} type="button" variant="secondary">
+          Добавить отметку
+        </Button>
+      }
+      className="today-panel daily-wellbeing-card daily-wellbeing-card--empty"
+      family="wellbeing"
+      icon="nav-today"
+      summary="По желанию · сон, настроение или длительность за выбранный день"
+      title="Сон и настроение"
+      variant="action"
+    />
+  );
+}
+
+export function DailyWellbeingCheckIn({
+  autoFocus = false,
+  initialDate,
+  timeZone,
+  userId,
+}: {
+  autoFocus?: boolean;
+  initialDate?: string;
+  timeZone?: string | null;
+  userId: number | 'anonymous';
+}) {
+  const { confirm, toast } = useFeedback();
+  const queryClient = useQueryClient();
+  const online = useOnlineStatus();
+  const cardRef = useRef<HTMLElement>(null);
+  const instanceId = useId();
+  const resolvedTimeZone = timeZone || detectedTimeZone();
+  const defaultDate = initialDate || dateInputValue(new Date(), resolvedTimeZone);
+  const [localDate, setLocalDate] = useState(defaultDate);
+  const [editing, setEditing] = useState(autoFocus);
+  const [dismissed, setDismissed] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [draft, setDraft] = useState<WellbeingForm | null>(null);
+  const [lastPayload, setLastPayload] = useState<DailyWellbeingSave | null>(null);
+
+  const current = useQuery({
+    queryKey: queryKeys.wellbeing.daily(userId, localDate),
+    queryFn: () => api<DailyWellbeingCurrent>(`/api/v1/check-ins/daily?local_date=${localDate}`),
+    enabled: userId !== 'anonymous' && Boolean(localDate),
+  });
+  const record = current.data?.record;
+  const form = draft ?? formFromRecord(record);
+
+  useEffect(() => {
+    if (!autoFocus || current.isLoading || current.error) return;
+    const details = cardRef.current?.closest('details');
+    const summary = details?.querySelector<HTMLElement>('summary');
+    summary?.focus({ preventScroll: true });
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const scrollTarget = details ?? cardRef.current;
+    scrollTarget?.scrollIntoView?.({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  }, [autoFocus, current.error, current.isLoading]);
+
+  const save = useMutation({
+    mutationFn: ({ date, payload }: { date: string; payload: DailyWellbeingSave }) =>
+      api<DailyWellbeingRecord>(`/api/v1/check-ins/daily/${date}`, {
+        method: 'PUT',
+        body: payload,
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['daily-wellbeing'] }),
+        queryClient.invalidateQueries({ queryKey: ['progress-report'] }),
+      ]);
+      setEditing(false);
+      setLastPayload(null);
+      toast('Отметка сохранена');
+    },
+  });
+  const remove = useMutation({
+    mutationFn: (date: string) =>
+      api<void>(`/api/v1/check-ins/daily/${date}`, { method: 'DELETE' }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['daily-wellbeing'] }),
+        queryClient.invalidateQueries({ queryKey: ['progress-report'] }),
+      ]);
+      setDraft(emptyForm);
+      setEditing(true);
+      setNoteOpen(false);
+      toast('Отметка удалена');
+    },
+  });
+
+  const today = current.data?.today || dateInputValue(new Date(), resolvedTimeZone);
+  const isDateAllowed = localDate <= today;
+  const isEmpty = !form.sleepQuality && !form.sleepDurationMinutes && !form.mood;
+  const saveError = save.error ? errorMessage(save.error) : null;
+  const removeError = remove.error ? errorMessage(remove.error) : null;
+
+  if (dismissed) return null;
+  if (!current.isLoading && !current.error && !record && !editing && !autoFocus) {
+    return <EmptyWellbeingCard onStart={() => setEditing(true)} />;
+  }
+  if (current.isLoading && !record) {
+    return (
+      <section className="daily-wellbeing-card daily-wellbeing-card--state" ref={cardRef}>
+        <LoadingState label="Загружаем отметку…" />
+      </section>
+    );
+  }
+  if (current.error && !record) {
+    return (
+      <section className="daily-wellbeing-card daily-wellbeing-card--state" ref={cardRef}>
+        <ErrorState message={errorMessage(current.error)} retry={() => void current.refetch()} />
+      </section>
+    );
+  }
+  if (record && !editing) {
+    return (
+      <SavedWellbeingCard
+        onEdit={() => {
+          setDraft(formFromRecord(record));
+          setNoteOpen(Boolean(record.note));
+          setEditing(true);
+        }}
+        record={record}
+      />
+    );
+  }
+
+  const savePayload: DailyWellbeingSave = {
+    sleep_quality: numericOrNull(form.sleepQuality),
+    sleep_duration_minutes: numericOrNull(form.sleepDurationMinutes),
+    mood: numericOrNull(form.mood),
+    note: form.note.trim() || null,
+  };
+
+  return (
+    <Card
+      className="daily-wellbeing-card daily-wellbeing-card--form"
+      defaultOpen
+      description="По желанию · короткая отметка за выбранный день."
+      family="wellbeing"
+      summary={
+        <>
+          <span>{formatDay(localDate)}</span>
+          {record && <Badge tone="success">Сохранено</Badge>}
+        </>
+      }
+      title="Сон и настроение"
+    >
+      <p className="daily-wellbeing__context">
+        Короткая субъективная отметка. Она не влияет на тренировочный план и не является медицинской
+        оценкой.
+      </p>
+
+      {current.error && (
+        <p className="daily-wellbeing__inline-error">{errorMessage(current.error)}</p>
+      )}
+      {!online && (
+        <p className="daily-wellbeing__offline" role="status">
+          Нет связи. Поля остаются на экране и готовы к повторной отправке после подключения.
+        </p>
+      )}
+      {saveError && (
+        <div className="daily-wellbeing__inline-error" role="alert">
+          <span>{saveError}</span>
+          {lastPayload && online && (
+            <Button
+              onClick={() => save.mutate({ date: localDate, payload: lastPayload })}
+              type="button"
+              variant="secondary"
+            >
+              Повторить
+            </Button>
+          )}
+        </div>
+      )}
+      {removeError && (
+        <div className="daily-wellbeing__inline-error" role="alert">
+          <span>{removeError}</span>
+          {online && (
+            <Button onClick={() => remove.mutate(localDate)} type="button" variant="secondary">
+              Повторить удаление
+            </Button>
+          )}
+        </div>
+      )}
+
+      <form
+        className="daily-wellbeing__form"
+        ref={(element) => {
+          cardRef.current = element;
+        }}
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (isEmpty || !online || !isDateAllowed) return;
+          setLastPayload(savePayload);
+          save.mutate({ date: localDate, payload: savePayload });
+        }}
+      >
+        <Field
+          hint="Можно выбрать сегодня или недавнюю дату."
+          label="День"
+          labelFor={`${instanceId}-date`}
+        >
+          <DateInput
+            id={`${instanceId}-date`}
+            max={today}
+            min={addCalendarDays(today, -90)}
+            onChange={(event) => {
+              setLocalDate(event.target.value);
+              setDraft(null);
+              setNoteOpen(false);
+              setEditing(true);
+              setLastPayload(null);
+            }}
+            value={localDate}
+          />
+        </Field>
+
+        <OptionField
+          id={`${instanceId}-sleep`}
+          legend="Как спалось?"
+          name={`${instanceId}-sleep-quality`}
+          onChange={(value) =>
+            setDraft((currentDraft) => ({
+              ...(currentDraft ?? form),
+              sleepQuality: value,
+            }))
+          }
+          options={sleepOptions}
+          value={form.sleepQuality}
+        />
+        <OptionField
+          id={`${instanceId}-mood`}
+          legend="Как себя ощущали?"
+          name={`${instanceId}-mood`}
+          onChange={(value) =>
+            setDraft((currentDraft) => ({
+              ...(currentDraft ?? form),
+              mood: value,
+            }))
+          }
+          options={moodOptions}
+          value={form.mood}
+        />
+
+        <Field
+          hint="Необязательно, от 1 до 1440 минут."
+          label="Сколько спали, минут"
+          labelFor={`${instanceId}-duration`}
+        >
+          <Input
+            id={`${instanceId}-duration`}
+            inputMode="numeric"
+            max={1440}
+            min={1}
+            onChange={(event) =>
+              setDraft((currentDraft) => ({
+                ...(currentDraft ?? form),
+                sleepDurationMinutes: event.target.value,
+              }))
+            }
+            placeholder="Например, 420"
+            type="number"
+            value={form.sleepDurationMinutes}
+          />
+        </Field>
+
+        <details
+          className="daily-wellbeing__note"
+          onToggle={(event) => setNoteOpen(event.currentTarget.open)}
+          open={noteOpen}
+        >
+          <summary>
+            Добавить заметку <small>не попадёт в отчёт</small>
+          </summary>
+          <Field
+            hint={`${form.note.length}/500 символов`}
+            label="Заметка для себя"
+            labelFor={`${instanceId}-note`}
+          >
+            <textarea
+              id={`${instanceId}-note`}
+              maxLength={500}
+              onChange={(event) =>
+                setDraft((currentDraft) => ({
+                  ...(currentDraft ?? form),
+                  note: event.target.value,
+                }))
+              }
+              placeholder="Например, поздно лёгли или был насыщенный день"
+              rows={3}
+              value={form.note}
+            />
+          </Field>
+        </details>
+
+        {!isDateAllowed && (
+          <p className="daily-wellbeing__inline-error" role="alert">
+            Нельзя сохранить будущую дату.
+          </p>
+        )}
+        {isEmpty && (
+          <p className="daily-wellbeing__hint" role="status">
+            Выберите хотя бы один показатель — заполнение остаётся необязательным.
+          </p>
+        )}
+        <div className="daily-wellbeing__actions">
+          <Button disabled={save.isPending || isEmpty || !online || !isDateAllowed} type="submit">
+            {save.isPending ? 'Сохраняем…' : 'Сохранить отметку'}
+          </Button>
+          {record && (
+            <Button
+              disabled={remove.isPending}
+              onClick={async () => {
+                if (
+                  await confirm({
+                    title: 'Удалить отметку?',
+                    message: `${formatDay(localDate)}. Сон и настроение будут удалены из истории и отчётов.`,
+                    confirmText: 'Удалить',
+                  })
+                ) {
+                  remove.mutate(localDate);
+                }
+              }}
+              type="button"
+              variant="danger"
+            >
+              {remove.isPending ? 'Удаляем…' : 'Удалить'}
+            </Button>
+          )}
+          {autoFocus && !record && (
+            <Button onClick={() => setDismissed(true)} type="button" variant="ghost">
+              Не сейчас
+            </Button>
+          )}
+        </div>
+      </form>
+    </Card>
+  );
+}

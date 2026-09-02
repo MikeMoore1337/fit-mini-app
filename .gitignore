@@ -197,7 +197,8 @@ frontend/openapi.json
 frontend/.npm-cache*/
 
 # Owner-only planning, findings and operational/legal workpapers stay local.
-/codex-backlog/tasks/
+/codex-backlog/tasks/automation
+/codex-backlog/tasks/done
 /codex-backlog/bugs/
 /codex-backlog/telegram-core-release-backlog/
 /codex-backlog/MANIFEST.json

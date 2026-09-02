@@ -158,6 +158,143 @@ function checkInValue(value: number | null | undefined): string {
   return value == null ? 'Не отвечено' : `${value} из 5`;
 }
 
+const wellbeingValueLabels: Record<'sleep' | 'mood', Record<number, string>> = {
+  sleep: {
+    1: 'Очень плохо',
+    2: 'Плохо',
+    3: 'Обычно',
+    4: 'Хорошо',
+    5: 'Отлично',
+  },
+  mood: {
+    1: 'Очень тяжело',
+    2: 'Тяжеловато',
+    3: 'Обычно',
+    4: 'Хорошо',
+    5: 'Отлично',
+  },
+};
+
+const wellbeingTrendLabels: Record<string, string> = {
+  improving: 'В конце периода выше',
+  declining: 'В конце периода ниже',
+  stable: 'Без заметной разницы',
+  insufficient_data: 'Пока мало точек',
+};
+
+function durationLabel(minutes: number | null | undefined): string {
+  if (minutes == null) return 'Не заполнено';
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (!hours) return `${rest} мин`;
+  if (!rest) return `${hours} ч`;
+  return `${hours} ч ${rest} мин`;
+}
+
+function DailyWellbeingReportSection({ report }: { report: ProgressReport }) {
+  const wellbeing = report.wellbeing;
+  if (!wellbeing) return null;
+  const metrics = [
+    ['sleep', 'Качество сна'],
+    ['mood', 'Настроение'],
+  ] as const;
+  return (
+    <section
+      aria-labelledby="report-wellbeing-title"
+      className="progress-report-section progress-report-section--wellbeing"
+    >
+      <header>
+        <div>
+          <span className="eyebrow">Самооценка</span>
+          <h2 id="report-wellbeing-title">Сон и настроение</h2>
+        </div>
+        <AppLink
+          className="button-link secondary-link report-screen-only"
+          to={`/app?section=today&wellbeing=1&wellbeing_date=${wellbeing.period_end}`}
+        >
+          Добавить отметку
+        </AppLink>
+      </header>
+      <dl className="progress-report-facts">
+        <div>
+          <dt>Покрытие</dt>
+          <dd>
+            {wellbeing.recorded_days} из {wellbeing.eligible_days} дней
+          </dd>
+        </div>
+        <div>
+          <dt>Процент периода</dt>
+          <dd>{formatNumber(wellbeing.coverage_percent)}%</dd>
+        </div>
+      </dl>
+      <div className="progress-report-wellbeing-grid">
+        {metrics.map(([key, label]) => {
+          const metric = wellbeing[key];
+          const maxCount = Math.max(1, ...metric.distribution.map((item) => item.count));
+          return (
+            <article className="progress-report-wellbeing-metric" key={key}>
+              <header>
+                <div>
+                  <h3>{label}</h3>
+                  <p>{metric.recorded_days} отдельных отметок</p>
+                </div>
+                <span>{wellbeingTrendLabels[metric.trend]}</span>
+              </header>
+              <ul aria-label={`Распределение: ${label}`}>
+                {metric.distribution.map((item) => (
+                  <li key={item.value}>
+                    <span>{wellbeingValueLabels[key][item.value]}</span>
+                    <span className="progress-report-wellbeing-metric__bar" aria-hidden="true">
+                      <i style={{ width: `${(item.count / maxCount) * 100}%` }} />
+                    </span>
+                    <strong>{item.count}</strong>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          );
+        })}
+      </div>
+      <details className="progress-report-wellbeing-days">
+        <summary>Дни с фактическими отметками</summary>
+        <div className="progress-report-wellbeing-days__table-wrap">
+          <table>
+            <caption>Записанные дни сна и настроения</caption>
+            <thead>
+              <tr>
+                <th scope="col">Дата</th>
+                <th scope="col">Сон</th>
+                <th scope="col">Длительность</th>
+                <th scope="col">Настроение</th>
+              </tr>
+            </thead>
+            <tbody>
+              {wellbeing.daily.map((item) => (
+                <tr key={item.local_date}>
+                  <th scope="row">{formatDate(item.local_date)}</th>
+                  <td>
+                    {item.sleep_quality == null
+                      ? 'Не заполнено'
+                      : wellbeingValueLabels.sleep[item.sleep_quality]}
+                  </td>
+                  <td>{durationLabel(item.sleep_duration_minutes)}</td>
+                  <td>
+                    {item.mood == null ? 'Не заполнено' : wellbeingValueLabels.mood[item.mood]}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+      <p className="progress-report-limit">
+        Это субъективные фактические отметки. Пропуски не считаются нулевыми значениями, а заметки
+        не включены в агрегаты, PDF и доступ тренера.
+      </p>
+    </section>
+  );
+}
+
 const bodyMetricLabels: Record<string, string> = {
   biceps_cm: 'Плечо',
   chest_cm: 'Грудь',
@@ -455,6 +592,8 @@ function ReportContent({
           </p>
         </section>
       </div>
+
+      <DailyWellbeingReportSection report={report} />
 
       <div className="progress-report-print-page-section">
         <PrintPageHeader continuation report={report} />
