@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { namedArticle } from './fixtures/locators';
 
 const captureLandingProductProofs =
   (
@@ -506,11 +507,13 @@ test('Today keeps hierarchy and has no horizontal overflow at required widths', 
     await page.setViewportSize(viewport);
     await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeInViewport();
     await expect(page.getByRole('heading', { name: 'Питание' })).toBeVisible();
-    const summaryCards = page.locator('.today-dashboard__facts .today-summary-card');
-    await expect(summaryCards).toHaveCount(2);
+    const nutritionCard = namedArticle(page, 'Питание');
+    const progressCard = namedArticle(page, 'Прогресс');
+    await expect(nutritionCard).toHaveCount(1);
+    await expect(progressCard).toHaveCount(1);
     const [nutritionBox, progressBox] = await Promise.all([
-      summaryCards.nth(0).boundingBox(),
-      summaryCards.nth(1).boundingBox(),
+      nutritionCard.boundingBox(),
+      progressCard.boundingBox(),
     ]);
     expect(nutritionBox).not.toBeNull();
     expect(progressBox).not.toBeNull();

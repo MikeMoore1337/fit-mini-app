@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { installTelegramHarness } from './fixtures/mobile-tma';
 import { installPlatformApi } from './fixtures/platform-api';
+import { progressOverview } from './fixtures/locators';
 
 const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
 const captureVisualImpactFix = env?.YFC_CAPTURE_PULSE_VISUAL_IMPACT === '1';
@@ -330,7 +331,7 @@ test('weight bento trend keeps smooth truthful geometry, area fill and measureme
     workoutStatus: 'completed',
   });
   await page.goto('/app?section=progress');
-  const insight = page.getByTestId('progress-bento-overview').locator('.progress-bento__trend');
+  const insight = progressOverview(page).locator('.progress-bento__trend');
   await insight.scrollIntoViewIfNeeded();
   const chart = insight.locator('.data-viz-chart');
   await expect(chart).toBeVisible();
@@ -372,9 +373,7 @@ test('weight bento trend keeps smooth truthful geometry, area fill and measureme
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/app?section=progress');
-  const desktopInsight = page
-    .getByTestId('progress-bento-overview')
-    .locator('.progress-bento__trend');
+  const desktopInsight = progressOverview(page).locator('.progress-bento__trend');
   await desktopInsight.scrollIntoViewIfNeeded();
   await expect(desktopInsight.locator('.data-viz-chart__area')).toHaveCount(1);
   if (capture) {
@@ -395,7 +394,7 @@ test('mocked TMA dark uses the same chart and safe-area floating dock', async ({
   await installPlatformApi(page, { measurementHistory: 'many', workoutStatus: 'completed' });
   await page.goto('/app?section=progress');
   const dock = page.locator('#appBottomNav');
-  const insight = page.getByTestId('progress-bento-overview').locator('.progress-bento__trend');
+  const insight = progressOverview(page).locator('.progress-bento__trend');
   await insight.scrollIntoViewIfNeeded();
   await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
   await expect(insight.locator('.data-viz-chart__area')).toHaveCount(1);

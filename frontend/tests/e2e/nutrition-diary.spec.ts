@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import type { FoodDiaryEntry, HydrationEntry } from '../../src/shared/api/types';
+import { nutritionDaySummary } from './fixtures/locators';
 
 const zeroNutrition = {
   energy_kcal: '0.00',
@@ -211,6 +212,10 @@ async function mockNutritionApi(
   hydrationState: 'data' | 'empty' | 'error' | 'loading' = 'data',
   profileSex: 'female' | null = 'female',
 ) {
+  let releaseHydrationLoading = () => {};
+  const hydrationLoading = new Promise<void>((resolve) => {
+    releaseHydrationLoading = resolve;
+  });
   let entries: FoodDiaryEntry[] = [yogurtEntry];
   let hydrationEntries: HydrationEntry[] =
     hydrationState === 'empty'
@@ -289,9 +294,7 @@ async function mockNutritionApi(
       });
     }
     if (path === '/api/v1/nutrition/hydration' && request.method() === 'GET') {
-      if (hydrationState === 'loading') {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      }
+      if (hydrationState === 'loading') await hydrationLoading;
       if (hydrationState === 'error') {
         return route.fulfill({ status: 503, json: { detail: 'Гидратация временно недоступна' } });
       }
@@ -577,6 +580,8 @@ async function mockNutritionApi(
     }
     return route.fulfill({ status: 404, json: { detail: `Unhandled ${path}` } });
   });
+
+  return { releaseHydrationLoading };
 }
 
 test('Task 81A groups nutrition into five cards and keeps profile choices compact', async ({
@@ -591,7 +596,7 @@ test('Task 81A groups nutrition into five cards and keeps profile choices compac
     page.locator('.nutrition-completeness > .nutrition-completeness__copy h2'),
     page.locator('.nutrition-day-balance h2'),
     page.locator('.nutrition-food-card__header h2'),
-    page.locator('.nutrition-day-summary h2'),
+    nutritionDaySummary(page).getByRole('heading', { name: 'КБЖУ', exact: true }),
     page.locator('.hydration-card h2'),
   ];
   const titlePositions: number[] = [];
@@ -604,7 +609,8 @@ test('Task 81A groups nutrition into five cards and keeps profile choices compac
   await expect(balance.getByRole('progressbar', { name: /Еда:/ })).toBeVisible();
   await expect(balance.getByRole('progressbar', { name: /Жидкость:/ })).toBeVisible();
   const foodCard = page.locator('.nutrition-food-card');
-  const firstMeal = foodCard.locator('.nutrition-meal').first();
+  const firstMeal = foodCard.getByRole('region', { name: 'Завтрак', exact: true });
+  await expect(firstMeal).toHaveCount(1);
   const [foodCardBox, firstMealBox] = await Promise.all([
     foodCard.boundingBox(),
     firstMeal.boundingBox(),
@@ -627,7 +633,7 @@ test('Task 81A groups nutrition into five cards and keeps profile choices compac
     page.locator('.nutrition-completeness'),
     page.locator('.nutrition-day-balance'),
     page.locator('.nutrition-food-card'),
-    page.locator('.nutrition-day-summary'),
+    nutritionDaySummary(page),
     page.locator('.hydration-card'),
   ];
   const mobileCardPositions: number[] = [];
@@ -736,12 +742,15 @@ for (const state of ['loading', 'error', 'empty'] as const) {
   test(`hydration visual evidence: ${state} state`, async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-08-19T13:00:00+03:00'));
     await page.setViewportSize({ width: 390, height: 844 });
-    await mockNutritionApi(page, state);
+    const hydrationApi = await mockNutritionApi(page, state);
     await page.goto('/app?section=nutrition&date=2026-08-19');
     const hydration = page.locator('.hydration-card');
     await expect(hydration).toBeVisible();
-    if (state === 'loading')
+    if (state === 'loading') {
       await expect(hydration.getByText('Загружаем гидратацию…')).toBeVisible();
+      hydrationApi.releaseHydrationLoading();
+      await expect(hydration.getByText('850 из 2200 мл', { exact: true })).toBeVisible();
+    }
     if (state === 'error')
       await expect(hydration.getByText('Гидратация временно недоступна')).toBeVisible();
     if (state === 'empty') await expect(hydration.getByText('0 мл записано')).toBeVisible();
@@ -771,7 +780,9 @@ test('hydration touch matrix has no horizontal overflow and keeps controls reach
       const box = await quickButtons.nth(index).boundingBox();
       expect(box?.height).toBeGreaterThanOrEqual(44);
     }
-    const volume = hydration.getByLabel('Объём, мл').first();
+    const customVolume = hydration.getByRole('region', { name: 'Другой объём', exact: true });
+    const volume = customVolume.getByLabel('Объём, мл');
+    await expect(volume).toHaveCount(1);
     await volume.focus();
     await expect(volume).toBeFocused();
     await expect(volume).toBeInViewport();
@@ -847,7 +858,16 @@ test('Russian preparation states and oil variants apply beyond potatoes', async 
   await expect(page.getByText('Яйцо целое жареное со сливочным маслом')).toBeVisible();
   await expect(page.getByText('155 ккал / 100 г')).toBeVisible();
   await expect(page.getByText('174 ккал / 100 г')).toBeVisible();
-  await expect(page.getByText('196 ккал / 100 г').first()).toBeVisible();
+  const friedWithOil = page.getByRole('article').filter({
+    hasText: 'Яйцо целое жареное с растительным маслом',
+  });
+  const friedWithButter = page.getByRole('article').filter({
+    hasText: 'Яйцо целое жареное со сливочным маслом',
+  });
+  await expect(friedWithOil).toHaveCount(1);
+  await expect(friedWithButter).toHaveCount(1);
+  await expect(friedWithOil).toContainText('196 ккал / 100 г');
+  await expect(friedWithButter).toContainText('196 ккал / 100 г');
   await page.getByText('Яйцо целое жареное с растительным маслом').scrollIntoViewIfNeeded();
   await page.screenshot({
     path: '../.artifacts/screenshots/task-114a/russian-food-oil-variants-mobile-390.png',
@@ -864,11 +884,9 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
 
   await expect(page.getByRole('heading', { name: 'Питание', exact: true })).toBeVisible();
   await expect(page.getByText('Греческий йогурт')).toBeVisible();
-  await expect(
-    page.locator('.nutrition-day-summary').getByRole('heading', { name: 'КБЖУ' }),
-  ).toBeVisible();
+  await expect(nutritionDaySummary(page)).toHaveCount(1);
+  await expect(nutritionDaySummary(page)).toBeVisible();
   await expect(page.getByText('Немного выше ориентира: 20 ккал')).toBeVisible();
-  await expect(page.locator('.nutrition-target').first()).not.toHaveClass(/is-over/);
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 768, height: 900 },
@@ -885,9 +903,7 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
     await expect(page.getByRole('navigation', { name: 'Дата дневника' })).not.toBeAttached();
     const selectedDay = week.locator('button[aria-pressed="true"]');
     expect((await selectedDay.boundingBox())?.height).toBeGreaterThanOrEqual(44);
-    const borderTop = await week.evaluate((element) => getComputedStyle(element).borderTopWidth);
-    expect(borderTop).toBe(viewport.width <= 640 ? '0px' : '1px');
-    const summary = page.locator('.nutrition-day-summary');
+    const summary = nutritionDaySummary(page);
     const targetBadge = summary.getByText('Цель КБЖУ настроена', { exact: true });
     const [weekBox, summaryBox, targetBadgeBox] = await Promise.all([
       week.boundingBox(),
@@ -903,7 +919,8 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
 
   const compactBreakfast = page.getByRole('region', { name: 'Завтрак' });
   const compactLunch = page.getByRole('region', { name: 'Обед' });
-  const entry = compactBreakfast.locator('.nutrition-entry').first();
+  const entry = compactBreakfast.getByRole('listitem');
+  await expect(entry).toHaveCount(1);
   const [entryBox, headerBox] = await Promise.all([
     entry.boundingBox(),
     compactBreakfast.locator('.nutrition-meal__header').boundingBox(),

@@ -44,6 +44,49 @@ Playwright harness задаёт `360x800`, `390x844` и `430x932`, настоя�
 fixed/sticky UI с action/content. Network helper переключает offline/reconnect на уровне browser
 context; feature API mock может одновременно моделировать отказ только backend-запросов.
 
+## Playwright E2E contract
+
+Этот раздел является общим контрактом для `frontend/tests/e2e/**` и применяется вместе с
+требованиями конкретного сценария. Он не меняет продуктовую семантику и не разрешает добавлять
+production hooks только ради удобства теста.
+
+### Локаторы и assertions
+
+1. Сначала используется доступная семантика: role и accessible name, затем scoped landmark,
+   dialog, section, form или card. Повторяемый сценарий выносит такой scope в helper с явным
+   именем, а не скрывает глобальный поиск.
+2. `.first()`, `.last()`, `.nth()` и positional/CSS selectors допустимы только когда тест сначала
+   фиксирует cardinality или связывает элемент с активным продуктовым идентификатором, именем,
+   ролью, состоянием (`aria-current`, `aria-selected`) либо иным действующим инвариантом.
+   Исторический порядок DOM сам по себе инвариантом не является.
+3. `data-testid` добавляется только если действующий role/name и scoped semantic locator не могут
+   выразить контракт. Ненужный production hook удаляется после миграции потребителей на семантику.
+4. `toHaveCSS` и bounding-box assertions описывают только действующий visual/platform contract:
+   active design source, touch target, overflow, safe area, keyboard/fixed/sticky overlap или
+   доказуемую responsive order. Цвет, размер, radius, `position` и DOM-порядок без такой опоры не
+   являются regression contract.
+5. Ожидания должны быть event-, response-, state- или assertion-driven. `waitForTimeout`,
+   произвольные sleeps, увеличенные retries/timeouts, `skip`/`fixme` и обход strict locator
+   errors не используются для закрытия регрессии. Внешний runtime prerequisite остаётся
+   отдельным явно обозначенным lane и не считается PASS обычного smoke.
+
+### Lanes и evidence
+
+- `npm run e2e:ci` — authoritative Chromium suite; в CI он выполняется тремя shards и включает
+  `tma-smoke.spec.ts` и `demo-mode.spec.ts`.
+- `npm run e2e:migrated-stack` — отдельный authoritative Chromium lane с FastAPI и PostgreSQL;
+  он проверяет реальный browser/API/database path и не заменяется route mock.
+- `playwright.cross-browser.config.ts` — дополнительный локальный Chromium/Firefox/WebKit lane;
+  он не является CI gate, пока не подключён отдельной job.
+- `csp-theme-bootstrap.spec.ts` требует `YFC_FASTAPI_ORIGIN=1`; без поднятого FastAPI это
+  отдельный неисполненный prerequisite, а не успешная проверка.
+- Owner-checkpoint screenshot scenarios (`YFC_CAPTURE_*`) — opt-in visual evidence и не входят в
+  regression count без соответствующего флага. Их `skip` не должен скрывать поведенческий тест.
+
+В итоговом отчёте automated Mobile Web, mocked TMA, migrated real browser/API stack, real Telegram
+и physical-device evidence перечисляются раздельно. Browser/mock результат никогда не выдаётся за
+доказательство реального Telegram client или физического устройства.
+
 ## Что фиксирует continuous smoke
 
 `tma-smoke.spec.ts` проверяет без дублирования больших feature suites:

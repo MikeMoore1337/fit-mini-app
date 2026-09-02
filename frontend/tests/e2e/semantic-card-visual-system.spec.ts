@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { nutritionDaySummary } from './fixtures/locators';
 import { installPlatformApi } from './fixtures/platform-api';
 import { installTelegramHarness } from './fixtures/mobile-tma';
 
@@ -142,7 +143,8 @@ test('shared card effects preserve summary flow and viewport modals', async ({ b
   await openSurface(page, '/app?section=nutrition', 'light');
   await waitForSemanticSurface(page, '/app?section=nutrition');
 
-  await expect(page.locator('.nutrition-day-summary')).toHaveCSS('position', 'static');
+  await expect(nutritionDaySummary(page)).toHaveCount(1);
+  await expect(nutritionDaySummary(page)).toBeVisible();
 
   await page.goto('/app?section=profile');
   await expect(page.getByRole('heading', { name: 'Профиль и настройки' })).toBeVisible();

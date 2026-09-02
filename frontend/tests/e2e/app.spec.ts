@@ -1,15 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { nutritionDaySummary, openDetailsByHeading as openCard } from './fixtures/locators';
 import { emptyHydrationDay } from './fixtures/platform-api';
-
-async function openCard(page: Page, title: string) {
-  const card = page
-    .getByRole('heading', { name: title, exact: true })
-    .locator('xpath=ancestor::details[1]');
-  if ((await card.getAttribute('open')) === null) {
-    await card.locator(':scope > summary').click();
-  }
-  await expect(card).toHaveAttribute('open');
-}
 
 type AppDestination = 'Сегодня' | 'Программа' | 'Прогресс' | 'Питание' | 'Упражнения' | 'Профиль';
 
@@ -152,7 +143,9 @@ test('первый экран лендинга объясняет продукт
     await page.goto('/');
 
     await expect(page.getByRole('heading', { name: /знайте, что делать сегодня/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /открыть приложение/i }).first()).toBeVisible();
+    await expect(
+      page.locator('.landing-hero__actions').getByRole('link', { name: /открыть приложение/i }),
+    ).toBeVisible();
     const heroProof = page.locator('.landing-hero-device');
     await expect(
       heroProof.getByRole('img', { name: /актуальный экран сегодня.*силовой тренировки/i }),
@@ -205,7 +198,9 @@ test('лендинг остаётся адаптивным на контроль
     }));
     expect(pageMetrics.documentWidth).toBeLessThanOrEqual(pageMetrics.viewport);
     expect(pageMetrics.bodyWidth).toBeLessThanOrEqual(pageMetrics.viewport);
-    await expect(page.getByRole('link', { name: /открыть приложение/i }).first()).toBeVisible();
+    await expect(
+      page.locator('.landing-hero__actions').getByRole('link', { name: /открыть приложение/i }),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: /Включить .* тему/ })).toBeInViewport();
     await expect(page.locator('.landing-continuity__rail')).toBeVisible();
   }
@@ -310,11 +305,12 @@ test('сценарии спортсмена и тренера ведут в ве
       'href',
       '/for-trainers',
     );
-    await expect(page.getByText(/тренера (можно )?подключи(ть|те) позже/i).first()).toBeVisible();
-    await expect(page.getByRole('link', { name: /открыть приложение/i }).last()).toHaveAttribute(
-      'href',
-      '/app',
-    );
+    await expect(
+      page.locator('.landing-core__self').getByText(/тренера (можно )?подключи(ть|те) позже/i),
+    ).toBeVisible();
+    await expect(
+      page.locator('.landing-contact__actions').getByRole('link', { name: /открыть приложение/i }),
+    ).toHaveAttribute('href', '/app');
     await expect(
       page.locator('.landing-contact').getByRole('link', { name: /попробовать демо/i }),
     ).toHaveAttribute('href', '/demo?cabinet=1&scenario=self_training&section=today');
@@ -326,12 +322,12 @@ test('сценарии спортсмена и тренера ведут в ве
     const contactButtons = page.locator('.landing-contact__actions .landing-button');
     for (const buttons of [heroButtons, contactButtons]) {
       await expect(buttons).toHaveCount(2);
-      const first = await buttons.first().boundingBox();
-      const second = await buttons.last().boundingBox();
-      expect(first).not.toBeNull();
-      expect(second).not.toBeNull();
-      expect(first!.height).toBe(second!.height);
-      if (viewport.width === 390) expect(first!.width).toBeCloseTo(second!.width, 0);
+      const boxes = await Promise.all((await buttons.all()).map((button) => button.boundingBox()));
+      expect(boxes).toHaveLength(2);
+      expect(boxes[0]).not.toBeNull();
+      expect(boxes[1]).not.toBeNull();
+      expect(boxes[0]!.height).toBe(boxes[1]!.height);
+      if (viewport.width === 390) expect(boxes[0]!.width).toBeCloseTo(boxes[1]!.width, 0);
     }
     const featureCards = page.locator('.landing-core__features article');
     await expect(featureCards).toHaveCount(3);
@@ -346,7 +342,9 @@ test('сценарии спортсмена и тренера ведут в ве
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
     if (viewport.width === 390) {
-      await expect(page.locator('.landing-footer p').first()).toBeVisible();
+      const footerTagline = page.locator('.landing-footer__brand > p');
+      await expect(footerTagline).toHaveCount(1);
+      await expect(footerTagline).toBeVisible();
     }
   }
 });
@@ -2544,9 +2542,8 @@ test('поля адаптируются к разным iPhone, а пример 
   );
 
   await openAppDestination(page, 'Питание');
-  await expect(
-    page.locator('.nutrition-day-summary').getByRole('heading', { name: 'КБЖУ' }),
-  ).toBeVisible();
+  await expect(nutritionDaySummary(page)).toHaveCount(1);
+  await expect(nutritionDaySummary(page)).toBeVisible();
   expect(
     await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,
