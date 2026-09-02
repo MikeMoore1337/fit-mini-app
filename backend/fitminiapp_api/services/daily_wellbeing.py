@@ -51,7 +51,6 @@ def get_daily_wellbeing(
     user: User,
     local_date: date,
 ) -> dict:
-    validate_local_date(user, local_date)
     row = (
         db.query(DailyWellbeingCheckIn)
         .filter(
@@ -60,6 +59,8 @@ def get_daily_wellbeing(
         )
         .one_or_none()
     )
+    # Reads may inspect an empty future calendar date, especially immediately
+    # after the account timezone changes; only writes reject future dates.
     return {
         "local_date": local_date,
         "today": today_for_user(user),
@@ -74,7 +75,6 @@ def save_daily_wellbeing(
     local_date: date,
     payload: DailyWellbeingCheckInSaveRequest,
 ) -> DailyWellbeingCheckIn:
-    validate_local_date(user, local_date)
     if (
         payload.sleep_quality is None
         and payload.sleep_duration_minutes is None
@@ -91,6 +91,10 @@ def save_daily_wellbeing(
         )
         .one_or_none()
     )
+    # A timezone change must not turn an already valid check-in into a future
+    # date while the user is editing it. New rows still cannot be future-dated.
+    if row is None:
+        validate_local_date(user, local_date)
     now = now_for_user_naive(user)
     values = {
         "sleep_quality": payload.sleep_quality,
@@ -122,11 +126,18 @@ def save_daily_wellbeing(
 
 
 def delete_daily_wellbeing(db: Session, user: User, local_date: date) -> None:
-    validate_local_date(user, local_date)
-    db.query(DailyWellbeingCheckIn).filter(
-        DailyWellbeingCheckIn.user_id == user.id,
-        DailyWellbeingCheckIn.local_date == local_date,
-    ).delete(synchronize_session=False)
+    row = (
+        db.query(DailyWellbeingCheckIn)
+        .filter(
+            DailyWellbeingCheckIn.user_id == user.id,
+            DailyWellbeingCheckIn.local_date == local_date,
+        )
+        .one_or_none()
+    )
+    if row is None:
+        validate_local_date(user, local_date)
+    else:
+        db.delete(row)
     db.commit()
 
 
