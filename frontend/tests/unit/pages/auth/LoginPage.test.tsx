@@ -104,6 +104,20 @@ describe('LoginPage', () => {
     );
   });
 
+  it('retries a failed provider flow through a fresh start link', () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/login?next=%2Fcoach&auth_error=invalid_state&oauth_provider=google&state=secret-state',
+    );
+    renderLogin();
+
+    const retry = screen.getByRole('link', { name: 'Повторить вход через Google' });
+    expect(retry).toHaveAttribute('href', '/api/v1/auth/oauth/google/start?next=%2Fcoach');
+    expect(screen.queryByRole('button', { name: 'Повторить' })).not.toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent('secret-state');
+  });
+
   it('redirects an already authenticated account to the intended destination', async () => {
     authState.user = { id: 9 };
     renderLogin();

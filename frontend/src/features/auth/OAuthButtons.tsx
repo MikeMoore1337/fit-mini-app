@@ -1,6 +1,6 @@
 import { useState, type MouseEventHandler, type ReactNode } from 'react';
-import { safeAuthNextPath } from '../../shared/auth/redirects';
 import { markProductLoginStarted } from '../../shared/analytics/productEvents';
+import { oauthStartHref } from '../../shared/auth/oauthRecovery';
 import { Icon } from '../../shared/ui/Icon';
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -124,31 +124,33 @@ export function OAuthButtons({
   const configuredProviders = configuredOAuthProviders(providers);
   if (!configuredProviders.length) return null;
 
-  const safeNext = nextPath ? safeAuthNextPath(nextPath) : null;
-
   return (
     <section className="oauth-auth" aria-label="Вход через другой сервис">
       <p className="muted">Войти с помощью</p>
       <div className="oauth-auth__grid">
-        {configuredProviders.map((provider) => (
-          <OAuthProviderButton
-            key={provider}
-            provider={provider}
-            href={`/api/v1/auth/oauth/${provider}/start${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ''}`}
-            disabled={redirectingProvider !== null}
-            busy={redirectingProvider === provider}
-            onClick={(event) => {
-              if (redirectingProvider !== null) {
-                event.preventDefault();
-                return;
-              }
-              setRedirectingProvider(provider);
-              markProductLoginStarted();
-            }}
-          >
-            {redirectingProvider === provider ? 'Переходим…' : PROVIDER_LABELS[provider]}
-          </OAuthProviderButton>
-        ))}
+        {configuredProviders.map((provider) => {
+          const href = oauthStartHref(provider, nextPath);
+          if (!href) return null;
+          return (
+            <OAuthProviderButton
+              key={provider}
+              provider={provider}
+              href={href}
+              disabled={redirectingProvider !== null}
+              busy={redirectingProvider === provider}
+              onClick={(event) => {
+                if (redirectingProvider !== null) {
+                  event.preventDefault();
+                  return;
+                }
+                setRedirectingProvider(provider);
+                markProductLoginStarted();
+              }}
+            >
+              {redirectingProvider === provider ? 'Переходим…' : PROVIDER_LABELS[provider]}
+            </OAuthProviderButton>
+          );
+        })}
       </div>
     </section>
   );
