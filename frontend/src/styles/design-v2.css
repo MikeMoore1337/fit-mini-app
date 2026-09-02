@@ -3098,6 +3098,469 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
   }
 }
 
+/* Task 111: one period contract and compact factual progress bento. */
+.app-section--progress .progress-experience--bento {
+  gap: var(--v2-space-5);
+  color: var(--v2-text-primary);
+}
+
+.app-section--progress .progress-experience--bento .progress-hero {
+  align-items: start;
+  padding-block: var(--v2-space-2) 0;
+}
+
+.app-section--progress .progress-experience--bento .progress-hero__actions {
+  display: grid;
+  justify-items: stretch;
+  gap: var(--v2-space-3);
+  min-width: min(100%, 620px);
+}
+
+.app-section--progress .progress-period-controls {
+  display: grid;
+  gap: var(--v2-space-2);
+  min-width: 0;
+}
+
+.app-section--progress .progress-period-controls__tabs {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.app-section--progress .progress-period-controls .ui-tabs {
+  display: flex;
+  justify-content: flex-start;
+  max-width: 100%;
+  padding: 3px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.app-section--progress .progress-period-controls .ui-tab {
+  flex: 0 0 auto;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.app-section--progress .progress-period-controls__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px 10px;
+  color: var(--v2-text-secondary);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.app-section--progress .progress-period-controls__meta strong {
+  color: var(--v2-text-primary);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-section--progress .progress-period-controls__custom {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr)) auto;
+  align-items: end;
+  gap: var(--v2-space-2);
+  padding: var(--v2-space-3);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--progress .progress-period-controls__custom .ui-field {
+  min-width: 0;
+}
+
+.app-section--progress .progress-period-controls__custom-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v2-space-2);
+}
+
+.app-section--progress .progress-period-controls__custom .ui-field__error,
+.app-section--progress .progress-period-controls__custom > .ui-field__error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.app-section--progress .progress-bento.progress-summary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--v2-space-4);
+  overflow: hidden;
+  padding: clamp(18px, 3vw, 28px);
+  border: 1px solid color-mix(in srgb, var(--semantic-progress-line) 72%, var(--v2-border));
+  border-radius: var(--v2-panel-radius);
+  background: var(--v2-surface);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--semantic-progress-line) 12%, transparent);
+}
+
+.app-section--progress .progress-bento__context,
+.app-section--progress .progress-bento__trend-head,
+.app-section--progress .progress-bento__journal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--v2-space-3);
+}
+
+.app-section--progress .progress-bento__context h2,
+.app-section--progress .progress-bento__trend h3,
+.app-section--progress .progress-bento__journal h3 {
+  margin: 0;
+  color: var(--v2-text-primary);
+  letter-spacing: -0.035em;
+}
+
+.app-section--progress .progress-bento__context h2 {
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+}
+
+.app-section--progress .progress-bento__context p {
+  max-width: 58ch;
+  margin: 5px 0 0;
+  color: var(--v2-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.app-section--progress .progress-bento__context > .ui-badge {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-section--progress .progress-bento__eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--v2-accent-text);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.app-section--progress .progress-bento__grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--v2-space-3);
+}
+
+.app-section--progress .progress-bento__adherence,
+.app-section--progress .progress-bento__trend,
+.app-section--progress .progress-bento__journal,
+.app-section--progress .progress-bento__metrics {
+  min-width: 0;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+}
+
+.app-section--progress .progress-bento__adherence {
+  display: grid;
+  align-content: center;
+  align-self: start;
+  grid-column: span 4;
+  height: fit-content;
+  min-height: 236px;
+  gap: 7px;
+  padding: clamp(20px, 3vw, 30px);
+  background: var(--v2-lime);
+  color: var(--v2-on-lime);
+}
+
+.app-section--progress .progress-bento__adherence .progress-bento__eyebrow {
+  color: var(--v2-on-lime);
+  opacity: 0.72;
+}
+
+.app-section--progress .progress-bento__adherence .progress-summary__score {
+  color: var(--v2-on-lime);
+}
+
+.app-section--progress .progress-bento__adherence strong {
+  max-width: 8ch;
+  font-size: clamp(2.15rem, 4vw, 3.65rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 0.98;
+  letter-spacing: -0.06em;
+}
+
+.app-section--progress .progress-bento__adherence p {
+  max-width: 30ch;
+  margin: 0;
+  color: inherit;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  opacity: 0.78;
+}
+
+.app-section--progress .progress-bento__trend {
+  display: grid;
+  grid-column: span 8;
+  gap: var(--v2-space-3);
+  padding: clamp(16px, 2.5vw, 24px);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--progress .progress-bento__trend-head > strong {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  color: var(--v2-text-primary);
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-section--progress .progress-bento__trend-head > strong small {
+  color: var(--v2-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.app-section--progress .progress-bento__trend .data-viz-chart {
+  gap: var(--v2-space-2);
+}
+
+.app-section--progress .progress-bento__trend .data-viz-chart__plot svg {
+  min-height: 170px;
+  max-height: 240px;
+}
+
+.app-section--progress .progress-bento__trend .data-viz-chart__table {
+  max-height: 132px;
+  overflow: auto;
+}
+
+.app-section--progress .progress-bento__trend .data-confidence {
+  margin: 0;
+}
+
+.app-section--progress .progress-bento__metrics {
+  display: grid;
+  grid-column: span 8;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  background: var(--v2-surface);
+}
+
+.app-section--progress .progress-bento__metric {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  min-height: 120px;
+  padding: 16px;
+  border-right: 1px solid var(--v2-border);
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.app-section--progress .progress-bento__metric:nth-child(2n) {
+  border-right: 0;
+}
+
+.app-section--progress .progress-bento__metric:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+
+.app-section--progress .progress-bento__metric dt,
+.app-section--progress .progress-bento__metric small {
+  color: var(--v2-text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.app-section--progress .progress-bento__metric dt {
+  font-weight: 800;
+}
+
+.app-section--progress .progress-bento__metric dd {
+  margin: 0;
+  color: var(--v2-text-primary);
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+
+.app-section--progress .progress-bento__journal {
+  display: grid;
+  grid-column: span 4;
+  align-content: start;
+  gap: var(--v2-space-3);
+  padding: clamp(16px, 2.5vw, 24px);
+  background: var(--v2-surface);
+}
+
+.app-section--progress .progress-bento__journal-count {
+  flex: 0 0 auto;
+  color: var(--v2-text-secondary);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-section--progress .progress-bento__journal ul {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-section--progress .progress-bento__journal li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--v2-space-2);
+  padding-block: 10px;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.app-section--progress .progress-bento__journal li:first-child {
+  padding-top: 0;
+}
+
+.app-section--progress .progress-bento__journal li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.app-section--progress .progress-bento__journal li span {
+  color: var(--v2-text-secondary);
+  font-size: 0.76rem;
+}
+
+.app-section--progress .progress-bento__journal li strong {
+  color: var(--v2-text-primary);
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-section--progress .progress-details {
+  display: grid;
+  gap: var(--v2-space-5);
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .app-section--progress .progress-experience--bento .progress-hero {
+    flex-direction: column;
+    gap: var(--v2-space-3);
+  }
+
+  .app-section--progress .progress-experience--bento .progress-hero__actions {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-section--progress .progress-bento__grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .app-section--progress .progress-bento__adherence,
+  .app-section--progress .progress-bento__journal {
+    grid-column: span 2;
+  }
+
+  .app-section--progress .progress-bento__trend,
+  .app-section--progress .progress-bento__metrics {
+    grid-column: span 4;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-section--progress .progress-experience--bento .progress-hero {
+    flex-direction: column;
+    gap: var(--v2-space-3);
+  }
+
+  .app-section--progress .progress-experience--bento .progress-hero__actions {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-section--progress .progress-period-controls__meta {
+    justify-content: flex-start;
+  }
+
+  .app-section--progress .progress-period-controls__custom {
+    grid-template-columns: 1fr;
+  }
+
+  .app-section--progress .progress-period-controls__custom-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .app-section--progress .progress-period-controls__custom-actions .ui-button {
+    width: 100%;
+  }
+
+  .app-section--progress .progress-bento.progress-summary {
+    padding: var(--v2-space-4);
+    border-radius: var(--v2-region-radius);
+  }
+
+  .app-section--progress .progress-bento__context {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .app-section--progress .progress-bento__context > .ui-badge {
+    justify-self: start;
+    width: fit-content;
+  }
+
+  .app-section--progress .progress-bento__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-section--progress .progress-bento__adherence,
+  .app-section--progress .progress-bento__trend,
+  .app-section--progress .progress-bento__metrics,
+  .app-section--progress .progress-bento__journal {
+    grid-column: 1;
+  }
+
+  .app-section--progress .progress-bento__adherence {
+    min-height: 184px;
+  }
+
+  .app-section--progress .progress-bento__metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .app-section--progress .progress-bento__metric,
+  .app-section--progress .progress-bento__metric:nth-child(2n),
+  .app-section--progress .progress-bento__metric:nth-last-child(-n + 2) {
+    border-right: 0;
+    border-bottom: 1px solid var(--v2-border);
+  }
+
+  .app-section--progress .progress-bento__metric:last-child {
+    border-bottom: 0;
+  }
+
+  .app-section--progress .progress-bento__trend-head > strong {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 379px) {
+  .app-section--progress .progress-bento.progress-summary {
+    padding: var(--v2-space-3);
+  }
+
+  .app-section--progress .progress-period-controls__custom-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .app-shell--design-v2 *,
   .auth-public-shell--design-v2 * {

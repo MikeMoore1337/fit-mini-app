@@ -54,7 +54,10 @@ from fitminiapp_api.schemas.workout import (
     WorkoutStatusResponse,
     WorkoutTodayResponse,
 )
-from fitminiapp_api.services.analytics import build_training_analytics, build_user_progress
+from fitminiapp_api.services.analytics import (
+    build_training_analytics_for_range,
+    build_user_progress,
+)
 from fitminiapp_api.services.cardio import (
     CardioSessionError,
     complete_cardio_session,
@@ -81,8 +84,11 @@ from fitminiapp_api.services.nutrition_reports import (
     build_nutrition_report,
     nutrition_report_csv,
 )
+from fitminiapp_api.services.period_bounds import PeriodBoundsError, resolve_progress_bounds
 from fitminiapp_api.services.program_common import ProgramError
-from fitminiapp_api.services.progress import build_progress_summary
+from fitminiapp_api.services.progress import (
+    build_progress_summary_for_range,
+)
 from fitminiapp_api.services.progress_report_downloads import (
     create_progress_report_download_token,
     read_progress_report_download_token,
@@ -595,11 +601,22 @@ def workout_progress(
 
 @router.get("/progress/summary", response_model=ProgressSummaryResponse)
 def workout_progress_summary(
-    period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
+    period_days: ProgressPeriodDays | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
-    return build_progress_summary(db, current_user, period_days)
+    try:
+        bounds = resolve_progress_bounds(
+            current_user,
+            period_days,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        return build_progress_summary_for_range(db, current_user, bounds.start, bounds.end)
+    except PeriodBoundsError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
 
 
 def _nutrition_report_or_422(
@@ -769,17 +786,29 @@ def workout_nutrition_report_export(
 
 @router.get("/progress/training-analytics", response_model=TrainingAnalyticsResponse)
 def workout_training_analytics(
-    period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
+    period_days: ProgressPeriodDays | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     exercise_history_limit: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
-    return build_training_analytics(
-        db,
-        current_user,
-        period_days,
-        exercise_history_limit=exercise_history_limit,
-    )
+    try:
+        bounds = resolve_progress_bounds(
+            current_user,
+            period_days,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        return build_training_analytics_for_range(
+            db,
+            current_user,
+            bounds.start,
+            bounds.end,
+            exercise_history_limit=exercise_history_limit,
+        )
+    except PeriodBoundsError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
 
 
 @router.delete("/today", status_code=status.HTTP_204_NO_CONTENT)
