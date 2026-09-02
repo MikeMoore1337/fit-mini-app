@@ -191,7 +191,6 @@ function SummaryOverview({ summary }: { summary: ProgressSummary }) {
       className="progress-summary progress-bento semantic-card semantic-card--summary semantic-card--progress"
       data-card-variant="summary"
       data-semantic-family="progress"
-      data-testid="progress-bento-overview"
       aria-labelledby="progress-overview-title"
     >
       <div className="progress-bento__context">

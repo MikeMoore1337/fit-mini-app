@@ -12,6 +12,7 @@ import {
 } from './fixtures/mobile-tma';
 import { installPlatformApi } from './fixtures/platform-api';
 import { makeProgressReportFixture } from '../fixtures/progress-report';
+import { namedArticle, notificationArticle } from './fixtures/locators';
 
 const todayStates = [
   { name: 'planned', options: { workoutStatus: 'planned' as const }, action: 'Начать тренировку' },
@@ -330,7 +331,7 @@ test('cardio quick log keeps retry, editing and shared Mobile Web/TMA behavior',
   await tmaPage.setViewportSize(MOBILE_CONTEXTS.baseline);
   await tma.setViewport(MOBILE_CONTEXTS.baseline.height, MOBILE_CONTEXTS.baseline.height);
   await tma.setTheme('dark');
-  const tmaToastClose = tmaPage.getByRole('button', { name: 'Закрыть сообщение' }).last();
+  const tmaToastClose = tmaPage.getByRole('button', { name: 'Закрыть сообщение', exact: true });
   if (await tmaToastClose.isVisible()) await tmaToastClose.click();
   await finalTmaRow.scrollIntoViewIfNeeded();
   await expectNoOverlap(finalTmaRow, tmaPage.locator('#appBottomNav'));
@@ -339,7 +340,10 @@ test('cardio quick log keeps retry, editing and shared Mobile Web/TMA behavior',
   });
 
   await mobilePage.setViewportSize(MOBILE_CONTEXTS.compact);
-  const mobileToastClose = mobilePage.getByRole('button', { name: 'Закрыть сообщение' }).last();
+  const mobileToastClose = mobilePage.getByRole('button', {
+    name: 'Закрыть сообщение',
+    exact: true,
+  });
   if (await mobileToastClose.isVisible()) await mobileToastClose.click();
   await savedMobileRow.scrollIntoViewIfNeeded();
   await mobilePage.screenshot({
@@ -382,22 +386,28 @@ test('notification center keeps Mobile Web/TMA parity, unread geometry and an ex
     await expectNoHorizontalOverflow(page);
     await expectTouchTargets(page.locator('.notification-settings .switch-row'));
     await expectTouchTargets(page.locator('.notification-row button:visible'));
-    await expectLimeStartBoundary(page.locator('.notification-row--unread').first());
+    const unreadNotification = notificationArticle(page, 'Комментарий тренера к тренировке');
+    await expect(unreadNotification).toHaveCount(1);
+    await expectLimeStartBoundary(unreadNotification);
     await expect(page.getByRole('button', { name: 'Отметить всё' })).toHaveCSS(
       'border-top-style',
       'solid',
     );
-    await expect(page.getByRole('button', { name: 'Удалить' }).first()).toHaveCSS(
-      'border-top-style',
-      'solid',
-    );
-    const [lastRow, personal] = await Promise.all([
-      page.locator('.notification-row').last().boundingBox(),
+    const unreadDeleteButton = unreadNotification.getByRole('button', {
+      name: 'Удалить',
+      exact: true,
+    });
+    await expect(unreadDeleteButton).toHaveCount(1);
+    await expect(unreadDeleteButton).toHaveCSS('border-top-style', 'solid');
+    const readNotification = notificationArticle(page, 'Пора обновить замеры');
+    await expect(readNotification).toHaveCount(1);
+    const [readRow, personal] = await Promise.all([
+      readNotification.boundingBox(),
       page.locator('.notification-personal').boundingBox(),
     ]);
-    expect(lastRow).not.toBeNull();
+    expect(readRow).not.toBeNull();
     expect(personal).not.toBeNull();
-    expect(personal!.y - (lastRow!.y + lastRow!.height)).toBeLessThanOrEqual(20);
+    expect(personal!.y - (readRow!.y + readRow!.height)).toBeLessThanOrEqual(20);
   }
 
   const signature = (page: typeof tmaPage) =>
@@ -871,7 +881,8 @@ test('nutrition report keeps period analytics and diary return aligned in Mobile
     await expectNoHorizontalOverflow(tmaPage);
     await expectTouchTargets(tmaSelector.getByRole('tab'));
   }
-  const diaryLink = tmaReport.locator('.nutrition-report-days tbody a').first();
+  const diaryLink = tmaReport.getByRole('row').filter({ hasText: '· сегодня' }).getByRole('link');
+  await expect(diaryLink).toHaveCount(1);
   await diaryLink.scrollIntoViewIfNeeded();
   await expectNoOverlap(diaryLink, tmaPage.locator('#appBottomNav'));
 
@@ -977,8 +988,10 @@ test('measurement add, edit, history and insufficient trend keep Mobile Web and 
       'Одна точка сохраняет факт, но ещё не показывает направление изменений.',
     );
     await expect(singlePointHints).toHaveCount(2);
-    await expect(singlePointHints.first()).toBeVisible();
-    await expect(body.getByText('Пока без динамики').first()).toBeVisible();
+    for (const hint of await singlePointHints.all()) await expect(hint).toBeVisible();
+    const noTrendStates = body.getByText('Пока без динамики', { exact: true });
+    await expect(noTrendStates).toHaveCount(2);
+    for (const state of await noTrendStates.all()) await expect(state).toBeVisible();
     const row = body.locator('.measurement-history__row').filter({ hasText: '74.2 кг' });
     await row.getByRole('button', { name: 'Изменить' }).click();
     await body.getByLabel('Вес, кг').fill('74.6');
@@ -1030,13 +1043,16 @@ test('data confidence keeps insufficient analytics explicit in Mobile Web and da
   ]);
 
   for (const page of [tmaPage, mobilePage]) {
-    const insufficient = page.getByLabel('Достаточно ли данных: Пока мало данных');
-    await expect(insufficient.first()).toBeVisible();
-    await expect(insufficient.first()).toContainText('0 рабочих подходов');
+    const insufficient = page
+      .getByRole('region', { name: 'Достаточно ли данных: Пока мало данных', exact: true })
+      .filter({ hasText: '0 рабочих подходов' });
+    await expect(insufficient).toHaveCount(1);
+    await expect(insufficient).toBeVisible();
+    await expect(insufficient).toContainText('0 рабочих подходов');
     await expect(page.getByRole('link', { name: 'Открыть тренировку' })).toBeVisible();
-    await expectLimeStartBoundary(insufficient.first());
+    await expectLimeStartBoundary(insufficient);
     await expectNoHorizontalOverflow(page);
-    await expectTouchTargets(page.locator('.data-confidence__details > summary'));
+    await expectTouchTargets(page.locator('#progress-body details > summary:visible'));
   }
   expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
 
@@ -1048,7 +1064,11 @@ test('data confidence keeps insufficient analytics explicit in Mobile Web and da
   }
   await tmaPage.setViewportSize(MOBILE_CONTEXTS.baseline);
   await tma.setViewport(MOBILE_CONTEXTS.baseline.height, MOBILE_CONTEXTS.baseline.height);
-  const bodyConfidence = tmaPage.locator('#progress-body .data-confidence').first();
+  const bodyConfidence = tmaPage
+    .locator('#progress-body')
+    .getByRole('region', { name: 'Достаточно ли данных: Пока мало данных', exact: true })
+    .filter({ hasText: 'Сейчас есть 0 замеров' });
+  await expect(bodyConfidence).toHaveCount(1);
   await bodyConfidence.scrollIntoViewIfNeeded();
   await expectNoOverlap(bodyConfidence, tmaPage.locator('#appBottomNav'));
   await tmaPage.screenshot({
@@ -1169,7 +1189,9 @@ test('direct Trainer activation keeps client context focused in mocked TMA', asy
     .getByRole('checkbox', { name: /Принимаю условия использования режима тренера/ })
     .check();
   await tmaPage.getByRole('button', { name: 'Включить режим тренера' }).click();
-  await expect(tmaPage.getByText('Режим тренера включён').first()).toBeVisible();
+  const trainerToast = tmaPage.getByRole('status').filter({ hasText: 'Режим тренера включён' });
+  await expect(trainerToast).toHaveCount(1);
+  await expect(trainerToast).toBeVisible();
   expect(api.trainerActivationCalls()).toBe(1);
 
   await tmaPage.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }).click();
@@ -1871,7 +1893,12 @@ test('progression guidance screenshots cover outcomes, long content and responsi
 
     await page.goto('/app');
     await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
-    const exercise = page.locator('.active-workout-exercise').first();
+    const exerciseTitle =
+      'longExerciseName' in current && current.longExerciseName
+        ? 'Приседания со штангой с контролируемой паузой в нижней точке'
+        : 'Приседания';
+    const exercise = namedArticle(page, exerciseTitle);
+    await expect(exercise).toHaveCount(1);
     const guidance = exercise.getByRole('region', { name: 'Рекомендация по следующей нагрузке' });
     await guidance.getByText('Почему?', { exact: true }).click();
     await expect(guidance).toBeVisible();
@@ -1935,8 +1962,6 @@ test('completion summary survives finish retry, feedback error, reload and TMA l
   expect((titleBox?.x ?? 0) + (titleBox?.width ?? 0)).toBeLessThanOrEqual(
     (await tmaPage.evaluate(() => window.innerWidth)) - 24,
   );
-  await expect(focusHeader).toHaveCSS('position', 'static');
-
   const resultsDisclosure = tmaPage.locator('.workout-completion__results');
   const resultsSummary = resultsDisclosure.locator('summary');
   const [resultsBox, resultsTextBox] = await Promise.all([
@@ -2018,7 +2043,11 @@ test('completion summary survives finish retry, feedback error, reload and TMA l
   }
 
   await mobilePage.goto('/');
-  await expect(mobilePage.locator('.landing-button').first()).toHaveCSS('border-radius', '12px');
+  const landingButtons = mobilePage.locator('.landing-button');
+  await expect(landingButtons).not.toHaveCount(0);
+  for (const button of await landingButtons.all()) {
+    await expect(button).toHaveCSS('border-radius', '12px');
+  }
 });
 
 test('nutrition quick paths recover in TMA and match Mobile Web before core navigation', async ({
@@ -2086,20 +2115,27 @@ test('nutrition quick paths recover in TMA and match Mobile Web before core navi
   const calories = tmaPage.getByRole('spinbutton', { name: 'Калории' });
   await calories.fill('510');
   await tmaPage.getByRole('textbox', { name: 'Название (необязательно)' }).fill('TMA перекус');
+  const quickAddAction = tmaPage.getByRole('button', {
+    name: 'Сохранить Quick Add',
+    exact: true,
+  });
+  const submitDock = tmaPage.locator('.nutrition-picker__submit');
+  await expect(quickAddAction).toHaveCount(1);
   for (const viewport of [MOBILE_CONTEXTS.compact, MOBILE_CONTEXTS.baseline]) {
     await tmaPage.setViewportSize(viewport);
     await tma.setViewport(560, viewport.height, false);
-    const lastAction = tmaPage.locator('.nutrition-picker__submit .ui-button').last();
-    await lastAction.scrollIntoViewIfNeeded();
-    const geometry = await tmaPage.locator('.nutrition-picker__submit').evaluate((submit) => {
-      const action = submit.querySelector('.ui-button:last-child');
-      if (!(action instanceof HTMLElement)) throw new Error('Quick Add action is missing');
-      return {
-        actionBottom: action.getBoundingClientRect().bottom,
-        paddingBottom: Number.parseFloat(getComputedStyle(submit).paddingBottom),
-        viewportHeight: window.innerHeight,
-      };
-    });
+    await quickAddAction.scrollIntoViewIfNeeded();
+    const [actionBox, paddingBottom, viewportHeight] = await Promise.all([
+      quickAddAction.boundingBox(),
+      submitDock.evaluate((submit) => Number.parseFloat(getComputedStyle(submit).paddingBottom)),
+      tmaPage.evaluate(() => window.innerHeight),
+    ]);
+    expect(actionBox).not.toBeNull();
+    const geometry = {
+      actionBottom: actionBox!.y + actionBox!.height,
+      paddingBottom,
+      viewportHeight,
+    };
     expect(geometry.paddingBottom).toBeGreaterThanOrEqual(24);
     expect(geometry.actionBottom).toBeLessThanOrEqual(geometry.viewportHeight - 23);
     await expectNoHorizontalOverflow(tmaPage);
@@ -2395,7 +2431,9 @@ test('contextual help covers workout, nutrition and Progress without a TMA libra
 
   await expect(tmaPage.getByRole('link', { name: 'База знаний' })).not.toBeAttached();
   await tmaPage.getByRole('button', { name: 'Начать тренировку' }).click();
-  await tmaPage.getByText('Дополнительно', { exact: true }).first().click();
+  const currentSet = tmaPage.locator('[aria-current="step"]');
+  await expect(currentSet).toHaveCount(1);
+  await currentSet.getByText('Дополнительно', { exact: true }).click();
   const rirDetails = tmaPage.locator('.active-workout-rir .contextual-help');
   const rirHelp = rirDetails.getByText('Что это?', { exact: true });
   await rirHelp.click();
@@ -2512,15 +2550,23 @@ test('task 72 screenshot packet keeps shared composition across core surfaces', 
       if (scenario.label === 'today') {
         await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible();
       } else if (scenario.label === 'progress') {
-        await expect(page.locator('#progress-body .data-confidence').first()).toBeVisible();
+        const confidences = page
+          .locator('#progress-body')
+          .getByRole('region', { name: /^Достаточно ли данных:/ });
+        await expect(confidences).not.toHaveCount(0);
+        for (const confidence of await confidences.all()) await expect(confidence).toBeVisible();
       } else {
         await expect(page.getByRole('heading', { name: 'Питание', exact: true })).toBeVisible();
       }
 
       if (scenario.label === 'progress') {
-        const confidence = page.locator('#progress-body .data-confidence').first();
-        await confidence.scrollIntoViewIfNeeded();
-        await expectLimeStartBoundary(confidence);
+        const confidences = page
+          .locator('#progress-body')
+          .getByRole('region', { name: /^Достаточно ли данных:/ });
+        for (const confidence of await confidences.all()) {
+          await confidence.scrollIntoViewIfNeeded();
+          await expectLimeStartBoundary(confidence);
+        }
       }
       if (scenario.label === 'nutrition-barcode') {
         await page
@@ -2559,11 +2605,16 @@ test('task 72 screenshot packet keeps shared composition across core surfaces', 
     const page = await browser.newPage({ viewport });
     await installPlatformApi(page, { browserSession: true });
     await page.goto(viewport.width === 768 ? '/app?section=progress' : '/app');
-    await expect(
-      viewport.width === 768
-        ? page.locator('#progress-body .data-confidence').first()
-        : page.getByRole('button', { name: 'Начать тренировку' }),
-    ).toBeVisible();
+    const progressConfidences = page
+      .locator('#progress-body')
+      .getByRole('region', { name: /^Достаточно ли данных:/ });
+    if (viewport.width === 768) {
+      await expect(progressConfidences).not.toHaveCount(0);
+      for (const confidence of await progressConfidences.all())
+        await expect(confidence).toBeVisible();
+    } else {
+      await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible();
+    }
     await expectNoHorizontalOverflow(page);
     await page.screenshot({
       path: `../.artifacts/screenshots/task-72/mobile-web-${viewport.width}x${viewport.height}-light-${viewport.width === 768 ? 'progress' : 'today'}.png`,

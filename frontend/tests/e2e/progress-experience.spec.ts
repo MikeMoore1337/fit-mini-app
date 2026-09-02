@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { emptyHydrationDay } from './fixtures/platform-api';
+import { progressOverview } from './fixtures/locators';
 
 const captureFeedbackAudit = Boolean(
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
@@ -924,19 +925,20 @@ test('shared data confidence keeps analytics factual, responsive and explicit wh
     path: '../.artifacts/screenshots/task-61/mobile-web-360x800-light-analytics.png',
   });
 
-  await expect(page.getByTestId('progress-bento-overview')).toBeVisible();
+  await expect(progressOverview(page)).toHaveCount(1);
+  await expect(progressOverview(page)).toBeVisible();
   await page.locator('.progress-hero').getByRole('tab', { name: '7 дней' }).click();
   await refreshStarted;
   const loadingState = page.getByRole('status').filter({ hasText: 'Обновляем динамику за период' });
   await expect(loadingState).toBeVisible();
-  await expect(page.getByTestId('progress-bento-overview')).toBeVisible();
+  await expect(progressOverview(page)).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await loadingState.scrollIntoViewIfNeeded();
   await page.screenshot({
     path: '../.artifacts/screenshots/task-61/mobile-web-390x844-light-period-loading.png',
   });
   releaseRefresh();
-  await expect(page.getByTestId('progress-bento-overview')).toBeVisible();
+  await expect(progressOverview(page)).toBeVisible();
 });
 
 test('measurements keep priority context, units, mobile order and add/edit history', async ({
@@ -1554,7 +1556,7 @@ test('progress bento keeps matching light and dark visual forms for the same dat
       await page.setViewportSize({ width: surface.width, height: surface.height });
 
       await expect(page.getByRole('heading', { name: 'Прогресс', exact: true })).toBeVisible();
-      await expect(page.getByTestId('progress-bento-overview')).toBeVisible();
+      await expect(progressOverview(page)).toBeVisible();
       await expect(page.locator('html')).toHaveAttribute('data-color-scheme', theme);
       await expect(
         page.locator('.progress-period-controls').getByRole('tab', { name: '30 дней' }),
@@ -1591,7 +1593,7 @@ test('progress period controls drive one exact URL and API range through history
   const controls = page.locator('.progress-period-controls');
   await expect(controls.getByRole('tab')).toHaveCount(4);
   await controls.getByRole('tab', { name: '30 дней' }).click();
-  await expect(page.getByTestId('progress-bento-overview')).toBeVisible();
+  await expect(progressOverview(page)).toBeVisible();
 
   for (const period of [7, 30, 90] as const) {
     const label = `${period} дней`;
@@ -1601,7 +1603,7 @@ test('progress period controls drive one exact URL and API range through history
       'aria-selected',
       'true',
     );
-    await expect(page.getByTestId('progress-bento-overview')).toBeVisible();
+    await expect(progressOverview(page)).toBeVisible();
   }
 
   await controls.getByRole('tab', { name: 'Свой период' }).click();
@@ -1618,5 +1620,5 @@ test('progress period controls drive one exact URL and API range through history
   await expect(page).toHaveURL(/progress_period=days_90/);
   await page.goForward();
   await expect(page).toHaveURL(/progress_period=custom/);
-  await expect(page.getByTestId('progress-bento-overview')).toBeVisible();
+  await expect(progressOverview(page)).toBeVisible();
 });
