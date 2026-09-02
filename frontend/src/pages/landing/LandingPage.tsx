@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState, type ImgHTMLAttributes } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import type { WebArticleCard } from '../../shared/api/types';
+import { api } from '../../shared/api/client';
 import {
   productEventSurface,
   trackProductEvent,
@@ -224,6 +227,10 @@ export default function LandingPage() {
   const { colorScheme } = useWebTheme();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const navigationRef = useRef<HTMLElement>(null);
+  const publishedArticles = useQuery({
+    queryKey: ['public', 'articles'],
+    queryFn: () => api<WebArticleCard[]>('/api/v1/public/articles'),
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -456,6 +463,33 @@ export default function LandingPage() {
             ))}
           </div>
         </section>
+
+        {publishedArticles.data && publishedArticles.data.length > 0 && (
+          <section className="landing-articles" aria-labelledby="landing-articles-title">
+            <div className="landing-articles__intro">
+              <p className="landing-kicker">Разобраться до действия</p>
+              <h2 id="landing-articles-title">Избранные материалы</h2>
+              <p>
+                Короткий путь к понятному контексту: тренировки, питание и прогресс с источниками и
+                честными ограничениями.
+              </p>
+              <AppLink className="landing-core__self-link" to="/articles">
+                Все статьи <Icon name="arrow-right" size={20} />
+              </AppLink>
+            </div>
+            <div className="landing-articles__grid">
+              {publishedArticles.data.slice(0, 3).map((article) => (
+                <article key={article.slug}>
+                  <small>{article.topics[0] ?? 'YFC'}</small>
+                  <h3>
+                    <AppLink to={`/articles/${article.slug}`}>{article.title}</AppLink>
+                  </h3>
+                  <p>{article.description}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="landing-trainer" aria-labelledby="trainer-title">
           <div className="landing-trainer__copy">

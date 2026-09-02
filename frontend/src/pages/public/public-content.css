@@ -171,6 +171,23 @@
   padding: 24px;
 }
 
+.public-article--web-article .public-hero h1,
+.articles-index__hero h1 {
+  font-size: clamp(2.8rem, 5.4vw, 5.8rem);
+  line-height: 0.98;
+}
+
+.article-card time {
+  display: block;
+  margin-top: 18px;
+  color: var(--landing-muted);
+  font-size: 0.78rem;
+}
+
+.article-card .public-inline-link {
+  margin-top: 22px;
+}
+
 .public-guide-meta {
   display: flex;
   flex-wrap: wrap;

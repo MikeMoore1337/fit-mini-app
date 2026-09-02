@@ -17,11 +17,13 @@ from fitminiapp_api.api.router import api_router
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.core.logging_config import configure_logging
 from fitminiapp_api.core.rate_limit import limiter
-from fitminiapp_api.db.session import engine
+from fitminiapp_api.db.session import SessionLocal, engine
 from fitminiapp_api.middleware.canonical_host import redirect_landing_application_requests
 from fitminiapp_api.middleware.request_body_limit import RequestBodyLimitMiddleware
 from fitminiapp_api.middleware.request_context import RequestContextMiddleware
+from fitminiapp_api.models.news import WebArticle
 from fitminiapp_api.seo import public_origin, public_page_paths, render_frontend_document
+from fitminiapp_api.services.web_articles import published_articles
 
 APP_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = APP_DIR.parent
@@ -151,11 +153,18 @@ def health_ready() -> dict[str, str]:
     return health()
 
 
-def _frontend_index(path: str) -> HTMLResponse:
+def _frontend_index(
+    path: str,
+    *,
+    article: WebArticle | None = None,
+    articles: tuple[WebArticle, ...] = (),
+) -> HTMLResponse:
     index = FRONTEND_DIST_DIR / "index.html"
     if not index.exists():
         raise RuntimeError("Frontend build is missing. Run `npm run build` in frontend/.")
-    document, metadata = render_frontend_document(index.read_text(encoding="utf-8"), path)
+    document, metadata = render_frontend_document(
+        index.read_text(encoding="utf-8"), path, article=article, articles=articles
+    )
     return HTMLResponse(
         document,
         headers={
@@ -186,11 +195,22 @@ def robots_txt() -> PlainTextResponse:
 def sitemap() -> Response:
     origin = public_origin()
     urls = [f"{origin}/" if path == "/" else f"{origin}{path}" for path in public_page_paths()]
-    entries = "\n".join(f"  <url>\n    <loc>{url}</loc>\n  </url>" for url in urls)
+    with SessionLocal() as db:
+        articles = published_articles(db)
+    entries = [f"  <url>\n    <loc>{url}</loc>\n  </url>" for url in urls]
+    entries.extend(
+        "  <url>\n"
+        f"    <loc>{origin}/articles/{article.slug}</loc>\n"
+        f"    <lastmod>{article.updated_at.date().isoformat()}</lastmod>\n"
+        "  </url>"
+        for article in articles
+        if article.updated_at is not None
+    )
+    entry_text = "\n".join(entries)
     content = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        f"{entries}\n"
+        f"{entry_text}\n"
         "</urlset>\n"
     )
     return Response(
@@ -218,6 +238,27 @@ def demo_page() -> HTMLResponse:
 @app.get("/")
 def landing_page() -> HTMLResponse:
     return _frontend_index("/")
+
+
+@app.get("/articles")
+def articles_index_page() -> HTMLResponse:
+    with SessionLocal() as db:
+        articles = tuple(published_articles(db))
+    return _frontend_index("/articles", articles=articles)
+
+
+@app.get("/articles/{slug}")
+def article_page(slug: str) -> HTMLResponse:
+    with SessionLocal() as db:
+        article = (
+            db.query(WebArticle)
+            .filter(WebArticle.slug == slug, WebArticle.status == "published")
+            .one_or_none()
+        )
+        if article is None:
+            raise HTTPException(status_code=404, detail="Article not found")
+        articles = tuple(published_articles(db))
+    return _frontend_index(f"/articles/{slug}", article=article, articles=articles)
 
 
 def public_content_page(request: Request) -> HTMLResponse:

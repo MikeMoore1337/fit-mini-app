@@ -8,6 +8,58 @@ export type Exercise = ApiSchemas['ExerciseCatalogItem'];
 export type ExerciseGuide = ApiSchemas['ExerciseGuide'];
 export type PublicExerciseSummary = ApiSchemas['PublicExerciseSummary'];
 export type PublicExerciseDetail = ApiSchemas['PublicExerciseDetail'];
+export type ArticleKind =
+  | 'evergreen_explainer'
+  | 'practical_guide'
+  | 'evidence_review'
+  | 'myth_busting'
+  | 'research_update'
+  | 'comparison'
+  | 'product_education';
+export interface WebArticleCard {
+  slug: string;
+  title: string;
+  description: string;
+  lead: string;
+  topics: string[];
+  article_kind: ArticleKind;
+  published_at: string;
+  updated_at: string;
+  canonical_url: string;
+}
+export interface WebArticle extends WebArticleCard {
+  body_sections: Array<{ heading: string; paragraphs: string[]; points: string[] }>;
+  search_intent: 'informational' | 'how_to' | 'comparison' | 'definition' | 'evidence' | 'mixed';
+  primary_query: string;
+  secondary_queries: string[];
+  risk_level: 'low' | 'moderate' | 'high' | 'critical' | 'unknown';
+  evidence_level: 'high' | 'moderate' | 'limited' | 'preliminary' | 'conflicting' | 'unknown';
+  claims: Array<{ claim_id: string; claim_text: string; normalized_claim: string }>;
+  sources: Array<{
+    source_id: string;
+    title: string;
+    publisher: string;
+    url: string;
+    source_type: string;
+    published_at: string | null;
+    limitations: string;
+  }>;
+  claim_source_matrix: Array<{
+    claim_id: string;
+    source_ids: string[];
+    support_level: 'supports' | 'partially_supports' | 'does_not_support' | 'unclear';
+    limitations: string;
+    review_status: 'pending' | 'verified' | 'blocked';
+  }>;
+  author: { name: string; type: 'Organization' | 'Person' };
+  editor: { name: string; type: 'Organization' | 'Person' };
+  domain_reviewer: { name: string; type: 'Organization' | 'Person' } | null;
+  related_slugs: string[];
+  cta: { destination: 'tma' | 'web' | 'landing'; label: string; description: string };
+  content_version: number;
+  generated_with_ai: boolean;
+  research_assistance: boolean;
+}
 export type ProgramTemplate = ApiSchemas['ProgramTemplateResponse'];
 export type ProgramTemplateCreate = ApiSchemas['ProgramTemplateCreate'];
 export type ProgramRecommendationRequest = ApiSchemas['ProgramRecommendationRequest'];
