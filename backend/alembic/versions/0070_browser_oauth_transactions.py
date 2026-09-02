@@ -32,10 +32,15 @@ def upgrade() -> None:
         sa.Column("code_verifier", sa.String(length=256), nullable=True),
         sa.Column("nonce", sa.String(length=256), nullable=True),
         sa.Column("link_action_token_hash", sa.String(length=64), nullable=True),
-        sa.Column("link_user_id", sa.Integer(), nullable=True),
+        sa.Column(
+            "link_user_id",
+            sa.Integer(),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=True,
+        ),
         sa.Column("session_family_id", sa.String(length=64), nullable=True),
         sa.Column("status", sa.String(length=16), nullable=False, server_default="pending"),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("expires_at", sa.DateTime(), nullable=False),
         sa.Column("claimed_at", sa.DateTime(), nullable=True),
         sa.Column("completed_at", sa.DateTime(), nullable=True),
@@ -48,7 +53,6 @@ def upgrade() -> None:
             "status IN ('pending', 'processing', 'completed', 'failed', 'expired')",
             name="ck_oauth_transactions_status",
         ),
-        sa.ForeignKeyConstraint(["link_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("transaction_id"),
     )
     op.create_index(
