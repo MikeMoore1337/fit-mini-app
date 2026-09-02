@@ -1,7 +1,7 @@
 """Run one explicitly selected backlog task to its terminal delivery state.
 
 The user-facing contract is one launch.  The worker keeps pull requests, checks,
-serialized integration, release, deployment monitoring and safe closeout inside
+release, deployment monitoring and safe closeout inside
 the canonical task lifecycle.
 """
 
@@ -172,7 +172,7 @@ def _worker_prompt(task_id: str, started: dict[str, Any]) -> str:
         "Один исходный owner launch является standing authorization для normal delivery path: "
         "task branch -> local PRE_PUSH_CI_PASS -> PR master -> exact master CI -> production -> safe closeout.\n"
         "Не запрашивай generic approval для commit, push, PR, merge, normal release, deploy "
-        "monitoring, exact ref sync, finish, cleanup или archive. Внутренние controller stages "
+        "monitoring, finish, cleanup или archive. Внутренние controller stages "
         "выполняй автоматически и сообщай только компактный status или точный terminal blocker.\n"
         "Все BLOCKER/HIGH/MEDIUM должны быть исправлены и пройти required targeted recheck до "
         "release. LOW не расширяет scope. Реальный HUMAN_EVIDENCE, LEGAL, EXTERNAL, DESTRUCTIVE "
