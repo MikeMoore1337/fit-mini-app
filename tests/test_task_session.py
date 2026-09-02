@@ -1204,3 +1204,53 @@ def test_finish_refuses_execution_from_task_worktree(
     assert worktree.is_dir()
     assert controller.repository.ref_exists(branch)
     assert controller.store.task_lease_path("408").exists()
+
+
+def test_finish_cleans_task_temporary_artifacts_and_records_result(
+    repository: tuple[Path, Any],
+) -> None:
+    controller, worktree, branch, _, _ = _prepare_finish_state(repository, "409")
+    manager = task_session.ArtifactManager(
+        controller.repository.current_worktree / ".artifacts",
+        repo_root=controller.repository.current_worktree,
+        controller_state_dir=controller.store.root,
+    )
+    temporary = manager.allocate_directory(
+        "409",
+        "temporary",
+        "temporary/worker-run",
+        purpose="controller cleanup test",
+        command="pytest",
+    )
+    (temporary / "generated.txt").write_text("remove\n", encoding="utf-8")
+
+    result = controller.finish("409")
+
+    assert result["history"]["artifact_cleanup"]["status"] == "completed"
+    assert result["history"]["artifact_cleanup"]["removed_count"] == 1
+    assert not (temporary / "generated.txt").exists()
+    assert not worktree.exists()
+    assert not controller.repository.ref_exists(branch)
+
+
+def test_finish_stops_before_git_cleanup_when_artifact_cleanup_fails(
+    repository: tuple[Path, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    controller, worktree, branch, _, _ = _prepare_finish_state(repository, "410")
+
+    def fail_closed(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        return {
+            "status": "partial-failure",
+            "cleanup_errors": [{"path": "tasks/410/temporary/open.log", "reason": "locked"}],
+        }
+
+    monkeypatch.setattr(task_session.ArtifactManager, "cleanup_task", fail_closed)
+
+    with pytest.raises(task_session.TaskSessionError, match="artifact cleanup stopped fail-closed"):
+        controller.finish("410")
+
+    assert worktree.exists()
+    assert controller.repository.ref_exists(branch)
+    assert controller.store.task_lease_path("410").exists()
+    history = controller.store.read_json(controller.store.history / "task-410.json")
+    assert history["state"] == "dev-ci-success"

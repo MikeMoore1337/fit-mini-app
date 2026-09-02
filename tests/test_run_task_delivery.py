@@ -111,3 +111,40 @@ def test_verify_closeout_rejects_finished_but_unarchived_task(tmp_path: Path) ->
 
     with pytest.raises(delivery.DeliveryError, match="was not archived"):
         delivery._verify_closeout({"lease": {"canonical_task_path": str(source)}})
+
+
+def test_delivery_artifacts_are_task_scoped_and_final_result_is_preserved(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(delivery, "REPOSITORY_ROOT", tmp_path)
+
+    artifacts = delivery._artifact_root("133")
+    assert artifacts.relative_to(tmp_path / ".artifacts").parts[:4] == (
+        "tasks",
+        "133",
+        "temporary",
+        "delivery",
+    )
+    (artifacts / "events.jsonl").write_text('{"stage":"worker"}\n', encoding="utf-8")
+    (artifacts / "final.md").write_text("terminal result\n", encoding="utf-8")
+
+    result = delivery._cleanup_delivery_artifacts("133", artifacts)
+
+    assert result["status"] == "completed"
+    assert result["removed_count"] == 1
+    assert not artifacts.exists()
+    evidence = tmp_path / ".artifacts" / "tasks" / "133" / "evidence" / "delivery"
+    assert [path.read_text(encoding="utf-8") for path in evidence.glob("*-final.md")] == [
+        "terminal result\n"
+    ]
+
+
+def test_delivery_cleanup_refuses_artifacts_outside_exact_task_path(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(delivery, "REPOSITORY_ROOT", tmp_path)
+    outside = tmp_path / ".artifacts" / "temporary" / "delivery"
+    outside.mkdir(parents=True)
+
+    with pytest.raises(delivery.DeliveryError, match="outside exact task root"):
+        delivery._cleanup_delivery_artifacts("133", outside)

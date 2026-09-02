@@ -20,6 +20,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+try:
+    from scripts.artifact_manager import ArtifactError, ArtifactManager
+except ModuleNotFoundError:
+    from artifact_manager import ArtifactError, ArtifactManager
+
 TASK_ID_PATTERN = r"[0-9]+[A-Z]?"
 TASK_ID_RE = re.compile(rf"^{TASK_ID_PATTERN}$")
 TASK_BRANCH_RE = re.compile(
@@ -1591,6 +1596,30 @@ class TaskController:
                     f"ahead={ahead}, behind={behind}"
                 )
 
+        try:
+            artifact_cleanup = ArtifactManager(
+                canonical / ".artifacts",
+                repo_root=canonical,
+                controller_state_dir=self.store.root,
+            ).cleanup_task(
+                expected,
+                terminal_state=str(lease["lifecycle_state"]),
+                exclude_prefixes=("temporary/delivery",),
+            )
+        except ArtifactError as error:
+            raise TaskSessionError(f"finish artifact cleanup failed closed: {error}") from error
+        if artifact_cleanup["status"] not in {"completed", "noop"} or artifact_cleanup.get(
+            "cleanup_errors"
+        ):
+            errors = "; ".join(
+                f"{item.get('path', 'temporary')}: {item.get('reason', 'unknown error')}"
+                for item in artifact_cleanup.get("cleanup_errors", [])
+            )
+            raise TaskSessionError(
+                "finish artifact cleanup stopped fail-closed" + (f": {errors}" if errors else "")
+            )
+        artifact_cleanup["excluded_prefixes"] = ["temporary/delivery"]
+
         self.repository.remove_worktree(worktree_path)
         if self.repository.ref(branch) != expected_head:
             raise TaskSessionError(
@@ -1605,6 +1634,7 @@ class TaskController:
                 "branch": branch,
                 "performed_at": history["finished_at"],
             }
+            history["artifact_cleanup"] = artifact_cleanup
             StateStore.replace_json(history_path, history)
             lease_path.unlink()
         return {

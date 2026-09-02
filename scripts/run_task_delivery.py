@@ -20,6 +20,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+try:
+    from scripts.artifact_manager import ArtifactError, ArtifactManager
+except ModuleNotFoundError:
+    from artifact_manager import ArtifactError, ArtifactManager
+
 SCRIPT_PATH = Path(__file__).resolve()
 REPOSITORY_ROOT = SCRIPT_PATH.parents[1]
 CONTROLLER_PATH = REPOSITORY_ROOT / "scripts" / "task_session.py"
@@ -178,10 +183,63 @@ def _worker_prompt(task_id: str, started: dict[str, Any]) -> str:
 
 
 def _artifact_root(task_id: str) -> Path:
-    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    path = REPOSITORY_ROOT / ".artifacts" / "task-deliveries" / f"{stamp}-task-{task_id}"
-    path.mkdir(parents=True, exist_ok=False)
-    return path
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
+    return ArtifactManager(
+        REPOSITORY_ROOT / ".artifacts", repo_root=REPOSITORY_ROOT
+    ).allocate_directory(
+        task_id,
+        "temporary",
+        Path("temporary") / "delivery" / f"{stamp}-delivery",
+        purpose="one-command task delivery worker output",
+        command="scripts/run_task_delivery.py",
+        owner="run_task_delivery",
+    )
+
+
+def _cleanup_delivery_artifacts(task_id: str, artifacts: Path) -> dict[str, Any]:
+    manager = ArtifactManager(REPOSITORY_ROOT / ".artifacts", repo_root=REPOSITORY_ROOT)
+    task_root = manager.task_root(task_id)
+    try:
+        relative = artifacts.resolve().relative_to(task_root.resolve())
+    except ValueError as error:
+        raise DeliveryError(
+            f"Delivery artifacts are outside exact task root: {artifacts}"
+        ) from error
+    if relative.parts[:2] != ("temporary", "delivery"):
+        raise DeliveryError(f"Delivery artifacts are outside temporary/delivery: {artifacts}")
+    final = artifacts / "final.md"
+    if final.exists():
+        try:
+            if not final.is_file():
+                raise DeliveryError(f"Delivery final result is not a regular file: {final}")
+            manager.promote_file(
+                final,
+                task_id,
+                Path("evidence") / "delivery" / f"{relative.name}-final.md",
+                purpose="terminal one-command delivery result",
+                command="scripts/run_task_delivery.py",
+                owner="run_task_delivery",
+            )
+        except ArtifactError as error:
+            raise DeliveryError(f"Cannot preserve terminal delivery result: {error}") from error
+    try:
+        result = manager.cleanup_task(
+            task_id,
+            terminal_state="finished",
+            include_prefixes=(relative.as_posix(),),
+        )
+    except ArtifactError as error:
+        raise DeliveryError(f"Delivery artifact cleanup failed closed: {error}") from error
+    if result["status"] not in {"completed", "noop"} or result.get("cleanup_errors"):
+        errors = "; ".join(
+            f"{item.get('path', relative.as_posix())}: {item.get('reason', 'unknown error')}"
+            for item in result.get("cleanup_errors", [])
+        )
+        raise DeliveryError(
+            "Delivery artifact cleanup stopped fail-closed" + (f": {errors}" if errors else "")
+        )
+    result["delivery_path"] = relative.as_posix()
+    return result
 
 
 def _launch_worker(task_id: str, started: dict[str, Any], artifacts: Path) -> int:
@@ -266,12 +324,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"inspect {artifacts}"
             )
         _verify_closeout(started)
+        delivery_cleanup = _cleanup_delivery_artifacts(task_id, artifacts)
         _event(
             "DONE",
             task_id=task_id,
             merge_sha=history.get("merge_sha"),
             finished_at=history.get("finished_at"),
             artifacts=str(artifacts),
+            artifact_cleanup=delivery_cleanup,
         )
         return 0
     except (DeliveryError, OSError) as error:
