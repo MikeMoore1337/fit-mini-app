@@ -1,25 +1,17 @@
 name: CI
 
 on:
-  push:
-    branches: [dev, master]
-    # Existing-branch push filters use a two-dot tree diff. A normal task/master update changes
-    # files and still runs full exact-SHA CI; the deployed master -> dev fast-forward normally has
-    # an identical tree and therefore creates no redundant workflow run.
-    paths: ["**"]
   pull_request:
     types: [opened, reopened, ready_for_review, synchronize]
+  push:
+    branches: [master]
 
 permissions:
-  actions: read
   contents: read
   pull-requests: read
 
 concurrency:
-  # All dev pushes and dev -> master PR runs share the supported native lane.
-  # The explicit PR gate below still rejects a PR that was opened before its
-  # exact-SHA push CI succeeded.
-  group: ${{ github.workflow }}-${{ (github.ref_name == 'dev' || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)) && 'dev-release' || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 env:
@@ -31,296 +23,115 @@ env:
   UV_SYSTEM_PYTHON: "1"
 
 jobs:
-  release-sequence:
-    name: Release sequence
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-
-    steps:
-      - name: Require successful push CI before release PR
-        if: >-
-          github.event_name == 'pull_request' &&
-          github.event.pull_request.base.ref == 'master' &&
-          github.event.pull_request.head.ref == 'dev' &&
-          github.event.pull_request.head.repo.full_name == github.repository
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_GATE_AT: ${{ github.event.pull_request.updated_at }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          current_pr_head="$(
-            gh api --method GET \
-              "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" \
-              --jq ".head.sha"
-          )"
-
-          if [ "$current_pr_head" != "$HEAD_SHA" ]; then
-            echo "Release sequence violation: stale PR event head $HEAD_SHA; current PR head is $current_pr_head." >&2
-            exit 1
-          fi
-
-          successful_run_id="$(
-            gh api --method GET \
-              "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
-              -f event=push \
-              -f head_sha="$HEAD_SHA" \
-              -f status=success \
-              -f per_page=100 \
-              --jq ".workflow_runs[] | select(
-                .head_branch == \"dev\" and
-                .head_sha == \"$HEAD_SHA\" and
-                .event == \"push\" and
-                .status == \"completed\" and
-                .conclusion == \"success\" and
-                .updated_at <= \"$PR_GATE_AT\"
-              ) | .id" \
-              | head -n 1
-          )"
-
-          if [ -z "$successful_run_id" ]; then
-            echo "Release sequence violation: PR dev -> master was opened before exact-SHA push CI completed successfully." >&2
-            echo "Close the PR, wait for successful push CI for $HEAD_SHA, then reopen or create the PR." >&2
-            exit 1
-          fi
-
-          echo "Release sequence verified by successful push CI run $successful_run_id."
-
   task-provenance:
     name: Task provenance
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions:
-      actions: read
-      contents: read
-      deployments: read
-      pull-requests: read
-    outputs:
-      dev-update-kind: ${{ steps.verify-dev.outputs.kind }}
-
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
         with:
-          python-version: "3.14"
+          fetch-depth: 0
+      - name: Validate task PR provenance
+        run: python scripts/task_session.py validate-pr --event "$GITHUB_EVENT_PATH"
 
-      - name: Validate task PR traceability
-        if: github.event_name == 'pull_request'
+  merge-provenance:
+    name: Merged master provenance
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify exact merged task PR
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >-
-          python scripts/task_session.py
-          --github-repository "$GITHUB_REPOSITORY"
-          validate-pr --event "$GITHUB_EVENT_PATH"
-
-      - name: Validate exact dev update provenance
-        id: verify-dev
-        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          APPROVED_RECOVERY_SHA: ${{ vars.DEV_RECOVERY_APPROVED_SHA }}
-        run: |
-          set -Eeuo pipefail
-          result="$(
-            python scripts/task_session.py \
-              --github-repository "$GITHUB_REPOSITORY" \
-              verify-dev-provenance --sha "$GITHUB_SHA" \
-              --actor "$GITHUB_ACTOR" \
-              --approved-recovery-sha "$APPROVED_RECOVERY_SHA"
-          )"
-          kind="$(jq -er '.kind' <<<"$result")"
-          printf 'kind=%s\n' "$kind" >> "$GITHUB_OUTPUT"
-          printf '%s\n' "$result"
+        run: python scripts/task_session.py verify-master-merge --sha "$GITHUB_SHA"
 
   quality:
     name: Python quality
-    needs: [release-sequence, task-provenance]
-    if: >-
-      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.base.ref != 'master' ||
-       github.event.pull_request.head.ref != 'dev' ||
-       github.event.pull_request.head.repo.full_name != github.repository)
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       PRE_COMMIT_HOME: ${{ github.workspace }}/.artifacts/runtime/cache/pre-commit
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        id: setup-python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-          cache: pip
-          cache-dependency-path: backend/requirements.txt
-
-      - name: Cache pre-commit environments
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.PRE_COMMIT_HOME }}
-          key: pre-commit-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
-          restore-keys: |
-            pre-commit-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-
-
       - name: Install pre-commit
         run: python -m pip install pre-commit==4.6.1
-
-      - name: Pre-commit
-        run: pre-commit run --all-files --show-diff-on-failure
+      - name: Run shared quality group
+        run: python scripts/ci_contract.py run-group quality
 
   frontend:
     name: Frontend
-    needs: [release-sequence, task-provenance]
-    if: >-
-      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.base.ref != 'master' ||
-       github.event.pull_request.head.ref != 'dev' ||
-       github.event.pull_request.head.repo.full_name != github.repository)
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
-      - name: Set up Python for API schema generation
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
         with:
           version: "0.11.32"
           enable-cache: true
           cache-dependency-glob: backend/requirements-runtime.txt
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           cache-suffix: frontend
-
-      - name: Install API schema dependencies
-        run: uv pip install -r backend/requirements-runtime.txt
-
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
-
-      - name: Verify generated API types
-        working-directory: frontend
-        run: |
-          npm run api:types
-          git diff --exit-code -- src/shared/api/schema.d.ts
-
-      - name: Frontend checks
-        shell: bash
-        working-directory: frontend
-        run: |
-          set -uo pipefail
-          npm run typecheck & typecheck_pid=$!
-          npm run lint & lint_pid=$!
-          npm run format:check & format_pid=$!
-          npm run test & test_pid=$!
-
-          status=0
-          wait "$typecheck_pid" || status=1
-          wait "$lint_pid" || status=1
-          wait "$format_pid" || status=1
-          wait "$test_pid" || status=1
-          exit "$status"
-
-      - name: Build frontend for production
-        working-directory: frontend
-        run: npx vite build
+      - name: Install API schema dependencies
+        run: uv pip install -r backend/requirements-runtime.txt
+      - name: Run shared frontend checks group
+        run: python scripts/ci_contract.py run-group frontend-checks
 
   frontend-smoke:
-    name: Frontend smoke (${{ matrix.shard }}/3)
-    needs: [release-sequence, task-provenance]
-    if: >-
-      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.base.ref != 'master' ||
-       github.event.pull_request.head.ref != 'dev' ||
-       github.event.pull_request.head.repo.full_name != github.repository)
+    name: Frontend smoke
+    needs: frontend
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
-
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
-
-      # Build locally so all Playwright shards can start immediately instead of
-      # waiting for the full frontend job only to reuse its fast Vite build.
-      - name: Build frontend for smoke tests
-        working-directory: frontend
-        run: npx vite build
-
       - name: Install Playwright Chromium
         working-directory: frontend
         run: npx playwright install --with-deps chromium
-
-      - name: Frontend smoke tests
-        working-directory: frontend
-        run: npm run e2e:ci -- --shard=${{ matrix.shard }}/3
-
+      - name: Run shared frontend E2E group
+        run: python scripts/ci_contract.py run-group frontend-e2e
       - name: Upload Playwright traces on failure
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
-          name: playwright-failure-${{ github.run_id }}-shard-${{ matrix.shard }}
+          name: playwright-failure-${{ github.run_id }}
           path: .artifacts/runtime/tests/playwright
           if-no-files-found: ignore
           include-hidden-files: true
           retention-days: 7
 
   python-tests:
-    name: Python tests (${{ matrix.shard }})
-    needs: [release-sequence, task-provenance]
-    if: >-
-      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.base.ref != 'master' ||
-       github.event.pull_request.head.ref != 'dev' ||
-       github.event.pull_request.head.repo.full_name != github.repository)
+    name: Python tests
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - shard: "1/3"
-            index: 0
-          - shard: "2/3"
-            index: 1
-          - shard: "3/3"
-            index: 2
-
     services:
       postgres:
         image: postgres:16-alpine
@@ -335,17 +146,12 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
         with:
           version: "0.11.32"
           enable-cache: true
@@ -354,67 +160,23 @@ jobs:
             bot/requirements.txt
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           cache-suffix: python-tests
-
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: uv pip install -r backend/requirements.txt -r bot/requirements.txt
-
-      - name: Dependency consistency
-        run: python -m pip check
-
-      - name: Pytest on PostgreSQL
-        shell: bash
+      - name: Run shared Python tests group
         env:
           TEST_DATABASE_URL: postgresql+psycopg://fitminiapp:test-password@127.0.0.1:5432/fitminiapp_test
           ENABLE_DEV_AUTH: "true"
           TELEGRAM_BOT_TOKEN: test-token
           BOT_INTERNAL_TOKEN: test-bot-internal-token
           SECRET_KEY: test-secret-key-at-least-thirty-two-characters
-          PYTEST_SHARD_INDEX: ${{ matrix.index }}
-        run: |
-          set -euo pipefail
-
-          # Collect the exact pytest node IDs first, then distribute them round-robin
-          # across three independent runners. This balances parametrized/heavy test
-          # modules much better than file-size sharding while keeping every test.
-          mapfile -t all_test_nodes < <(
-            python scripts/run_pytest.py backend/tests bot/tests --collect-only -q \
-              | sed -n '/::/p'
-          )
-
-          if (( ${#all_test_nodes[@]} == 0 )); then
-            echo "Pytest collection returned no tests" >&2
-            exit 1
-          fi
-
-          test_nodes=()
-          shard_count=3
-          for i in "${!all_test_nodes[@]}"; do
-            if (( i % shard_count == PYTEST_SHARD_INDEX )); then
-              test_nodes+=("${all_test_nodes[$i]}")
-            fi
-          done
-
-          if (( ${#test_nodes[@]} == 0 )); then
-            echo "No tests selected for shard ${PYTEST_SHARD_INDEX}" >&2
-            exit 1
-          fi
-
-          printf 'Selected %s of %s tests for shard %s/3\n' \
-            "${#test_nodes[@]}" "${#all_test_nodes[@]}" "$((PYTEST_SHARD_INDEX + 1))"
-          python scripts/run_pytest.py "${test_nodes[@]}" -q -n 4 --dist=worksteal --durations=20
+        run: python scripts/ci_contract.py run-group python-tests
 
   migrated-stack:
     name: Migrated PostgreSQL stack
-    needs: [release-sequence, task-provenance]
-    if: >-
-      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.base.ref != 'master' ||
-       github.event.pull_request.head.ref != 'dev' ||
-       github.event.pull_request.head.repo.full_name != github.repository)
+    needs: frontend
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16-alpine
@@ -429,62 +191,28 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
         with:
           version: "0.11.32"
           enable-cache: true
           cache-dependency-glob: backend/requirements.txt
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           cache-suffix: migrated-stack
-
-      - name: Install dependencies
-        run: uv pip install -r backend/requirements.txt
-
-      - name: Build frontend and install browser dependencies
-        working-directory: frontend
+      - name: Install stack dependencies
         run: |
-          npm ci
-          npx vite build
-          npx playwright install --with-deps chromium
-
-      - name: Dependency consistency
-        run: python -m pip check
-
-      - name: Alembic migrations
-        working-directory: backend
-        run: |
-          alembic upgrade head
-          alembic check
-        env:
-          APP_ENV: test
-          APP_NAME: Your Fitness Coach CI
-          APP_DEBUG: "false"
-          ACCESS_TOKEN_EXPIRE_MINUTES: "60"
-          REFRESH_TOKEN_EXPIRE_DAYS: "30"
-          DATABASE_URL: postgresql+psycopg://fitminiapp:test-password@127.0.0.1:5432/fitminiapp_test
-          ENABLE_DEV_AUTH: "true"
-          TELEGRAM_BOT_TOKEN: test-token
-          SECRET_KEY: test-secret-key-at-least-thirty-two-characters
-
-      - name: Migrated PostgreSQL API and account-deletion smoke
-        run: python scripts/run_pytest.py tests/integration/test_migrated_stack.py -q
+          uv pip install -r backend/requirements.txt
+          npm --prefix frontend ci
+      - name: Run shared migrated-stack group
         env:
           RUN_MIGRATED_STACK_TEST: "1"
           APP_ENV: test
@@ -497,56 +225,24 @@ jobs:
           TELEGRAM_BOT_TOKEN: test-token
           BOT_INTERNAL_TOKEN: test-bot-internal-token
           SECRET_KEY: test-secret-key-at-least-thirty-two-characters
-
-      - name: Migrated PostgreSQL real browser smoke
-        working-directory: frontend
-        run: npm run e2e:migrated-stack
-        env:
-          APP_ENV: test
-          APP_NAME: Your Fitness Coach CI
-          APP_DEBUG: "false"
-          ACCESS_TOKEN_EXPIRE_MINUTES: "60"
-          REFRESH_TOKEN_EXPIRE_DAYS: "30"
-          DATABASE_URL: postgresql+psycopg://fitminiapp:test-password@127.0.0.1:5432/fitminiapp_test
-          ENABLE_DEV_AUTH: "true"
-          TELEGRAM_BOT_TOKEN: test-token
-          BOT_INTERNAL_TOKEN: test-bot-internal-token
-          SECRET_KEY: test-secret-key-at-least-thirty-two-characters
-
-      - name: Upload migrated-stack traces on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: migrated-stack-playwright-failure-${{ github.run_id }}
-          path: .artifacts/runtime/tests/playwright-migrated-stack
-          if-no-files-found: ignore
-          include-hidden-files: true
-          retention-days: 7
+        run: python scripts/ci_contract.py run-group migrated-stack
 
   dependency-audit:
     name: Dependency audit
-    needs: [release-sequence, task-provenance]
-    if: >-
-      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.base.ref != 'master' ||
-       github.event.pull_request.head.ref != 'dev' ||
-       github.event.pull_request.head.repo.full_name != github.repository)
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
         with:
           version: "0.11.32"
           enable-cache: true
@@ -555,25 +251,15 @@ jobs:
             bot/requirements.txt
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           cache-suffix: dependency-audit
-
-      - name: Frontend production dependency audit
+      - name: Install frontend dependencies
         working-directory: frontend
-        run: npm audit --omit=dev --audit-level=high
-
-      - name: Python dependency vulnerability audit
-        run: |
-          uvx --from pip-audit==2.10.1 pip-audit -r backend/requirements-runtime.txt
-          uvx --from pip-audit==2.10.1 pip-audit -r bot/requirements.txt
+        run: npm ci
+      - name: Run shared dependency audit group
+        run: python scripts/ci_contract.py run-group dependency-audit
 
   containers:
     name: Container (${{ matrix.image }})
-    needs: [release-sequence, task-provenance]
-    if: >-
-      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.base.ref != 'master' ||
-       github.event.pull_request.head.ref != 'dev' ||
-       github.event.pull_request.head.repo.full_name != github.repository)
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -582,111 +268,59 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - image: backend
-            context: .
-            dockerfile: backend/Dockerfile
-            tag: fit-mini-app-backend:ci
-            no_cache: false
-          - image: bot
-            context: bot
-            dockerfile: bot/Dockerfile
-            tag: fit-mini-app-bot:ci
-            # A corrupted shared GHA COPY cache previously published a correctly
-            # labelled image with stale runtime sources. Keep this small image
-            # fail-closed until cache provenance can be proven independently.
-            no_cache: true
-
+        image: [backend, bot]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Build production image
+      - name: Run shared container contract group
+        run: python scripts/ci_contract.py run-group container-contract
+      - uses: docker/setup-buildx-action@v4
+      - name: Resolve immutable image reference
+        id: image
+        env:
+          IMAGE_KIND: ${{ matrix.image }}
+        run: python scripts/deployment_contract.py refs --repository "$GITHUB_REPOSITORY" --revision "$GITHUB_SHA" --kind "$IMAGE_KIND" >> "$GITHUB_OUTPUT"
+      - name: Build and scan production image
         uses: docker/build-push-action@v7
         with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
+          context: ${{ matrix.image == 'backend' && '.' || 'bot' }}
+          file: ${{ matrix.image == 'backend' && 'backend/Dockerfile' || 'bot/Dockerfile' }}
+          load: true
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-          load: true
-          tags: ${{ matrix.tag }}
-          no-cache: ${{ matrix.no_cache }}
+          tags: ${{ steps.image.outputs.local_tag }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
-
-      - name: Verify bot runtime image contract
-        if: matrix.image == 'bot'
-        shell: bash
-        env:
-          LOCAL_TAG: ${{ matrix.tag }}
-        run: |
-          docker run --rm --network none \
-            --env TELEGRAM_BOT_TOKEN=ci-image-contract-token \
-            --env BOT_INTERNAL_TOKEN=ci-image-contract-internal-token \
-            "$LOCAL_TAG" \
-            python -c "import fitminiapp_bot.profile_sync; import fitminiapp_bot.public_profile; import fitminiapp_bot.telegram_client"
-
-      # v0.36.0 is an immutable, signed post-remediation release. Keep the full SHA.
       - name: Scan image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           version: v0.73.0
-          image-ref: ${{ matrix.tag }}
+          image-ref: ${{ steps.image.outputs.local_tag }}
           format: table
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           trivyignores: .trivyignore.yaml
           exit-code: "1"
-
-      - name: Log in to GitHub Container Registry
+      - name: Publish immutable image after merge
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish scanned image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        shell: bash
         env:
-          IMAGE_KIND: ${{ matrix.image }}
-          LOCAL_TAG: ${{ matrix.tag }}
-        run: |
-          registry_tag="ghcr.io/${GITHUB_REPOSITORY,,}-${IMAGE_KIND}:${GITHUB_SHA}"
-          docker tag "$LOCAL_TAG" "$registry_tag"
-          docker push "$registry_tag"
+          LOCAL_TAG: ${{ steps.image.outputs.local_tag }}
+          PUBLISHED_REF: ${{ steps.image.outputs.image_ref }}
+        run: docker tag "$LOCAL_TAG" "$PUBLISHED_REF" && docker push "$PUBLISHED_REF"
 
   checks:
-    # Keep the Ruleset-required `checks` context exclusive to PR validation.
-    # A later push run therefore cannot overwrite a failed release PR verdict.
     name: ${{ github.event_name == 'pull_request' && 'checks' || 'branch-checks' }}
     if: always()
     needs:
-      [
-        release-sequence,
-        task-provenance,
-        quality,
-        frontend,
-        frontend-smoke,
-        python-tests,
-        migrated-stack,
-        dependency-audit,
-        containers,
-      ]
+      [task-provenance, merge-provenance, quality, frontend, frontend-smoke, python-tests, migrated-stack, dependency-audit, containers]
     runs-on: ubuntu-latest
     timeout-minutes: 5
-
     steps:
-      - name: Verify all CI jobs succeeded
+      - name: Verify required result set
         env:
-          CANONICAL_RELEASE_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository }}
-          LIGHTWEIGHT_DEV_SYNC: ${{ needs.task-provenance.outputs.dev-update-kind == 'deployed-master-sync' }}
-          RELEASE_SEQUENCE_RESULT: ${{ needs.release-sequence.result }}
+          EVENT_NAME: ${{ github.event_name }}
           TASK_PROVENANCE_RESULT: ${{ needs.task-provenance.result }}
+          MERGE_PROVENANCE_RESULT: ${{ needs.merge-provenance.result }}
           QUALITY_RESULT: ${{ needs.quality.result }}
           FRONTEND_RESULT: ${{ needs.frontend.result }}
           FRONTEND_SMOKE_RESULT: ${{ needs.frontend-smoke.result }}
@@ -695,22 +329,17 @@ jobs:
           DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}
           CONTAINERS_RESULT: ${{ needs.containers.result }}
         run: |
-          test "$RELEASE_SEQUENCE_RESULT" = success
-          test "$TASK_PROVENANCE_RESULT" = success
-          if [ "$CANONICAL_RELEASE_PR" = "true" ] || [ "$LIGHTWEIGHT_DEV_SYNC" = "true" ]; then
-            test "$QUALITY_RESULT" = skipped
-            test "$FRONTEND_RESULT" = skipped
-            test "$FRONTEND_SMOKE_RESULT" = skipped
-            test "$PYTHON_TESTS_RESULT" = skipped
-            test "$MIGRATED_STACK_RESULT" = skipped
-            test "$DEPENDENCY_AUDIT_RESULT" = skipped
-            test "$CONTAINERS_RESULT" = skipped
-          else
+          set -Eeuo pipefail
+          if [ "$EVENT_NAME" = pull_request ]; then
+            test "$TASK_PROVENANCE_RESULT" = success
             test "$QUALITY_RESULT" = success
             test "$FRONTEND_RESULT" = success
             test "$FRONTEND_SMOKE_RESULT" = success
             test "$PYTHON_TESTS_RESULT" = success
             test "$MIGRATED_STACK_RESULT" = success
             test "$DEPENDENCY_AUDIT_RESULT" = success
+            test "$CONTAINERS_RESULT" = success
+          else
+            test "$MERGE_PROVENANCE_RESULT" = success
             test "$CONTAINERS_RESULT" = success
           fi
