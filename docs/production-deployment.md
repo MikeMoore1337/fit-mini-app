@@ -75,7 +75,7 @@ branch policy только для `master`; production secrets остаются 
   `bot-blue/green`. Общий `bot_polling_lock` остаётся дополнительной защитой от двух poller.
 - PostgreSQL, `edge_config`, `caddy_data`, `caddy_config` и `bot_polling_lock` не принадлежат slot и
   не удаляются cleanup-командами rollout.
-- Canonical source of truth — `.artifacts/deployments/state.json` на production host. Он хранит
+- Canonical source of truth — `.artifacts/operations/deployments/state.json` на production host. Он хранит
   active/rollback slot, revision и immutable image digest без secrets. Caddy admin config
   проверяется против этого состояния перед каждым rollout.
 
@@ -104,7 +104,7 @@ production config, после чего передаёт управление `sc
 Любой сбой до switch оставляет прежний route. Сбой после switch до commit state выполняет reload на
 старый живой backend, проверяет public smoke и возвращает прежних worker/bot. Interrupted retry
 сериализован host lock; повтор уже активного SHA является проверенным no-op. Deployment evidence
-пишется в `.artifacts/deployments/<deployment-id>/summary.json` и содержит stages, durations,
+пишется в `.artifacts/operations/deployments/<deployment-id>/summary.json` и содержит stages, durations,
 capacity, probe counters/latency, handoff и verdict без env values/cookies/request bodies.
 
 ## Миграции

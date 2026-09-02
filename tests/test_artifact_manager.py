@@ -125,6 +125,33 @@ def test_cleanup_task_blocks_non_terminal_target_lease(tmp_path: Path) -> None:
     assert result["cleanup_errors"]
 
 
+def test_shared_cleanup_blocks_parallel_lease_and_unfinished_task_132(tmp_path: Path) -> None:
+    manager = _manager(tmp_path)
+    state = tmp_path / "state"
+    (state / "leases").mkdir(parents=True)
+    (state / "history").mkdir()
+    (state / "leases" / "task-134.json").write_text(
+        json.dumps({"task_id": "134", "mode": "write", "lifecycle_state": "implementation"}),
+        encoding="utf-8",
+    )
+    (state / "history" / "task-132.json").write_text(
+        json.dumps({"state": "integration"}), encoding="utf-8"
+    )
+    manager.controller_state_dir = state
+    runtime = manager.root / "runtime" / "cache"
+    runtime.mkdir(parents=True, exist_ok=True)
+    target = runtime / "cache.bin"
+    target.write_bytes(b"cache")
+
+    plan = manager.dry_run()
+
+    assert plan["summary"]["counts"]["DELETE"] == 0
+    assert any("active task leases" in issue for issue in plan["safety"]["issues"])
+    assert any("Task 132" in issue for issue in plan["safety"]["issues"])
+    with pytest.raises(artifact_manager.ArtifactSafetyError, match="Cleanup blocked"):
+        manager.apply_plan(plan, approved_plan_sha256=plan["plan_sha256"])
+
+
 def test_dry_run_apply_requires_exact_unchanged_plan_and_is_idempotent(tmp_path: Path) -> None:
     manager = _manager(tmp_path)
     runtime = manager.root / "cache"
@@ -155,7 +182,7 @@ def test_validate_detects_new_top_level_and_source_path(tmp_path: Path) -> None:
     scripts = manager.repo_root / "scripts"
     scripts.mkdir()
     (scripts / "producer.py").write_text(
-        "OUTPUT = '.artifacts/new-ad-hoc/output.json'\n", encoding="utf-8"
+        "OUTPUT = '.artifacts/' + 'new-ad-hoc/output.json'\n", encoding="utf-8"
     )
     result = manager.validate()
     assert not result["ok"]
@@ -188,3 +215,126 @@ def test_runtime_cleanup_is_bounded_and_requires_plan_hash(tmp_path: Path) -> No
         approved_plan_sha256=plan["plan_sha256"],
     )
     assert result["status"] == "completed"
+
+
+def test_ensure_layout_refuses_canonical_reparse_point(tmp_path: Path) -> None:
+    manager = _manager(tmp_path)
+    manager.root.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    link = manager.root / "runtime"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except (OSError, NotImplementedError) as error:
+        pytest.skip(f"symlink creation unavailable: {error}")
+
+    with pytest.raises(artifact_manager.ArtifactSafetyError, match="Reparse point"):
+        manager.ensure_layout()
+
+
+def test_manifest_validation_rejects_unregistered_durable_artifact(tmp_path: Path) -> None:
+    manager = _manager(tmp_path)
+    manager.ensure_layout("133")
+    durable = manager.root / "tasks" / "133" / "evidence" / "unregistered.json"
+    durable.write_text("{}\n", encoding="utf-8")
+
+    result = manager.validate(task_id="133")
+
+    assert not result["ok"]
+    assert any("unregistered.json" in error for error in result["errors"])
+
+
+def test_audit_keeps_worktrees_and_operations_protected(tmp_path: Path) -> None:
+    manager = _manager(tmp_path)
+    manager.ensure_layout()
+    worktree_file = manager.root / "worktrees" / "registered" / "file.bin"
+    backup_file = manager.root / "operations" / "backups" / "database.dump"
+    worktree_file.parent.mkdir(parents=True)
+    backup_file.parent.mkdir(parents=True, exist_ok=True)
+    worktree_file.write_bytes(b"worktree")
+    backup_file.write_bytes(b"backup")
+
+    entries = manager.audit()["entries"]
+
+    by_path = {entry["path"]: entry for entry in entries}
+    assert by_path["worktrees/registered/file.bin"]["disposition"] == "KEEP"
+    assert by_path["operations/backups/database.dump"]["disposition"] == "KEEP"
+
+
+def test_cleanup_task_counts_only_selected_scope(tmp_path: Path) -> None:
+    manager = _manager(tmp_path)
+    worker = manager.allocate_directory(
+        "133",
+        "temporary",
+        "temporary/worker",
+        purpose="worker output",
+        command="test",
+    )
+    delivery = manager.allocate_directory(
+        "133",
+        "temporary",
+        "temporary/delivery",
+        purpose="delivery output",
+        command="test",
+    )
+    worker_file = worker / "worker.bin"
+    delivery_file = delivery / "delivery.bin"
+    worker_file.write_bytes(b"worker")
+    delivery_file.write_bytes(b"delivery")
+
+    result = manager.cleanup_task(
+        "133", terminal_state="finished", exclude_prefixes=("temporary/delivery",)
+    )
+
+    assert result["status"] == "completed"
+    assert result["removed_bytes"] == len(b"worker")
+    assert delivery_file.exists()
+
+
+def test_cleanup_task_stops_on_target_drift(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manager = _manager(tmp_path)
+    temporary = manager.allocate_directory(
+        "133",
+        "temporary",
+        "temporary/worker",
+        purpose="worker output",
+        command="test",
+    )
+    target = temporary / "generated.bin"
+    target.write_bytes(b"original")
+    original_fingerprint = artifact_manager._file_fingerprint
+
+    def change_before_fingerprint(path: Path) -> dict[str, object]:
+        if path == target:
+            target.write_bytes(b"changed")
+        return original_fingerprint(path)
+
+    monkeypatch.setattr(artifact_manager, "_file_fingerprint", change_before_fingerprint)
+    drift = manager.cleanup_task("133", terminal_state="finished")
+    assert drift["status"] == "partial-failure"
+    assert drift["cleanup_errors"]
+    assert target.exists()
+
+
+def test_runtime_cleanup_applies_the_saved_exact_plan(tmp_path: Path) -> None:
+    manager = _manager(tmp_path)
+    target = manager.root / "runtime" / "cache" / "old.bin"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"old")
+    old_timestamp = target.stat().st_mtime - 10_000
+    os.utime(target, (old_timestamp, old_timestamp))
+
+    plan = manager.cleanup_runtime(ttl=timedelta(seconds=1), max_entries=1, max_bytes=10)
+    result = manager.cleanup_runtime(
+        ttl=timedelta(seconds=1),
+        max_entries=1,
+        max_bytes=10,
+        apply=True,
+        approved_plan_sha256=plan["plan_sha256"],
+        plan=plan,
+    )
+
+    assert result["status"] == "completed"
+    assert not target.exists()

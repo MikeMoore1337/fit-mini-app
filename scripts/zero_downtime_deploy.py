@@ -1487,7 +1487,7 @@ def _config(args: argparse.Namespace) -> DeployConfig:
         backend_image=os.environ["BACKEND_IMAGE"],
         bot_image=os.environ["BOT_IMAGE"],
         root=root,
-        state_root=root / ".artifacts" / "deployments",
+        state_root=root / ".artifacts" / "operations" / "deployments",
         observation_seconds=float(_deployment_setting("DEPLOY_OBSERVATION_SECONDS", "900")),
         readiness_timeout_seconds=configured_timeout("DEPLOY_READINESS_TIMEOUT_SECONDS", 180),
         probe_interval_seconds=float(_deployment_setting("DEPLOY_PROBE_INTERVAL_SECONDS", "1")),

@@ -10,6 +10,30 @@ authorization на весь normal path этой task. Launcher/controller ав�
 ожидание CI/deploy и безопасную cleanup в новые вопросы владельцу. Отдельный ответ нужен только для
 явно объявленного human/legal/external/destructive/task-specific gate или terminal blocker.
 
+## 0A. Structured task artifacts
+
+Every new task artifact uses one canonical `.artifacts/` layout:
+
+```text
+.artifacts/tasks/<TASK_ID>/{temporary,evidence,deliverables,logs}/
+.artifacts/tasks/<TASK_ID>/manifest.json
+.artifacts/runtime/{cache,tmp,tests}/
+.artifacts/shared/
+.artifacts/operations/{backups,deployments,recovery}/
+```
+
+`temporary` is reproducible and may be removed after terminal success; `evidence` is selected
+durable proof; `deliverables` are owner materials and require an exact owner disposition; `logs`
+have limited retention. Registered worktrees, active task data, backups, deployment evidence and
+recovery anchors are protected from generic cleanup. Producers should allocate task paths through
+`scripts/artifact_manager.py`, which records purpose, owner, command context and retention in the
+task manifest.
+
+The manager's `audit`/`dry-run` is read-only. A cleanup plan is applied only with the exact
+owner-approved SHA256, unchanged target fingerprints and no incompatible controller lease or
+unfinished Task 132. On drift or any unsafe/unclassified path, cleanup stops fail-closed; it never
+deletes `REVIEW` data or follows a symlink/junction/reparse point.
+
 ## 0. Контракты task имеют приоритет
 
 Перед работой:

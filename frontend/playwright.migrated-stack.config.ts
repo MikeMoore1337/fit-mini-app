@@ -7,7 +7,7 @@ const serverPort = parsedBaseURL.port || (parsedBaseURL.protocol === 'https:' ? 
 export default defineConfig({
   testDir: './tests/integration',
   testMatch: 'migrated-stack.spec.ts',
-  outputDir: '../.artifacts/tests/playwright-migrated-stack',
+  outputDir: '../.artifacts/runtime/tests/playwright-migrated-stack',
   fullyParallel: false,
   workers: 1,
   retries: 0,

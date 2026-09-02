@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
-  outputDir: '../.artifacts/tests/playwright-cross-browser',
+  outputDir: '../.artifacts/runtime/tests/playwright-cross-browser',
   fullyParallel: true,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'github' : 'list',

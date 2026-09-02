@@ -42,9 +42,17 @@ they exist.
   generated reports under `.artifacts/`.
 - Never create ad-hoc scratch paths such as `.tmp*`, `pytest-cache-files-*`, reports,
   screenshots or logs in the repository root.
+- New artifacts use the single canonical layout: controller worktrees in
+  `.artifacts/worktrees/`; task-owned data in `.artifacts/tasks/<TASK_ID>/{temporary,evidence,deliverables,logs}`
+  with `manifest.json`; reproducible runtime data in `.artifacts/runtime/{cache,tmp,tests}`;
+  reusable local assets in `.artifacts/shared/`; and protected operational data in
+  `.artifacts/operations/{backups,deployments,recovery}`.
+- Allocate task paths and write manifest metadata through `scripts/artifact_manager.py`.
+  Do not add a new top-level `.artifacts/` directory without registering its class in the
+  manager and documenting its migration/retention policy.
 - Prefer paths already configured in `pyproject.toml`, Playwright config and `scripts/`.
-- Use `.artifacts/cache/`, `.artifacts/tmp/` or another suitable `.artifacts/` subdirectory
-  when an isolated path is needed.
+- Existing legacy top-level artifact paths are migration inputs only. Do not create new files
+  there or rename them in bulk without an exact inventory and durable-reference review.
 - Never commit `.artifacts/` contents.
 
 # Working principles

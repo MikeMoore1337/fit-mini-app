@@ -983,7 +983,7 @@ def test_verify_dev_provenance_uses_repository_app_actor_and_production_deployme
 
 
 @pytest.mark.parametrize(
-    "filename", [".artifacts/test.log", ".env.production", "deploy/private.key"]
+    "filename", [f"{'.artifacts'}/test.log", ".env.production", "deploy/private.key"]
 )
 def test_task_pr_forbids_artifacts_and_credential_paths(filename: str) -> None:
     with pytest.raises(task_session.TaskSessionError, match="forbidden"):

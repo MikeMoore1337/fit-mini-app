@@ -12,6 +12,24 @@ Tasks `109-111` остаются owner-selected pending: Landing offer испо�
 approved security baseline task `108`; avatar сохраняет private-media lifecycle; Progress не
 выдумывает данные из визуального референса. Каждая требует отдельного owner запуска.
 
+## Structured artifact contract
+
+All new ignored files belong to the canonical `.artifacts/` structure: task data lives under
+`.artifacts/tasks/<TASK_ID>/{temporary,evidence,deliverables,logs}` and is described by its
+`manifest.json`; reproducible caches, process temp files and test output use
+`.artifacts/runtime/{cache,tmp,tests}`; reusable local assets use `.artifacts/shared/`; backups,
+deployment evidence and recovery data use the protected `.artifacts/operations/{backups,deployments,recovery}`.
+Controller-managed worktrees remain under `.artifacts/worktrees/` and are never removed by a
+filesystem cleanup.
+
+New producers must use `scripts/artifact_manager.py` or an already configured canonical path.
+Legacy top-level paths are migration inputs only and must not receive new output. Run
+`python scripts/artifact_manager.py --root .artifacts --repo-root . validate` to detect unknown
+top-level paths and ad-hoc source references. Run `audit`/`dry-run` before cleanup; apply only the
+exact owner-approved plan SHA after controller/worktree safety checks. `REVIEW`, active/dirty/
+interrupted/unique-commit/recovery data, deliverables and operational backups are not generic
+cleanup targets.
+
 ## Полный task lifecycle
 
 Перед каждой task обязательно прочитать и выполнить `codex-backlog/TASK_EXECUTION_LIFECYCLE.md`.
@@ -296,8 +314,9 @@ checkpoint до массовой реализации.
   `--radius-action` и фиксированной geometry, а не только screenshot;
 - выполнить Human Design Test из `$product-designer`: brand swap, screenshot, card, decoration и
   designer-intent checks; после первого browser render сделать минимум один refinement pass;
-- сохранить representative screenshots в `.artifacts/screenshots/task-XX/`; `.artifacts/` не
-  коммитить.
+- сохранить representative screenshots в `.artifacts/tasks/<TASK_ID>/evidence/screenshots/`;
+  исторические `.artifacts/screenshots/task-XX/` являются legacy evidence и не пополняются;
+  `.artifacts/` не коммитить.
 
 ### Owner visual checkpoint
 

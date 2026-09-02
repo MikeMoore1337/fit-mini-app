@@ -23,11 +23,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NPM_CONFIG_CACHE: ${{ github.workspace }}/.artifacts/cache/npm
+  NPM_CONFIG_CACHE: ${{ github.workspace }}/.artifacts/runtime/cache/npm
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   PYTHONDONTWRITEBYTECODE: "1"
   PYTHONUNBUFFERED: "1"
-  UV_CACHE_DIR: ${{ github.workspace }}/.artifacts/cache/uv
+  UV_CACHE_DIR: ${{ github.workspace }}/.artifacts/runtime/cache/uv
   UV_SYSTEM_PYTHON: "1"
 
 jobs:
@@ -148,7 +148,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      PRE_COMMIT_HOME: ${{ github.workspace }}/.artifacts/cache/pre-commit
+      PRE_COMMIT_HOME: ${{ github.workspace }}/.artifacts/runtime/cache/pre-commit
 
     steps:
       - uses: actions/checkout@v4
@@ -294,7 +294,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: playwright-failure-${{ github.run_id }}-shard-${{ matrix.shard }}
-          path: .artifacts/tests/playwright
+          path: .artifacts/runtime/tests/playwright
           if-no-files-found: ignore
           include-hidden-files: true
           retention-days: 7
@@ -518,7 +518,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: migrated-stack-playwright-failure-${{ github.run_id }}
-          path: .artifacts/tests/playwright-migrated-stack
+          path: .artifacts/runtime/tests/playwright-migrated-stack
           if-no-files-found: ignore
           include-hidden-files: true
           retention-days: 7

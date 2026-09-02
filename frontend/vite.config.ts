@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  cacheDir: '../.artifacts/cache/vite',
+  cacheDir: '../.artifacts/runtime/cache/vite',
   build: {
     outDir: 'dist',
     emptyOutDir: true,

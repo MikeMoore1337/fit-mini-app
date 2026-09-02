@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 
@@ -41,11 +40,19 @@ def _run(
 def main() -> int:
     root = Path(__file__).resolve().parent.parent
 
-    # On Windows, use a per-run temporary tree. This avoids stale/corrupted ACLs
-    # or file-vs-directory collisions inside a shared .artifacts pytest cache.
-    # Linux/CI keeps generated test files under .artifacts as before.
+    artifacts = root / ".artifacts"
+    runtime = artifacts / "runtime"
+    # Keep every generated path below the repository artifact contract. On
+    # Windows a per-run tree still avoids stale ACLs and file-vs-directory
+    # collisions, but its parent is now the classified runtime/tmp area.
     if os.name == "nt":
-        with tempfile.TemporaryDirectory(prefix="fitminiapp-pytest-") as temp_dir:
+        import tempfile
+
+        temporary_parent = runtime / "tmp"
+        temporary_parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(
+            prefix="fitminiapp-pytest-", dir=temporary_parent
+        ) as temp_dir:
             temp_root = Path(temp_dir)
             return _run(
                 root,
@@ -54,12 +61,11 @@ def main() -> int:
                 process_tmp=temp_root / "python",
             )
 
-    artifacts = root / ".artifacts"
     return _run(
         root,
-        pytest_cache=artifacts / "cache" / "pytest-runner",
-        pytest_tmp=artifacts / "tests" / "pytest-runner-tmp",
-        process_tmp=artifacts / "tmp" / "python",
+        pytest_cache=runtime / "cache" / "pytest-runner",
+        pytest_tmp=runtime / "tests" / "pytest-runner-tmp",
+        process_tmp=runtime / "tmp" / "python",
     )
 
 

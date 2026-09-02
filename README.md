@@ -20,7 +20,7 @@ tests/          cross-stack integration tests
 docs/           публичные русскоязычные product и architecture contracts
 codex-backlog/  публичные lifecycle rules и исторический release context
 .agents/        роли, skills и verification references для Codex
-.artifacts/     только локальные caches, logs, screenshots, traces и reports; не коммитится
+.artifacts/     canonical task/runtime/operations artifacts; не коммитится
 ```
 
 Основные runtime-потоки:
@@ -169,7 +169,7 @@ git diff -- frontend/openapi.json frontend/src/shared/api/schema.d.ts
 ## Проверки
 
 Выбирайте targeted набор по изменённому риску. Скрипт Python складывает pytest cache и temp files в
-`.artifacts/`:
+`.artifacts/runtime/{cache,tmp,tests}/` согласно [lifecycle документации](docs/artifacts-lifecycle.md):
 
 ```bash
 .venv/bin/python scripts/run_pytest.py backend/tests/test_account_lifecycle.py -q
@@ -217,10 +217,12 @@ keyboard, BackButton и lifecycle contracts, но не заменяют Telegram
 - domain contracts: [`docs/exercise-domain.md`](docs/exercise-domain.md),
   [`docs/food-domain.md`](docs/food-domain.md) и
   [`docs/training-analytics.md`](docs/training-analytics.md);
-- активная UI-система: [`docs/design/design-direction-v2.1.md`](docs/design/design-direction-v2.1.md).
+- активная UI-система: [`docs/design/design-direction-v2.1.md`](docs/design/design-direction-v2.1.md);
+  lifecycle локальных artifacts: [`docs/artifacts-lifecycle.md`](docs/artifacts-lifecycle.md).
 
 Документы под `docs/` ведутся на русском. Детальные временные audit reports, screenshots и test
-traces хранятся в `.artifacts/` и не коммитятся. Внутренние operational, security, provider,
+traces хранятся в `.artifacts/tasks/<TASK_ID>/evidence/` или `.artifacts/runtime/tests/` и не
+коммитятся. Внутренние operational, security, provider,
 legal-risk и owner-only документы также не публикуются в Git.
 
 ## Production и deployment

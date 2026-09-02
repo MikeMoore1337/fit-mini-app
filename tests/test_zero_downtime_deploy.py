@@ -26,7 +26,7 @@ def _config(tmp_path: Path) -> deploy.DeployConfig:
         backend_image=f"registry/backend:{NEW_SHA}",
         bot_image=f"registry/bot:{NEW_SHA}",
         root=tmp_path,
-        state_root=tmp_path / ".artifacts" / "deployments",
+        state_root=tmp_path / ".artifacts" / "operations" / "deployments",
         observation_seconds=1,
         readiness_timeout_seconds=5,
         probe_interval_seconds=0.1,

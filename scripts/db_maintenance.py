@@ -1,7 +1,8 @@
 """Create and restore PostgreSQL dumps through the Compose db service.
 
-All dump files are intentionally restricted to .artifacts/backups so operational
-data cannot accidentally become a tracked repository file.
+All dump files are intentionally restricted to .artifacts/operations/backups so
+operational data cannot accidentally become a tracked repository file or a
+generic runtime-cleanup candidate.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = ROOT / ".artifacts"
-BACKUP_DIR = ARTIFACTS / "backups"
+BACKUP_DIR = ARTIFACTS / "operations" / "backups"
 UTC = timezone.utc  # noqa: UP017 - deployment hosts can still run Python 3.10.
 BACKUP_SCRIPT = (
     "exec pg_dump --format=custom --no-owner --no-privileges "
@@ -34,9 +35,9 @@ def _timestamp() -> str:
 
 def _artifact_path(path: Path) -> Path:
     resolved = (path if path.is_absolute() else ROOT / path).resolve()
-    artifacts = ARTIFACTS.resolve()
-    if not resolved.is_relative_to(artifacts):
-        raise ValueError(f"backup paths must stay below {artifacts}")
+    backup_dir = BACKUP_DIR.resolve()
+    if not resolved.is_relative_to(backup_dir):
+        raise ValueError(f"backup paths must stay below {backup_dir}")
     return resolved
 
 
@@ -136,14 +137,16 @@ def main() -> int:
         "--output",
         type=Path,
         default=None,
-        help="path below .artifacts/ (default: timestamped .artifacts/backups file)",
+        help="path below .artifacts/operations/backups (default: timestamped backup file)",
     )
 
     restore_parser = subparsers.add_parser(
         "restore",
         help="restore a custom-format dump after creating a safety backup",
     )
-    restore_parser.add_argument("input", type=Path, help="dump file below .artifacts/")
+    restore_parser.add_argument(
+        "input", type=Path, help="dump file below .artifacts/operations/backups/"
+    )
     restore_parser.add_argument(
         "--confirm-database",
         required=True,

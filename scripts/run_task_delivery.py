@@ -184,16 +184,19 @@ def _worker_prompt(task_id: str, started: dict[str, Any]) -> str:
 
 def _artifact_root(task_id: str) -> Path:
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
-    return ArtifactManager(
-        REPOSITORY_ROOT / ".artifacts", repo_root=REPOSITORY_ROOT
-    ).allocate_directory(
-        task_id,
-        "temporary",
-        Path("temporary") / "delivery" / f"{stamp}-delivery",
-        purpose="one-command task delivery worker output",
-        command="scripts/run_task_delivery.py",
-        owner="run_task_delivery",
-    )
+    try:
+        return ArtifactManager(
+            REPOSITORY_ROOT / ".artifacts", repo_root=REPOSITORY_ROOT
+        ).allocate_directory(
+            task_id,
+            "temporary",
+            Path("temporary") / "delivery" / f"{stamp}-delivery",
+            purpose="one-command task delivery worker output",
+            command="scripts/run_task_delivery.py",
+            owner="run_task_delivery",
+        )
+    except ArtifactError as error:
+        raise DeliveryError(f"Cannot allocate delivery artifacts: {error}") from error
 
 
 def _cleanup_delivery_artifacts(task_id: str, artifacts: Path) -> dict[str, Any]:

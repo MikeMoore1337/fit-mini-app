@@ -14,28 +14,30 @@ def isolated_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     artifacts = tmp_path / ".artifacts"
     monkeypatch.setattr(db_maintenance, "ROOT", tmp_path)
     monkeypatch.setattr(db_maintenance, "ARTIFACTS", artifacts)
-    monkeypatch.setattr(db_maintenance, "BACKUP_DIR", artifacts / "backups")
+    monkeypatch.setattr(db_maintenance, "BACKUP_DIR", artifacts / "operations" / "backups")
     return artifacts
 
 
-def test_artifact_path_accepts_only_paths_below_artifacts(isolated_paths: Path) -> None:
-    accepted = db_maintenance._artifact_path(Path(".artifacts/backups/database.dump"))
+def test_artifact_path_accepts_only_paths_below_operational_backups(isolated_paths: Path) -> None:
+    accepted = db_maintenance._artifact_path(Path(".artifacts/operations/backups/database.dump"))
 
-    assert accepted == (isolated_paths / "backups" / "database.dump").resolve()
+    assert accepted == (isolated_paths / "operations" / "backups" / "database.dump").resolve()
     with pytest.raises(ValueError, match="backup paths must stay below"):
         db_maintenance._artifact_path(Path("database.dump"))
     with pytest.raises(ValueError, match="backup paths must stay below"):
         db_maintenance._artifact_path(isolated_paths.parent / "outside.dump")
+    with pytest.raises(ValueError, match="backup paths must stay below"):
+        db_maintenance._artifact_path(Path(".artifacts/runtime/cache/not-a-backup.dump"))
 
 
 def test_restore_uses_single_transaction_and_streams_selected_dump(
     isolated_paths: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    source = isolated_paths / "backups" / "selected.dump"
+    source = isolated_paths / "operations" / "backups" / "selected.dump"
     source.parent.mkdir(parents=True)
     source.write_bytes(b"postgres-custom-dump")
-    safety_backup = isolated_paths / "backups" / "pre-restore.dump"
+    safety_backup = isolated_paths / "operations" / "backups" / "pre-restore.dump"
     captured: dict[str, object] = {}
 
     monkeypatch.setattr(db_maintenance, "_database_name", lambda: "fitminiapp_test")
@@ -64,7 +66,7 @@ def test_restore_rejects_wrong_database_before_backup_or_pg_restore(
     isolated_paths: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    source = isolated_paths / "backups" / "selected.dump"
+    source = isolated_paths / "operations" / "backups" / "selected.dump"
     source.parent.mkdir(parents=True)
     source.write_bytes(b"postgres-custom-dump")
     monkeypatch.setattr(db_maintenance, "_database_name", lambda: "fitminiapp_test")
@@ -80,7 +82,7 @@ def test_restore_rejects_wrong_database_before_backup_or_pg_restore(
 
 
 def test_create_backup_refuses_to_overwrite_existing_dump(isolated_paths: Path) -> None:
-    target = isolated_paths / "backups" / "existing.dump"
+    target = isolated_paths / "operations" / "backups" / "existing.dump"
     target.parent.mkdir(parents=True)
     target.write_bytes(b"keep-me")
 
@@ -94,7 +96,7 @@ def test_create_backup_validates_dump_before_publishing(
     isolated_paths: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    target = isolated_paths / "backups" / "validated.dump"
+    target = isolated_paths / "operations" / "backups" / "validated.dump"
     calls: list[list[str]] = []
 
     def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
@@ -126,7 +128,7 @@ def test_create_backup_discards_dump_that_pg_restore_cannot_read(
     isolated_paths: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    target = isolated_paths / "backups" / "invalid.dump"
+    target = isolated_paths / "operations" / "backups" / "invalid.dump"
 
     def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
         if command == db_maintenance._compose_exec(db_maintenance.BACKUP_SCRIPT):

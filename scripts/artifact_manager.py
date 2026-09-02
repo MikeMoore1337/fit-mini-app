@@ -298,12 +298,11 @@ class ArtifactManager:
     def ensure_layout(self, task_id: str | None = None) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
         for name in CANONICAL_TOP_LEVEL:
-            (self.root / name).mkdir(exist_ok=True)
-        (self.root / "runtime" / "cache").mkdir(parents=True, exist_ok=True)
-        (self.root / "runtime" / "tmp").mkdir(parents=True, exist_ok=True)
-        (self.root / "runtime" / "tests").mkdir(parents=True, exist_ok=True)
+            _safe_relative(self.root, name).mkdir(exist_ok=True)
+        for name in ("cache", "tmp", "tests"):
+            _safe_relative(self.root, Path("runtime") / name).mkdir(parents=True, exist_ok=True)
         for name in ("backups", "deployments", "recovery"):
-            (self.root / "operations" / name).mkdir(parents=True, exist_ok=True)
+            _safe_relative(self.root, Path("operations") / name).mkdir(parents=True, exist_ok=True)
         if task_id is not None:
             normalized = normalize_task_id(task_id)
             task_root = self.task_root(normalized)
@@ -583,11 +582,16 @@ class ArtifactManager:
         if self.root.exists():
             for entry in self.root.iterdir():
                 name = entry.name
+                if _is_reparse(entry):
+                    errors.append(f"Reparse point is not allowed in artifact root: {name}")
+                    continue
                 if name in CANONICAL_TOP_LEVEL or _is_legacy_top_level(name):
                     continue
                 errors.append(f"Unclassified top-level artifact path: {name}")
         manifests: list[dict[str, Any]] = []
-        if self.tasks_root.is_dir():
+        if _is_reparse(self.tasks_root):
+            errors.append("Reparse point is not allowed for artifact tasks/")
+        elif self.tasks_root.is_dir():
             for task_path in sorted(
                 self.tasks_root.iterdir(), key=lambda item: item.name.casefold()
             ):
@@ -1033,26 +1037,7 @@ class ArtifactManager:
             except (OSError, ArtifactError) as error:
                 errors.append({"path": relative, "reason": str(error)})
                 break
-        after_bytes = _tree_file_bytes(self.root)
-        result = {
-            "schema_version": SCHEMA_VERSION,
-            "operation": "apply-plan",
-            "root": str(self.root),
-            "plan_sha256": plan["plan_sha256"],
-            "status": "completed" if not errors else "partial-failure",
-            "removed": removed,
-            "moved": moved,
-            "cleanup_errors": errors,
-            "removed_count": len(removed),
-            "removed_bytes": sum(
-                int(entry.get("size_bytes", 0))
-                for entry in mutations
-                if entry.get("path") in removed
-            ),
-            "before_bytes": before_bytes,
-            "after_bytes": after_bytes,
-            "freed_bytes": max(0, before_bytes - after_bytes),
-        }
+        marker_error: dict[str, str] | None = None
         if not errors:
             try:
                 _atomic_write_json(
@@ -1065,10 +1050,30 @@ class ArtifactManager:
                     },
                 )
             except OSError as error:
-                result["status"] = "partial-failure"
-                result["cleanup_errors"] = [
-                    {"path": marker.relative_to(self.root).as_posix(), "reason": str(error)}
-                ]
+                marker_error = {
+                    "path": marker.relative_to(self.root).as_posix(),
+                    "reason": str(error),
+                }
+        after_bytes = _tree_file_bytes(self.root)
+        result = {
+            "schema_version": SCHEMA_VERSION,
+            "operation": "apply-plan",
+            "root": str(self.root),
+            "plan_sha256": plan["plan_sha256"],
+            "status": "completed" if not errors and marker_error is None else "partial-failure",
+            "removed": removed,
+            "moved": moved,
+            "cleanup_errors": [*errors, *([marker_error] if marker_error else [])],
+            "removed_count": len(removed),
+            "removed_bytes": sum(
+                int(entry.get("size_bytes", 0))
+                for entry in mutations
+                if entry.get("path") in removed
+            ),
+            "before_bytes": before_bytes,
+            "after_bytes": after_bytes,
+            "freed_bytes": max(0, before_bytes - after_bytes),
+        }
         return result
 
     def cleanup_task(
@@ -1155,7 +1160,7 @@ class ArtifactManager:
             try:
                 target = _safe_relative(self.root, _safe_relative_name(entry["path"]))
                 if not target.exists():
-                    continue
+                    raise ArtifactSafetyError("task cleanup target disappeared after inventory")
                 if _is_reparse(target):
                     raise ArtifactSafetyError("reparse point")
                 current = _file_fingerprint(target)
@@ -1167,7 +1172,9 @@ class ArtifactManager:
                 errors.append({"path": str(entry["path"]), "reason": str(error)})
                 break
         self._remove_empty_task_directories(task_root, includes, excludes)
-        after = _tree_file_bytes(temporary_root) if temporary_root.exists() else 0
+        after = sum(
+            int(entry["size_bytes"]) for entry in plan_entries if entry["path"] not in removed
+        )
         result = self._cleanup_result(
             normalized,
             "completed" if not errors else "partial-failure",
@@ -1246,6 +1253,7 @@ class ArtifactManager:
         max_bytes: int = 512 * 1024 * 1024,
         apply: bool = False,
         approved_plan_sha256: str | None = None,
+        plan: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         if max_entries < 1 or max_bytes < 1:
             raise ArtifactError("Runtime cleanup bounds must be positive")
@@ -1260,6 +1268,35 @@ class ArtifactManager:
                 "removed_count": 0,
                 "removed_bytes": 0,
             }
+        if plan is not None:
+            if not apply:
+                return dict(plan)
+            entries = plan.get("entries")
+            if not isinstance(entries, list):
+                raise ArtifactError("Runtime cleanup plan entries must be a list")
+            for entry in entries:
+                if not isinstance(entry, Mapping) or entry.get("disposition") not in {
+                    "DELETE",
+                    "MOVE",
+                }:
+                    continue
+                raw_path = entry.get("path")
+                if not isinstance(raw_path, str):
+                    raise ArtifactSafetyError(
+                        "Runtime cleanup plan contains an entry without a relative path"
+                    )
+                relative = _safe_relative_name(raw_path)
+                if relative.parts[:2] not in {
+                    ("runtime", "cache"),
+                    ("runtime", "tmp"),
+                    ("runtime", "tests"),
+                }:
+                    raise ArtifactSafetyError(
+                        f"Runtime cleanup plan escapes runtime areas: {raw_path}"
+                    )
+            result = self.apply_plan(plan, approved_plan_sha256=approved_plan_sha256)
+            result["operation"] = "cleanup-runtime"
+            return result
         cutoff = datetime.now(UTC) - ttl
         candidates: list[dict[str, Any]] = []
         for base_name in ("cache", "tmp", "tests"):
@@ -1453,6 +1490,7 @@ def _parser() -> argparse.ArgumentParser:
     runtime.add_argument("--max-entries", type=int, default=1000)
     runtime.add_argument("--max-bytes", type=int, default=512 * 1024 * 1024)
     runtime.add_argument("--apply", action="store_true")
+    runtime.add_argument("--plan", type=Path)
     runtime.add_argument("--approved-plan-sha256")
     runtime.add_argument("--json", action="store_true")
     runtime.add_argument("--output", type=Path)
@@ -1514,12 +1552,18 @@ def main(argv: Sequence[str] | None = None) -> int:
                 exclude_prefixes=args.exclude,
             )
         elif args.command == "cleanup-runtime":
+            runtime_plan = None
+            if args.plan is not None:
+                runtime_plan = _read_json(_resolved(args.plan))
+                if not isinstance(runtime_plan, dict):
+                    raise ArtifactError("Runtime cleanup plan must be a JSON object")
             payload = manager.cleanup_runtime(
                 ttl=_parse_duration(args.ttl),
                 max_entries=args.max_entries,
                 max_bytes=args.max_bytes,
                 apply=args.apply,
                 approved_plan_sha256=args.approved_plan_sha256,
+                plan=runtime_plan,
             )
         elif args.command == "apply-plan":
             plan = _read_json(_resolved(args.plan))
