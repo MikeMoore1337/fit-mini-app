@@ -23,6 +23,7 @@ from fitminiapp_api.models.food_diary import (
 )
 from fitminiapp_api.models.hydration import HydrationEntry, HydrationGoal, HydrationPreset
 from fitminiapp_api.models.news import (
+    HermesWebArticleSubmission,
     NewsCluster,
     NewsDraftRevision,
     NewsEditorialAction,
@@ -33,6 +34,9 @@ from fitminiapp_api.models.news import (
     NewsReviewDelivery,
     NewsSource,
     NewsStateTransition,
+    WebArticle,
+    WebArticleCandidate,
+    WebArticleRevision,
 )
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
@@ -95,6 +99,7 @@ __all__ = [
     "FoodDiaryDayStatus",
     "FoodDiaryEntry",
     "FoodFavorite",
+    "HermesWebArticleSubmission",
     "HiddenProgramTemplate",
     "HydrationEntry",
     "HydrationGoal",
@@ -134,6 +139,9 @@ __all__ = [
     "UserWorkout",
     "UserWorkoutExercise",
     "UserWorkoutSet",
+    "WebArticle",
+    "WebArticleCandidate",
+    "WebArticleRevision",
     "WeeklyCheckIn",
     "WeeklyDigestDelivery",
     "WeeklyDigestIssue",
