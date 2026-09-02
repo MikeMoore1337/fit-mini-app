@@ -614,6 +614,12 @@ def validate_pr_event(
         raise TaskSessionError(
             f"Unsupported pull request base: {pull_request.get('base', {}).get('ref')}"
         )
+    event_base_sha = str(pull_request.get("base", {}).get("sha", ""))
+    current_master_sha = github.branch_head(TARGET_BASE_BRANCH)
+    if event_base_sha != current_master_sha:
+        raise TaskSessionError(
+            f"Task PR is stale: base {event_base_sha} != current {current_master_sha}"
+        )
     number = int(pull_request["number"])
     commits = github.pull_request_commits(number)
     files = github.pull_request_files(number)
@@ -621,7 +627,7 @@ def validate_pr_event(
         pull_request,
         commits,
         [],
-        expected_base_sha=str(pull_request["base"]["sha"]),
+        expected_base_sha=event_base_sha,
         require_checks=False,
     )
     validate_task_pull_request_files(

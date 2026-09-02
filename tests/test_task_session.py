@@ -275,6 +275,23 @@ def test_task_pr_requires_master_and_exact_head_check() -> None:
         )
 
 
+def test_validate_pr_event_rejects_base_behind_live_master(
+    tmp_path: Path,
+) -> None:
+    base_sha = "a" * 40
+    live_master_sha = "c" * 40
+    head_sha = "b" * 40
+    event_path = tmp_path / "event.json"
+    event_path.write_text(
+        json.dumps({"pull_request": _task_pr(135, "135", base_sha, head_sha)}),
+        encoding="utf-8",
+    )
+    github = FakeGitHub(live_master_sha)
+    github.commits[135] = [_task_commit("135")]
+    with pytest.raises(task_session.TaskSessionError, match="Task PR is stale"):
+        task_session.validate_pr_event(object(), github, event_path)  # type: ignore[arg-type]
+
+
 def test_master_ruleset_requires_pr_current_base_and_aggregate_check() -> None:
     weak = [
         {
