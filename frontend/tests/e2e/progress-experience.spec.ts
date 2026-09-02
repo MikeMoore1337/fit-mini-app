@@ -924,11 +924,12 @@ test('shared data confidence keeps analytics factual, responsive and explicit wh
     path: '../.artifacts/screenshots/task-61/mobile-web-360x800-light-analytics.png',
   });
 
+  await expect(page.getByTestId('progress-bento-overview')).toBeVisible();
   await page.locator('.progress-hero').getByRole('tab', { name: '7 дней' }).click();
   await refreshStarted;
-  const loadingState = page.getByRole('status').filter({ hasText: 'Собираем динамику за период' });
+  const loadingState = page.getByRole('status').filter({ hasText: 'Обновляем динамику за период' });
   await expect(loadingState).toBeVisible();
-  await expect(page.getByTestId('progress-bento-overview')).toHaveCount(0);
+  await expect(page.getByTestId('progress-bento-overview')).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await loadingState.scrollIntoViewIfNeeded();
   await page.screenshot({
@@ -1179,12 +1180,7 @@ test('nutrition report preserves truthful period context, daily drill-down and r
       );
       expect(selectorScrollState.overflowX).toBe('auto');
       if (selectorScrollState.scrollWidth > selectorScrollState.clientWidth) {
-        await selectorScroller.evaluate((element) => {
-          element.scrollLeft = element.scrollWidth;
-        });
-        await expect
-          .poll(() => selectorScroller.evaluate((element) => element.scrollLeft))
-          .toBeGreaterThan(0);
+        await selector.getByRole('tab', { name: 'Свой период' }).scrollIntoViewIfNeeded();
         expect(
           await selector.getByRole('tab', { name: 'Свой период' }).evaluate((tab) => {
             const scroller = tab.closest('.progress-period-controls .ui-tabs');
@@ -1194,9 +1190,6 @@ test('nutrition report preserves truthful period context, daily drill-down and r
             return tabBox.left >= scrollerBox.left && tabBox.right <= scrollerBox.right;
           }),
         ).toBe(true);
-        await selectorScroller.evaluate((element) => {
-          element.scrollLeft = 0;
-        });
       }
     }
     const reportBox = await report.boundingBox();

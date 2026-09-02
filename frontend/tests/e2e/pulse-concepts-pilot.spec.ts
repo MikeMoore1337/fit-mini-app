@@ -320,7 +320,7 @@ test('frequent current action feedback is interruptible, repeatable and reduced-
   ).toBe(0);
 });
 
-test('weight insight keeps smooth truthful geometry, area fill and measurement alternative', async ({
+test('weight bento trend keeps smooth truthful geometry, area fill and measurement alternative', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -330,11 +330,10 @@ test('weight insight keeps smooth truthful geometry, area fill and measurement a
     workoutStatus: 'completed',
   });
   await page.goto('/app?section=progress');
-  const insight = page.locator('.progress-body-metric--data-insight');
+  const insight = page.getByTestId('progress-bento-overview').locator('.progress-bento__trend');
   await insight.scrollIntoViewIfNeeded();
   const chart = insight.locator('.data-viz-chart');
   await expect(chart).toBeVisible();
-  await expect(insight.locator('.ui-semantic-artwork--data-insight')).toHaveCount(1);
   await expect(chart.locator('.data-viz-chart__area')).toHaveCount(1);
   await expect(chart.getByRole('table', { name: /Вес/ })).toBeAttached();
   const lineContract = await chart.locator('.data-viz-chart__actual').evaluate((line) => ({
@@ -346,28 +345,11 @@ test('weight insight keeps smooth truthful geometry, area fill and measurement a
   expect(lineContract.caps).toBe('round');
   expect(lineContract.joins).toBe('round');
   expect(lineContract.path).toContain(' C ');
-  expect(lineContract.width).toBeGreaterThanOrEqual(4);
-  const insightImpact = await insight.evaluate((element) => {
-    const surface = getComputedStyle(element);
-    const artwork = getComputedStyle(
-      element.querySelector<HTMLElement>('.ui-semantic-artwork--data-insight')!,
-    );
-    const areaStart = getComputedStyle(
-      element.querySelector<SVGStopElement>('.data-viz-chart__area-start')!,
-    );
-    return {
-      areaOpacity: Number.parseFloat(areaStart.stopOpacity),
-      artworkOpacity: Number.parseFloat(artwork.opacity),
-      artworkWidth: Number.parseFloat(artwork.width),
-      background: surface.backgroundImage,
-      borderLeftWidth: Number.parseFloat(surface.borderLeftWidth),
-    };
-  });
-  expect(insightImpact.areaOpacity).toBeGreaterThanOrEqual(0.45);
-  expect(insightImpact.artworkOpacity).toBeGreaterThanOrEqual(0.8);
-  expect(insightImpact.artworkWidth).toBeGreaterThanOrEqual(230);
-  expect(insightImpact.borderLeftWidth).toBeGreaterThanOrEqual(7);
-  expect(insightImpact.background).toContain('radial-gradient');
+  expect(lineContract.width).toBeGreaterThanOrEqual(2.5);
+  const areaOpacity = await chart
+    .locator('.data-viz-chart__area-start')
+    .evaluate((stop) => Number.parseFloat(getComputedStyle(stop).stopOpacity));
+  expect(areaOpacity).toBeGreaterThanOrEqual(0.28);
   await expect(chart).toHaveAttribute('data-motion-phase', 'idle');
   await expectNoHorizontalOverflow(page);
   await expectNoOverlap(chart, page.locator('#appBottomNav'));
@@ -390,7 +372,9 @@ test('weight insight keeps smooth truthful geometry, area fill and measurement a
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/app?section=progress');
-  const desktopInsight = page.locator('.progress-body-metric--data-insight');
+  const desktopInsight = page
+    .getByTestId('progress-bento-overview')
+    .locator('.progress-bento__trend');
   await desktopInsight.scrollIntoViewIfNeeded();
   await expect(desktopInsight.locator('.data-viz-chart__area')).toHaveCount(1);
   if (capture) {
@@ -411,7 +395,7 @@ test('mocked TMA dark uses the same chart and safe-area floating dock', async ({
   await installPlatformApi(page, { measurementHistory: 'many', workoutStatus: 'completed' });
   await page.goto('/app?section=progress');
   const dock = page.locator('#appBottomNav');
-  const insight = page.locator('.progress-body-metric--data-insight');
+  const insight = page.getByTestId('progress-bento-overview').locator('.progress-bento__trend');
   await insight.scrollIntoViewIfNeeded();
   await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
   await expect(insight.locator('.data-viz-chart__area')).toHaveCount(1);

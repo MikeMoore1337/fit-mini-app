@@ -1056,6 +1056,14 @@ export function ProgressExperience({
     navigateWithinProgress(progressPath(search, nextSelection));
   }
 
+  const summaryMatchesSelection = summary.data
+    ? selection.kind === 'custom'
+      ? summary.data.period_start === selection.dateFrom &&
+        summary.data.period_end === selection.dateTo
+      : summary.data.period_days === selection.days
+    : false;
+  const isSummaryUpdating = Boolean(summary.data && !summaryMatchesSelection);
+
   return (
     <div className="progress-experience progress-experience--bento">
       <header className="progress-hero">
@@ -1094,6 +1102,11 @@ export function ProgressExperience({
         />
       ) : summary.data ? (
         <>
+          {isSummaryUpdating && (
+            <p className="progress-note" role="status">
+              Обновляем динамику за период…
+            </p>
+          )}
           <SummaryOverview summary={summary.data} />
           <div className="progress-details" aria-label="Подробности прогресса">
             <TrainingSection analytics={analytics} summary={summary.data} />
