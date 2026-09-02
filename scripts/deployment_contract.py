@@ -71,16 +71,24 @@ def validate_files(
         errors.append(
             "deploy workflow does not resolve image references through deployment_contract.py"
         )
+    if "git archive" not in deploy or "deployment-migration-manifest.json" not in deploy:
+        errors.append(
+            "deploy workflow does not transfer an immutable commit bundle and migration manifest"
+        )
     if "${BACKEND_IMAGE" not in compose_text or "${BOT_IMAGE" not in compose_text:
         errors.append("Compose application services do not consume BACKEND_IMAGE/BOT_IMAGE")
     if "GHCR_BACKEND_IMAGE" in deploy or "GHCR_BOT_IMAGE" in deploy:
         errors.append("deploy workflow contains an independent GHCR image-name source")
+    if "sync-dev:" in deploy or "DEV_SYNC_APP" in deploy:
+        errors.append("deploy workflow contains the removed dev synchronization lane")
     if "fit-mini-app-backend" in ci or "fit-mini-app-bot" in ci:
         errors.append("CI contains legacy hardcoded application image names")
     if deploy_script is not None:
         script = deploy_script.read_text(encoding="utf-8")
         if "BACKEND_IMAGE" not in script or "BOT_IMAGE" not in script:
             errors.append("deploy script does not require both application image references")
+        if ".deployment-sha" not in script:
+            errors.append("deploy script does not verify immutable bundle provenance")
         if "git fetch" in script or "git reset" in script or "git rev-parse" in script:
             errors.append("deploy script depends on a production Git checkout")
     if errors:

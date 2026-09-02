@@ -6,55 +6,42 @@ VPS, PostgreSQL, Cloudflare или сети.
 
 ## Release entry и полностью автоматический deploy
 
-Постоянная ветка разработки — `dev`, production source of truth — `master`. Новая production
-revision попадает в `master` только через checked merged pull request из `dev` либо узкой временной
-hotfix/recovery branch. Внешний GitHub
-ruleset для `master` обязан требовать pull request и успешный check `checks`, запрещать direct push,
-force-push и удаление ветки и не разрешать bypass обычного release path.
+`master` — единственная защищённая release-ветка и production source of truth. Новая production
+revision попадает в `master` только через checked merged task pull request. Внешний GitHub ruleset
+для `master` обязан требовать pull request и успешный exact-head check `checks`, запрещать direct
+push, force-push и удаление ветки и не разрешать bypass обычного release path.
 
 Task получает normal automatic release только при `AUTO_RELEASE_ELIGIBLE`: есть tracked logical
 commit, lifecycle/review/QA/final verification завершены, незакрытых `BLOCKER/HIGH/MEDIUM` нет,
 findings синхронизированы и отсутствует обязательный owner/human/manual visual gate. Тогда task
-branch через exact-head checked PR сериализованно интегрируется в `dev`; агент ждёт successful
-push-CI exact merge SHA, создаёт/обновляет PR `dev -> master`, проверяет exact PR head SHA и required
-check `checks`, выполняет checked merge и наблюдает post-merge CI/deploy до terminal success. Exact
-merged `dev` push уже является полным release-candidate suite, поэтому canonical `dev -> master` PR
-выполняет только быстрые release-sequence/provenance checks и не повторяет тяжёлые jobs; любой
-exceptional PR в `master` проходит полный suite. После
-успешного release узкий GitHub App fast-forward'ит `dev` к exact deployed `master`.
+branch сначала проходит shared local `PRE_PUSH_CI_PASS` для exact HEAD и current `origin/master`,
+затем exact-head checked task PR в `master`. PR-triggered CI выполняет полный regression profile;
+после merge push-CI выполняет только merge provenance и immutable image publication, потому что
+тот же tree уже прошёл полный PR suite. Затем `.github/workflows/deploy.yml` передаёт на host
+immutable commit bundle, image refs и migration manifest; host не использует Git checkout.
 Failure/rollback/manual intervention required блокирует следующую backlog task.
 
-Permanent `dev` является integration-only и защищается PR-only Ruleset с deletion/non-fast-forward,
-strict required `checks` и единственным bypass actor узкого deployed-sync GitHub App. Task PR идут
-только из `task/<ID>-<slug>`, а `scripts/task_session.py` выдаёт integration eligibility только
-queue head. Repository `delete_branch_on_merge` не заменяет owner-safe cleanup worktree/branch.
-`allow_auto_merge` для task PR не используется: second candidate после первого merge обязан
-обновиться от current `dev` и повторить checks.
+Task PR идут только из `task/<ID>-<slug>`, а `scripts/task_session.py` выдаёт readiness только при
+свежем exact `PRE_PUSH_CI_PASS`, approved review/QA и clean task worktree. Repository
+`delete_branch_on_merge` не заменяет owner-safe cleanup worktree/branch. Если `master` изменился до
+push или merge, candidate обязан повторить current-base gate.
 
-После successful production deploy job `sync-dev` того же `.github/workflows/deploy.yml`
-fast-forward'ит `dev` только на exact текущий deployed `master` SHA. В текущем repository этот path
-активирован owner-approved узким GitHub App и `ENABLE_DEPLOYED_MASTER_DEV_SYNC=true`; broad
-PAT/admin bypass запрещён. Content-equivalent служебный push не создаёт CI run: `paths: ["**"]`
-оценивается по two-dot tree diff без changed files. Если нетипичный sync всё же меняет tree,
-fallback запускает только лёгкий CI: exact App actor, current `master` и successful `production`
-deployment проверяются, а тяжёлые jobs остаются `skipped`.
-Изменение App, Ruleset, variable или secrets остаётся exceptional owner-authorized action.
+Изменение Ruleset, variables или secrets остаётся exceptional owner-authorized action.
 Подробный ADR/runbook: `docs/task-branch-integration.md`.
 
 После merge участие человека заканчивается:
 
-1. `push` merge result в `master` запускает полный CI для точного SHA и публикует проверенные
-   backend/bot images с immutable SHA tag;
+1. `push` merge result в `master` запускает полный PR-equivalent CI для точного SHA и публикует
+   проверенные backend/bot images с immutable SHA tag;
 2. успешный CI запускает `.github/workflows/deploy.yml` через `workflow_run`;
 3. отдельный job без production secrets через GitHub API проверяет, что SHA является результатом
-   merged PR в `master`;
-4. deployment job получает доступ к `production` environment, повторно проверяет, что SHA остаётся
-   текущим `origin/master`, и выполняет rollout;
-5. smoke/observation gates фиксируют успех, а ошибка до commit state автоматически возвращает
-   прежний живой slot;
-6. только после успешного deployment job `sync-dev` получает App secrets из того же protected
-   environment и fast-forward'ит `dev`; sync использует `deployment: false`, поэтому не создаёт
-   фиктивную вторую production deployment запись.
+   ровно одного merged task PR в `master`;
+4. deployment job получает доступ к `production` environment, повторно проверяет current `master`,
+   собирает bundle из exact commit и передаёт его на host вместе с migration manifest;
+5. host распаковывает bundle в release directory, проверяет `.deployment-sha`, запускает rollout с
+   persistent state и не выполняет `git fetch`, `git reset` или любой Git checkout;
+6. smoke/observation gates фиксируют успех, а ошибка до commit state автоматически возвращает
+   прежний живой slot.
 
 У `production` environment не должно быть required reviewers или wait timer: это добавило бы
 ручную стадию после уже одобренного merge. `workflow_dispatch` отсутствует, поэтому normal path не
@@ -86,8 +73,8 @@ Frontend входит в backend image. После switch Caddy направля
 
 ## Порядок rollout
 
-`scripts/deploy_production.sh` проверяет exact Git SHA, immutable infrastructure image references и
-production config, после чего передаёт управление `scripts/zero_downtime_deploy.py`:
+`scripts/deploy_production.sh` проверяет exact `.deployment-sha` bundle marker, immutable image
+references и production config, после чего передаёт управление `scripts/zero_downtime_deploy.py`:
 
 1. host lock, state/config drift, capacity и public active smoke;
 2. pull candidate image, проверка OCI revision и разрешение exact repository digest;

@@ -1,12 +1,40 @@
+import json
 from pathlib import Path
 
 import pytest
-from scripts.check_online_migrations import OnlineMigrationError, validate_added_migration
+from scripts.check_online_migrations import (
+    OnlineMigrationError,
+    changed_migrations_from_manifest,
+    validate_added_migration,
+)
 
 
 def _migration(path: Path, body: str) -> Path:
     path.write_text(body, encoding="utf-8")
     return path
+
+
+def test_production_migration_manifest_is_revision_bound(tmp_path: Path) -> None:
+    manifest = tmp_path / "deployment-migration-manifest.json"
+    active = "a" * 40
+    target = "b" * 40
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "active_revision": active,
+                "target_revision": target,
+                "changes": [{"status": "A", "path": "backend/alembic/versions/0064_expand.py"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert changed_migrations_from_manifest(active, target, manifest) == [
+        ("A", Path("backend/alembic/versions/0064_expand.py"))
+    ]
+    with pytest.raises(OnlineMigrationError, match="revision range"):
+        changed_migrations_from_manifest(active, "c" * 40, manifest)
 
 
 def test_online_migration_accepts_declared_additive_expand(tmp_path: Path) -> None:

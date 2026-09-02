@@ -8,13 +8,14 @@ generic runtime-cleanup candidate.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ARTIFACTS = ROOT / ".artifacts"
+ARTIFACTS = Path(os.environ.get("DEPLOY_ARTIFACT_ROOT", str(ROOT / ".artifacts"))).resolve()
 BACKUP_DIR = ARTIFACTS / "operations" / "backups"
 UTC = timezone.utc  # noqa: UP017 - deployment hosts can still run Python 3.10.
 BACKUP_SCRIPT = (

@@ -1,11 +1,11 @@
 x-backend-image: &backend-image
-  image: ${BACKEND_IMAGE:-fit-mini-app-backend:local}
+  image: ${BACKEND_IMAGE:-yfc-backend:local}
   build:
     context: .
     dockerfile: backend/Dockerfile
 
 x-bot-image: &bot-image
-  image: ${BOT_IMAGE:-fit-mini-app-bot:local}
+  image: ${BOT_IMAGE:-yfc-bot:local}
   build: ./bot
 
 services:
@@ -59,7 +59,7 @@ services:
 
   backend-blue:
     <<: *backend-image
-    image: ${BACKEND_BLUE_IMAGE:-fit-mini-app-backend:local}
+    image: ${BACKEND_BLUE_IMAGE:-yfc-backend:local}
     restart: unless-stopped
     profiles: ["production-slots"]
     env_file: .env
@@ -88,7 +88,7 @@ services:
 
   backend-green:
     <<: *backend-image
-    image: ${BACKEND_GREEN_IMAGE:-fit-mini-app-backend:local}
+    image: ${BACKEND_GREEN_IMAGE:-yfc-backend:local}
     restart: unless-stopped
     profiles: ["production-slots"]
     env_file: .env
@@ -260,7 +260,7 @@ services:
 
   worker-blue:
     <<: *backend-image
-    image: ${BACKEND_BLUE_IMAGE:-fit-mini-app-backend:local}
+    image: ${BACKEND_BLUE_IMAGE:-yfc-backend:local}
     restart: unless-stopped
     profiles: ["production-slots"]
     env_file: .env
@@ -285,7 +285,7 @@ services:
 
   worker-green:
     <<: *backend-image
-    image: ${BACKEND_GREEN_IMAGE:-fit-mini-app-backend:local}
+    image: ${BACKEND_GREEN_IMAGE:-yfc-backend:local}
     restart: unless-stopped
     profiles: ["production-slots"]
     env_file: .env
@@ -310,7 +310,7 @@ services:
 
   bot-blue:
     <<: *bot-image
-    image: ${BOT_BLUE_IMAGE:-fit-mini-app-bot:local}
+    image: ${BOT_BLUE_IMAGE:-yfc-bot:local}
     restart: unless-stopped
     profiles: ["production-slots"]
     extra_hosts:
@@ -337,7 +337,7 @@ services:
 
   bot-green:
     <<: *bot-image
-    image: ${BOT_GREEN_IMAGE:-fit-mini-app-bot:local}
+    image: ${BOT_GREEN_IMAGE:-yfc-bot:local}
     restart: unless-stopped
     profiles: ["production-slots"]
     extra_hosts:

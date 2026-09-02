@@ -234,9 +234,10 @@ Ruleset требует green check `checks`, запрещает direct push, for
 Merge PR является release authorization. После него человек не участвует в normal deployment path:
 post-merge CI публикует проверенные immutable images и автоматически запускает
 `.github/workflows/deploy.yml`; `production` environment не содержит reviewers или wait timer.
-Fail-closed `scripts/deploy_production.sh` выполняет preflight, PostgreSQL backup, migrations,
-blue/green rollout, smoke/observation gates и автоматический возврат прежнего slot при ошибке до
-commit state.
+Workflow собирает bundle из exact commit и передаёт его на host вместе с image refs и migration
+manifest. Fail-closed `scripts/deploy_production.sh` проверяет `.deployment-sha`, затем выполняет
+preflight, PostgreSQL backup, migrations, blue/green rollout, smoke/observation gates и
+автоматический возврат прежнего slot при ошибке до commit state; host не требует Git checkout.
 
 `workflow_dispatch` не используется, поэтому normal path не выбирает произвольный SHA и не требует
 ручного подтверждения после merge. History rewrite, direct/force push, ручные production-команды,

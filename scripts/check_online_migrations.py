@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -91,6 +92,51 @@ def changed_migrations(active_revision: str, target_revision: str) -> list[tuple
         path = Path(fields[-1])
         if path.suffix == ".py" and path.name != "__init__.py":
             changes.append((status, path))
+    return changes
+
+
+def changed_migrations_from_manifest(
+    active_revision: str, target_revision: str, manifest: Path
+) -> list[tuple[str, Path]]:
+    try:
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise OnlineMigrationError(
+            f"cannot read immutable migration manifest {manifest}: {exc}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise OnlineMigrationError("immutable migration manifest must be an object")
+    if payload.get("schema_version") != 1:
+        raise OnlineMigrationError("unsupported immutable migration manifest version")
+    if (
+        payload.get("active_revision") != active_revision
+        or payload.get("target_revision") != target_revision
+    ):
+        raise OnlineMigrationError(
+            "immutable migration manifest revision range does not match deployment"
+        )
+    changes: list[tuple[str, Path]] = []
+    raw_changes = payload.get("changes")
+    if not isinstance(raw_changes, list):
+        raise OnlineMigrationError("immutable migration manifest changes must be a list")
+    for item in raw_changes:
+        if (
+            not isinstance(item, dict)
+            or not isinstance(item.get("status"), str)
+            or not isinstance(item.get("path"), str)
+        ):
+            raise OnlineMigrationError("immutable migration manifest contains an invalid change")
+        path = Path(item["path"])
+        if (
+            path.is_absolute()
+            or ".." in path.parts
+            or path.parts[: len(MIGRATION_ROOT.parts)] != MIGRATION_ROOT.parts
+        ):
+            raise OnlineMigrationError(
+                f"immutable migration manifest path is outside {MIGRATION_ROOT}: {path}"
+            )
+        if path.suffix == ".py" and path.name != "__init__.py":
+            changes.append((item["status"], path))
     return changes
 
 
@@ -359,8 +405,14 @@ def validate_added_migration(path: Path) -> None:
     _validate_upgrade_call_allowlist(path, upgrade, phase)
 
 
-def check_online_migrations(active_revision: str, target_revision: str) -> list[Path]:
-    changes = changed_migrations(active_revision, target_revision)
+def check_online_migrations(
+    active_revision: str, target_revision: str, *, manifest: Path | None = None
+) -> list[Path]:
+    changes = (
+        changed_migrations_from_manifest(active_revision, target_revision, manifest)
+        if manifest is not None
+        else changed_migrations(active_revision, target_revision)
+    )
     unsafe_history = [(status, path) for status, path in changes if status != "A"]
     if unsafe_history:
         details = ", ".join(f"{status}:{path}" for status, path in unsafe_history)
@@ -375,11 +427,42 @@ def check_online_migrations(active_revision: str, target_revision: str) -> list[
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("active_revision")
-    parser.add_argument("target_revision")
+    parser.add_argument("active_revision", nargs="?")
+    parser.add_argument("target_revision", nargs="?")
+    parser.add_argument("--manifest", type=Path)
+    parser.add_argument("--write-manifest", action="store_true")
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     try:
-        migrations = check_online_migrations(args.active_revision, args.target_revision)
+        if not args.active_revision or not args.target_revision:
+            raise OnlineMigrationError("active and target revisions are required")
+        if args.write_manifest:
+            if args.manifest is not None or args.output is None:
+                raise OnlineMigrationError("--write-manifest requires only --output")
+            changes = changed_migrations(args.active_revision, args.target_revision)
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "active_revision": args.active_revision,
+                        "target_revision": args.target_revision,
+                        "changes": [
+                            {"status": status, "path": path.as_posix()} for status, path in changes
+                        ],
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            print(f"Migration manifest written: {args.output}")
+            return 0
+        if args.output is not None:
+            raise OnlineMigrationError("--output is valid only with --write-manifest")
+        migrations = check_online_migrations(
+            args.active_revision, args.target_revision, manifest=args.manifest
+        )
     except (OSError, SyntaxError, subprocess.CalledProcessError, OnlineMigrationError) as exc:
         print(f"Online migration gate failed: {exc}")
         return 1
