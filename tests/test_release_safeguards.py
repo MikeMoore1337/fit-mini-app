@@ -17,6 +17,8 @@ def test_automated_deploy_keeps_revision_provenance_and_stale_run_guards() -> No
     deploy_script = (root / "scripts" / "deploy_production.sh").read_text(encoding="utf-8")
 
     assert "org.opencontainers.image.revision=${{ github.sha }}" in ci_workflow
+    assert "GHCR_BACKEND_IMAGE: ghcr.io/mikemoore1337/your-fitness-coach-backend" in deploy_workflow
+    assert "GHCR_BOT_IMAGE: ghcr.io/mikemoore1337/your-fitness-coach-bot" in deploy_workflow
     assert "workflow_dispatch:" not in deploy_workflow
     assert "pull-requests: read" in deploy_workflow
     assert '"repos/$REPOSITORY/commits/$DEPLOY_SHA/pulls"' in deploy_workflow
