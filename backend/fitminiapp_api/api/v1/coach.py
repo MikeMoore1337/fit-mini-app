@@ -48,7 +48,7 @@ from fitminiapp_api.schemas.workout import (
     WorkoutTimelineItem,
 )
 from fitminiapp_api.services.analytics import (
-    build_training_analytics,
+    build_training_analytics_for_range,
     build_user_progress,
     build_workout_timeline,
 )
@@ -75,6 +75,7 @@ from fitminiapp_api.services.nutrition_reports import (
     build_nutrition_report,
     nutrition_report_csv,
 )
+from fitminiapp_api.services.period_bounds import PeriodBoundsError, resolve_progress_bounds
 from fitminiapp_api.services.profile import ProfileError, update_profile
 from fitminiapp_api.services.program_common import ProgramError, assignment_error_status
 from fitminiapp_api.services.program_versioning import upsert_future_program_exercise
@@ -85,7 +86,7 @@ from fitminiapp_api.services.programs import (
     list_coach_assigned_programs,
 )
 from fitminiapp_api.services.progress import (
-    build_progress_summary,
+    build_progress_summary_for_range,
     build_trainer_client_summaries,
 )
 from fitminiapp_api.services.progress_report_downloads import create_progress_report_download_token
@@ -237,12 +238,23 @@ def coach_client_analytics(
 )
 def coach_client_progress_summary(
     client_id: int,
-    period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
+    period_days: ProgressPeriodDays | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
-    return build_progress_summary(db, client, period_days)
+    try:
+        bounds = resolve_progress_bounds(
+            client,
+            period_days,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        return build_progress_summary_for_range(db, client, bounds.start, bounds.end)
+    except PeriodBoundsError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
 
 
 def _client_nutrition_report_or_422(
@@ -386,18 +398,30 @@ def coach_client_weekly_check_ins(
 )
 def coach_client_training_analytics(
     client_id: int,
-    period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
+    period_days: ProgressPeriodDays | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     exercise_history_limit: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
-    return build_training_analytics(
-        db,
-        client,
-        period_days,
-        exercise_history_limit=exercise_history_limit,
-    )
+    try:
+        bounds = resolve_progress_bounds(
+            client,
+            period_days,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        return build_training_analytics_for_range(
+            db,
+            client,
+            bounds.start,
+            bounds.end,
+            exercise_history_limit=exercise_history_limit,
+        )
+    except PeriodBoundsError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
 
 
 @router.get(
@@ -405,19 +429,26 @@ def coach_client_training_analytics(
     response_model=TrainerClientProgressListResponse,
 )
 def coach_client_progress_summaries(
-    period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
+    period_days: ProgressPeriodDays | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0, le=10_000),
     current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
-    return build_trainer_client_summaries(
-        db,
-        current_user,
-        period_days,
-        limit=limit,
-        offset=offset,
-    )
+    try:
+        return build_trainer_client_summaries(
+            db,
+            current_user,
+            period_days,
+            limit=limit,
+            offset=offset,
+            date_from=date_from,
+            date_to=date_to,
+        )
+    except PeriodBoundsError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
 
 
 @router.get(

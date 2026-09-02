@@ -20,9 +20,11 @@ import {
 } from '../../shared/ui/common';
 
 const reportPeriods = [
+  { value: 'days_1', label: 'День' },
   { value: 'days_7', label: '7 дней' },
   { value: 'days_30', label: '30 дней' },
   { value: 'days_90', label: '90 дней' },
+  { value: 'days_365', label: 'Год' },
   { value: 'current_week', label: 'Эта неделя' },
   { value: 'current_month', label: 'Этот месяц' },
   { value: 'previous_month', label: 'Прошлый месяц' },
@@ -389,7 +391,21 @@ function DailyTable({
   );
 }
 
-export function NutritionPeriodReport({ clientId }: { clientId?: number }) {
+export type ControlledNutritionPeriod = {
+  period: NutritionReportPeriod;
+  dateFrom: string;
+  dateTo: string;
+};
+
+export function NutritionPeriodReport({
+  clientId,
+  controlledPeriod,
+  showSelector = true,
+}: {
+  clientId?: number;
+  controlledPeriod?: ControlledNutritionPeriod;
+  showSelector?: boolean;
+}) {
   const initial = useMemo(
     () =>
       clientId == null
@@ -404,9 +420,21 @@ export function NutritionPeriodReport({ clientId }: { clientId?: number }) {
   const [customError, setCustomError] = useState('');
   const [exportState, setExportState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const dayLink = clientId == null ? diaryLink : null;
+  const activePeriod = controlledPeriod?.period ?? period;
+  const activeDateFrom = controlledPeriod?.dateFrom ?? dateFrom;
+  const activeDateTo = controlledPeriod?.dateTo ?? dateTo;
+  const visibleSelectedPeriod = controlledPeriod?.period ?? selectedPeriod;
+  const visibleDateFrom = controlledPeriod?.dateFrom ?? dateFrom;
+  const visibleDateTo = controlledPeriod?.dateTo ?? dateTo;
   const report = useQuery({
-    queryKey: queryKeys.progress.nutritionReport(clientId ?? 'me', period, dateFrom, dateTo),
-    queryFn: () => api<NutritionReport>(reportPath(period, dateFrom, dateTo, false, clientId)),
+    queryKey: queryKeys.progress.nutritionReport(
+      clientId ?? 'me',
+      activePeriod,
+      activeDateFrom,
+      activeDateTo,
+    ),
+    queryFn: () =>
+      api<NutritionReport>(reportPath(activePeriod, activeDateFrom, activeDateTo, false, clientId)),
     placeholderData: keepPreviousData,
   });
   const today = report.data
@@ -457,7 +485,9 @@ export function NutritionPeriodReport({ clientId }: { clientId?: number }) {
   async function downloadCsv(): Promise<void> {
     setExportState('loading');
     try {
-      const file = await apiFile(reportPath(period, dateFrom, dateTo, true, clientId));
+      const file = await apiFile(
+        reportPath(activePeriod, activeDateFrom, activeDateTo, true, clientId),
+      );
       const url = URL.createObjectURL(file.blob);
       const link = document.createElement('a');
       link.href = url;
@@ -503,18 +533,22 @@ export function NutritionPeriodReport({ clientId }: { clientId?: number }) {
         </Button>
       </header>
 
-      <div className="nutrition-period-report__selector">
-        <SegmentedControl
-          ariaLabel="Период отчёта по питанию"
-          value={selectedPeriod}
-          options={reportPeriods}
-          onChange={selectPeriod}
-        />
-      </div>
-      <p className="nutrition-period-report__selector-hint" aria-hidden="true">
-        Ещё периоды — свайпните влево
-      </p>
-      {selectedPeriod === 'custom' && (
+      {showSelector && (
+        <>
+          <div className="nutrition-period-report__selector">
+            <SegmentedControl
+              ariaLabel="Период отчёта по питанию"
+              value={selectedPeriod}
+              options={reportPeriods}
+              onChange={selectPeriod}
+            />
+          </div>
+          <p className="nutrition-period-report__selector-hint" aria-hidden="true">
+            Ещё периоды — свайпните влево
+          </p>
+        </>
+      )}
+      {showSelector && visibleSelectedPeriod === 'custom' && (
         <div
           className="nutrition-period-report__custom"
           aria-describedby={customError ? 'nutrition-report-custom-error' : undefined}
@@ -522,18 +556,18 @@ export function NutritionPeriodReport({ clientId }: { clientId?: number }) {
           <Field label="Начало периода" labelFor="nutrition-report-from">
             <DateInput
               id="nutrition-report-from"
-              max={dateTo || today}
+              max={visibleDateTo || today}
               onChange={(event) => setDateFrom(event.target.value)}
-              value={dateFrom}
+              value={visibleDateFrom}
             />
           </Field>
           <Field label="Конец периода" labelFor="nutrition-report-to">
             <DateInput
               id="nutrition-report-to"
               max={today}
-              min={dateFrom}
+              min={visibleDateFrom}
               onChange={(event) => setDateTo(event.target.value)}
-              value={dateTo}
+              value={visibleDateTo}
             />
           </Field>
           <Button onClick={applyCustomPeriod} type="button" variant="secondary">

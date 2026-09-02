@@ -669,15 +669,20 @@ export function CardioQuickLog({
 
 export function CardioHistory({
   periodDays,
+  dateFrom: requestedDateFrom,
+  dateTo: requestedDateTo,
   summary,
   timeZone = detectedTimeZone(),
 }: {
-  periodDays: number;
+  periodDays?: number;
+  dateFrom?: string;
+  dateTo?: string;
   summary: CardioSummary;
   timeZone?: string;
 }) {
-  const dateTo = dateInputValue(new Date(), timeZone);
-  const dateFrom = addCalendarDays(dateTo, -(periodDays - 1));
+  const dateTo = requestedDateTo ?? dateInputValue(new Date(), timeZone);
+  const dateFrom =
+    requestedDateFrom ?? addCalendarDays(dateTo, -((periodDays ?? 30) - 1));
   const sessions = useQuery({
     queryKey: queryKeys.cardio.range(dateFrom, dateTo),
     queryFn: () =>

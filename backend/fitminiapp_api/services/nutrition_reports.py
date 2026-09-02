@@ -15,21 +15,16 @@ from fitminiapp_api.models.hydration import HydrationEntry, HydrationGoal
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.user import User
 from fitminiapp_api.schemas.progress import NutritionReportPeriod
+from fitminiapp_api.services.period_bounds import (
+    PeriodBoundsError,
+    ReportBounds,
+    resolve_report_bounds,
+)
 from fitminiapp_api.services.progress import is_calorie_target_met, is_protein_target_met
 
-MAX_REPORT_DAYS = 366
 METRICS = ("calories", "protein_g", "fat_g", "carbs_g")
 
-
-class NutritionReportError(ValueError):
-    pass
-
-
-@dataclass(frozen=True)
-class ReportBounds:
-    period: NutritionReportPeriod
-    start: date
-    end: date
+NutritionReportError = PeriodBoundsError
 
 
 @dataclass(frozen=True)
@@ -40,47 +35,6 @@ class AggregatedDiaryDay:
     fat_g: Decimal | None
     carbs_g: Decimal | None
     has_entries: bool
-
-
-def resolve_report_bounds(
-    user: User,
-    period: NutritionReportPeriod,
-    *,
-    date_from: date | None = None,
-    date_to: date | None = None,
-) -> ReportBounds:
-    today = today_for_user(user)
-    if period == NutritionReportPeriod.CUSTOM:
-        if date_from is None or date_to is None:
-            raise NutritionReportError("Для произвольного периода укажите обе даты")
-        start, end = date_from, date_to
-    else:
-        if date_from is not None or date_to is not None:
-            raise NutritionReportError("Даты можно передавать только для произвольного периода")
-        if period == NutritionReportPeriod.DAYS_7:
-            start, end = today - timedelta(days=6), today
-        elif period == NutritionReportPeriod.DAYS_30:
-            start, end = today - timedelta(days=29), today
-        elif period == NutritionReportPeriod.DAYS_90:
-            start, end = today - timedelta(days=89), today
-        elif period == NutritionReportPeriod.CURRENT_WEEK:
-            start, end = today - timedelta(days=today.weekday()), today
-        elif period == NutritionReportPeriod.CURRENT_MONTH:
-            start, end = today.replace(day=1), today
-        elif period == NutritionReportPeriod.PREVIOUS_MONTH:
-            previous_end = today.replace(day=1) - timedelta(days=1)
-            start = previous_end.replace(day=1)
-            end = previous_end
-        else:  # pragma: no cover - enum validation owns this boundary
-            raise NutritionReportError("Неизвестный период отчёта")
-
-    if end < start:
-        raise NutritionReportError("Дата окончания не может быть раньше даты начала")
-    if end > today:
-        raise NutritionReportError("Отчёт нельзя построить за будущие даты")
-    if (end - start).days + 1 > MAX_REPORT_DAYS:
-        raise NutritionReportError(f"Период отчёта не может превышать {MAX_REPORT_DAYS} дней")
-    return ReportBounds(period=period, start=start, end=end)
 
 
 def _entry_value(quick_column, regular_column):

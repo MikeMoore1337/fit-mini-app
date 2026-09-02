@@ -26,6 +26,7 @@ from fitminiapp_api.services.data_quality import (
     collect_training_data_counts,
 )
 from fitminiapp_api.services.exercise_catalog import get_visible_exercise_display_map
+from fitminiapp_api.services.period_bounds import MAX_REPORT_DAYS, resolve_progress_bounds
 from fitminiapp_api.services.workouts import (
     counts_toward_working_volume,
     working_volume_set_filter,
@@ -413,15 +414,12 @@ def build_training_analytics(
     *,
     exercise_history_limit: int,
 ) -> dict:
-    if period_days not in {7, 30, 90}:
-        raise ValueError("period_days must be 7, 30, or 90")
-    period_end = today_for_user(user)
-    period_start = period_end - timedelta(days=period_days - 1)
+    bounds = resolve_progress_bounds(user, period_days)
     return _build_training_analytics(
         db,
         user,
-        period_start,
-        period_end,
+        bounds.start,
+        bounds.end,
         exercise_history_limit=exercise_history_limit,
     )
 
@@ -436,6 +434,8 @@ def build_training_analytics_for_range(
 ) -> dict:
     if period_end < period_start:
         raise ValueError("period_end must not be before period_start")
+    if (period_end - period_start).days + 1 > MAX_REPORT_DAYS:
+        raise ValueError(f"period cannot exceed {MAX_REPORT_DAYS} days")
     return _build_training_analytics(
         db,
         user,

@@ -1,35 +1,42 @@
-import { useState, type ReactNode } from 'react';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { ApiSchemas, ProgressSummary, TrainingAnalytics } from '../../shared/api/types';
 import { queryKeys } from '../../shared/queryKeys';
-import { AppLink } from '../../shared/navigation/router';
+import { AppLink, useNavigation } from '../../shared/navigation/router';
 import { ContextualHelp } from '../../shared/ui/ContextualHelp';
 import { DataConfidence } from '../../shared/ui/DataConfidence';
 import { QuantitativeProgress, RankedBars, TimeSeriesChart } from '../../shared/ui/DataViz';
-import { formatCalendarDate } from '../../shared/dateTime';
+import { dateInputValue, detectedTimeZone, formatCalendarDate } from '../../shared/dateTime';
 import {
   Badge,
+  Button,
   DisclosureIcon,
   EmptyState,
   ErrorState,
+  Field,
   LoadingState,
   SegmentedControl,
   SemanticArtwork,
 } from '../../shared/ui/common';
-import { NutritionPeriodReport } from './NutritionReport';
+import { NutritionPeriodReport, type ControlledNutritionPeriod } from './NutritionReport';
 import { Icon } from '../../shared/ui/Icon';
 import { CardioHistory } from '../cardio/CardioLogging';
+import {
+  nutritionPeriodForProgress,
+  parseProgressSelection,
+  progressApiQuery,
+  progressPath,
+  progressPeriodOptions,
+  progressReportPath,
+  progressSelectionKey,
+  selectionDateRange,
+  validateCustomProgressRange,
+  type ProgressSelection,
+} from './progressPeriods';
 
-type PeriodDays = 7 | 30 | 90;
 type BodyTrend = ProgressSummary['body']['trends'][number];
 type AdherenceComponent = ProgressSummary['adherence']['workouts'];
-
-const periodOptions = [
-  { value: '7', label: '7 дней' },
-  { value: '30', label: '30 дней' },
-  { value: '90', label: '90 дней' },
-] as const;
 
 const bodyMetricLabels: Record<BodyTrend['metric'], string> = {
   weight_kg: 'Вес',
@@ -115,56 +122,159 @@ function SectionHeading({
   );
 }
 
+function periodDateLabel(start: string, end: string): string {
+  return start === end
+    ? formatDate(start, true)
+    : `${formatDate(start, true)} — ${formatDate(end, true)}`;
+}
+
+function ProgressBentoMetric({
+  detail,
+  label,
+  value,
+}: {
+  detail: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="progress-bento__metric">
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+      <small>{detail}</small>
+    </div>
+  );
+}
+
+function LatestMeasurementPoints({ summary }: { summary: ProgressSummary }) {
+  const trend =
+    summary.body.trends.find((item) => item.metric === 'weight_kg') ?? summary.body.trends[0];
+  const points = trend?.points.slice(-4).reverse() ?? [];
+  return (
+    <article className="progress-bento__journal">
+      <div className="progress-bento__journal-head">
+        <div>
+          <span className="progress-bento__eyebrow">Последние факты</span>
+          <h3>Журнал замеров</h3>
+        </div>
+        <span className="progress-bento__journal-count">
+          {points.length ? `${points.length} точек` : 'Нет точек'}
+        </span>
+      </div>
+      {points.length ? (
+        <ul aria-label="Последние замеры за выбранный период">
+          {points.map((point) => (
+            <li key={point.measured_on}>
+              <span>{formatDate(point.measured_on, true)}</span>
+              <strong>
+                {formatNumber(point.value)} {bodyMetricUnits[trend?.metric ?? 'weight_kg']}
+              </strong>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="progress-note">
+          Добавьте фактический замер, чтобы увидеть первую точку истории. Одна точка ещё не
+          образует тренд.
+        </p>
+      )}
+    </article>
+  );
+}
+
 function SummaryOverview({ summary }: { summary: ProgressSummary }) {
   const weight = summary.body.trends.find((trend) => trend.metric === 'weight_kg');
+  const confirmedNutritionDays = summary.nutrition.complete_days + summary.nutrition.fasted_days;
+  const latestWeight = weight ? `${formatNumber(weight.latest_value)} кг` : 'Нет данных';
   return (
     <section
-      className="progress-summary semantic-card semantic-card--summary semantic-card--progress"
+      className="progress-summary progress-bento semantic-card semantic-card--summary semantic-card--progress"
       data-card-variant="summary"
       data-semantic-family="progress"
+      data-testid="progress-bento-overview"
       aria-labelledby="progress-overview-title"
     >
-      <div className="progress-summary__lead">
-        <span>Соблюдение плана</span>
-        <strong
-          id="progress-overview-title"
-          className={
-            summary.adherence.overall_percent == null ? undefined : 'progress-summary__score'
-          }
-        >
-          {summary.adherence.overall_percent == null
-            ? 'Пока не оценить'
-            : `${formatNumber(summary.adherence.overall_percent)}%`}
-        </strong>
-        <p>
-          {summary.adherence.overall_percent == null
-            ? 'Добавляйте тренировки и питание — оценка появится, когда будет что сравнивать с планом.'
-            : 'Расчёт учитывает только доступные компоненты плана за выбранный период.'}
-        </p>
+      <div className="progress-bento__context">
+        <div>
+          <span className="progress-bento__eyebrow">Сводка выбранного периода</span>
+          <h2 id="progress-overview-title">Прогресс по фактам</h2>
+          <p>
+            {periodDateLabel(summary.period_start, summary.period_end)}. Показаны только записи,
+            попавшие в этот диапазон.
+          </p>
+        </div>
+        <Badge>{summary.period_days} дн.</Badge>
       </div>
-      <dl className="progress-summary__facts">
-        <div>
-          <dt>Тренировки</dt>
-          <dd>
-            {summary.training.completed_workouts} из {summary.training.planned_workouts}
-          </dd>
-          <small>завершено по плану</small>
-        </div>
-        <div>
-          <dt>Новые рекорды</dt>
-          <dd>{summary.training.new_personal_records}</dd>
-          <small>по данным завершённых подходов</small>
-        </div>
-        <div>
-          <dt>{weight ? 'Изменение веса' : 'Дней с питанием'}</dt>
-          <dd>
-            {weight
-              ? formatChange(weight.change, bodyMetricUnits[weight.metric])
-              : summary.nutrition.complete_days + summary.nutrition.fasted_days}
-          </dd>
-          <small>{weight ? 'сравнение с собой' : 'подтверждено за период'}</small>
-        </div>
-      </dl>
+      <div className="progress-bento__grid">
+        <article className="progress-bento__adherence">
+          <span className="progress-bento__eyebrow">Ритм плана</span>
+          <strong className="progress-summary__score">
+            {summary.adherence.overall_percent == null
+              ? 'Пока не оценить'
+              : `${formatNumber(summary.adherence.overall_percent)}%`}
+          </strong>
+          <p>
+            {summary.adherence.overall_percent == null
+              ? 'Появится, когда за период будет что сравнивать с планом.'
+              : 'Расчёт учитывает только доступные компоненты плана.'}
+          </p>
+        </article>
+        <article className="progress-bento__trend">
+          <div className="progress-bento__trend-head">
+            <div>
+              <span className="progress-bento__eyebrow">Главная динамика</span>
+              <h3>{weight ? 'Вес' : 'Замеры тела'}</h3>
+            </div>
+            {weight && (
+              <strong>
+                {latestWeight}
+                <small>{formatChange(weight.change, 'кг')}</small>
+              </strong>
+            )}
+          </div>
+          {weight ? (
+            <>
+              <BodyChart trend={weight} />
+              <DataConfidence
+                kind="weight"
+                signal={summary.data_sufficiency.weight_trend}
+              />
+            </>
+          ) : (
+            <EmptyState
+              title="Недостаточно точек для динамики"
+              text="Добавьте замеры тела: первая запись сохранит факт, но не станет трендом сама по себе."
+            />
+          )}
+        </article>
+        <dl className="progress-bento__metrics" aria-label="Факты за выбранный период">
+          <ProgressBentoMetric
+            detail={`${summary.training.planned_workouts} запланировано`}
+            label="Тренировки"
+            value={`${summary.training.completed_workouts} из ${summary.training.planned_workouts}`}
+          />
+          <ProgressBentoMetric
+            detail={
+              summary.nutrition.visible
+                ? `${summary.nutrition.incomplete_days} частичных, не входят в средние`
+                : 'Доступ закрыт для этой роли'
+            }
+            label="Питание"
+            value={summary.nutrition.visible ? `${confirmedNutritionDays} дней` : 'Недоступно'}
+          />
+          <ProgressBentoMetric
+            detail={`${summary.cardio.duration_minutes} мин фактической длительности`}
+            label="Кардио"
+            value={`${summary.cardio.completed_sessions} сессий`}
+          />
+          <ProgressBentoMetric
+            detail={weight ? `${weight.point_count} точек веса в периоде` : 'Нет фактических точек'}
+            label="Замеры"
+            value={latestWeight}
+          />
+        </dl>
+        <LatestMeasurementPoints summary={summary} />
+      </div>
     </section>
   );
 }
@@ -449,10 +559,12 @@ function BodySection({
   isStale,
   measurementDiary,
   summary,
+  weightChartInOverview = false,
 }: {
   isStale?: boolean;
   measurementDiary?: ReactNode;
   summary: ProgressSummary;
+  weightChartInOverview?: boolean;
 }) {
   const { body } = summary;
   const priorityOptions = useQuery({
@@ -581,7 +693,11 @@ function BodySection({
                           <span>{formatChange(trend.change, unit)}</span>
                         </div>
                       </header>
-                      <BodyChart trend={trend} />
+                      {weightChartInOverview && trend.metric === 'weight_kg' ? (
+                        <p className="progress-note">График веса вынесен в сводку выбранного периода.</p>
+                      ) : (
+                        <BodyChart trend={trend} />
+                      )}
                       {interpretation && <p className="progress-note">{interpretation}</p>}
                     </article>
                   );
@@ -775,12 +891,133 @@ function AdherenceSection({ summary }: { summary: ProgressSummary }) {
   );
 }
 
-function useTrainingAnalytics(period: PeriodDays) {
+function ProgressPeriodControls({
+  onSelectPreset,
+  onApplyCustom,
+  selection,
+  timeZone,
+  today,
+}: {
+  onApplyCustom: (selection: Extract<ProgressSelection, { kind: 'custom' }>) => void;
+  onSelectPreset: (days: 7 | 30 | 90) => void;
+  selection: ProgressSelection;
+  timeZone: string;
+  today: string;
+}) {
+  const initialRange = selectionDateRange(selection, today);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customDateFrom, setCustomDateFrom] = useState(initialRange.dateFrom);
+  const [customDateTo, setCustomDateTo] = useState(initialRange.dateTo);
+  const [customError, setCustomError] = useState('');
+  const range = selectionDateRange(selection, today);
+  const selectedValue = selection.kind === 'custom' ? 'custom' : String(selection.days);
+  const onTabChange = (value: string) => {
+    if (value === 'custom') {
+      const nextRange = selectionDateRange(selection, today);
+      setCustomDateFrom(nextRange.dateFrom);
+      setCustomDateTo(nextRange.dateTo);
+      setCustomError('');
+      setCustomOpen(true);
+      return;
+    }
+    setCustomOpen(false);
+    setCustomError('');
+    onSelectPreset(Number(value) as 7 | 30 | 90);
+  };
+
+  function applyCustom(): void {
+    const error = validateCustomProgressRange(customDateFrom, customDateTo, today);
+    if (error) {
+      setCustomError(error);
+      return;
+    }
+    setCustomError('');
+    setCustomOpen(false);
+    onApplyCustom({ kind: 'custom', dateFrom: customDateFrom, dateTo: customDateTo });
+  }
+
+  function cancelCustom(): void {
+    setCustomError('');
+    setCustomOpen(false);
+    setCustomDateFrom(range.dateFrom);
+    setCustomDateTo(range.dateTo);
+  }
+
+  return (
+    <div className="progress-period-controls">
+      <div className="progress-period-controls__tabs">
+        <SegmentedControl
+          ariaLabel="Период прогресса"
+          options={progressPeriodOptions}
+          value={selectedValue}
+          onChange={onTabChange}
+        />
+      </div>
+      <div className="progress-period-controls__meta" aria-live="polite">
+        <strong>
+          Период: {periodDateLabel(range.dateFrom, range.dateTo)}
+        </strong>
+        <span>Часовой пояс: {timeZone}</span>
+      </div>
+      {customOpen && (
+        <form
+          className="progress-period-controls__custom"
+          onSubmit={(event: FormEvent<HTMLFormElement>) => {
+            event.preventDefault();
+            applyCustom();
+          }}
+          aria-describedby={customError ? 'progress-custom-period-error' : undefined}
+        >
+          <Field label="Начало периода" labelFor="progress-period-from">
+            <input
+              aria-label="Начало периода"
+              className="ui-input"
+              id="progress-period-from"
+              max={customDateTo || today}
+              onChange={(event) => setCustomDateFrom(event.target.value)}
+              type="date"
+              value={customDateFrom}
+            />
+          </Field>
+          <Field label="Конец периода" labelFor="progress-period-to">
+            <input
+              aria-label="Конец периода"
+              className="ui-input"
+              id="progress-period-to"
+              max={today}
+              min={customDateFrom}
+              onChange={(event) => setCustomDateTo(event.target.value)}
+              type="date"
+              value={customDateTo}
+            />
+          </Field>
+          <div className="progress-period-controls__custom-actions">
+            <Button type="submit" variant="secondary">
+              Показать период
+            </Button>
+            <Button onClick={cancelCustom} type="button" variant="ghost">
+              Отмена
+            </Button>
+          </div>
+          {customError && (
+            <p className="ui-field__error" id="progress-custom-period-error" role="alert">
+              {customError}
+            </p>
+          )}
+        </form>
+      )}
+    </div>
+  );
+}
+
+function useTrainingAnalytics(selection: ProgressSelection) {
+  const selectionKey = progressSelectionKey(selection);
   return useQuery({
-    queryKey: ['workout', 'training-analytics', period],
+    queryKey: ['workout', 'training-analytics', selectionKey],
     queryFn: () =>
-      api<TrainingAnalytics>(`/api/v1/workouts/progress/training-analytics?period_days=${period}`),
-    placeholderData: keepPreviousData,
+      api<TrainingAnalytics>(
+        `/api/v1/workouts/progress/training-analytics${progressApiQuery(selection)}`,
+      ),
   });
 }
 
@@ -788,16 +1025,35 @@ export function ProgressExperience({
   measurementDiary,
   timeZone,
 }: { measurementDiary?: ReactNode; timeZone?: string | null } = {}) {
-  const [period, setPeriod] = useState<PeriodDays>(30);
+  const { navigate, search } = useNavigation();
+  const selection = useMemo(() => parseProgressSelection(search), [search]);
+  const resolvedTimeZone = timeZone ?? detectedTimeZone();
+  const today = dateInputValue(new Date(), resolvedTimeZone);
+
+  const selectionKey = progressSelectionKey(selection);
   const summary = useQuery({
-    queryKey: queryKeys.progress.summary(period),
-    queryFn: () => api<ProgressSummary>(`/api/v1/workouts/progress/summary?period_days=${period}`),
-    placeholderData: keepPreviousData,
+    queryKey: queryKeys.progress.summary(selectionKey),
+    queryFn: () =>
+      api<ProgressSummary>(
+        `/api/v1/workouts/progress/summary${progressApiQuery(selection)}`,
+      ),
   });
-  const analytics = useTrainingAnalytics(period);
+  const analytics = useTrainingAnalytics(selection);
+  const controlledNutritionPeriod = useMemo<ControlledNutritionPeriod>(
+    () => nutritionPeriodForProgress(selection),
+    [selection],
+  );
+
+  function selectPreset(days: 7 | 30 | 90): void {
+    navigate(progressPath(search, { kind: 'preset', days }));
+  }
+
+  function applyCustom(nextSelection: Extract<ProgressSelection, { kind: 'custom' }>): void {
+    navigate(progressPath(search, nextSelection));
+  }
 
   return (
-    <div className="progress-experience">
+    <div className="progress-experience progress-experience--bento">
       <header className="progress-hero">
         <div className="progress-hero__copy">
           <span className="eyebrow">Ваша динамика</span>
@@ -811,13 +1067,15 @@ export function ProgressExperience({
           </ContextualHelp>
         </div>
         <div className="progress-hero__actions">
-          <SegmentedControl
-            ariaLabel="Период прогресса"
-            value={String(period)}
-            options={periodOptions}
-            onChange={(value) => setPeriod(Number(value) as PeriodDays)}
+          <ProgressPeriodControls
+            key={selectionKey}
+            onApplyCustom={applyCustom}
+            onSelectPreset={selectPreset}
+            selection={selection}
+            timeZone={resolvedTimeZone}
+            today={today}
           />
-          <AppLink className="button-link secondary-link" to={`/app/report?period=days_${period}`}>
+          <AppLink className="button-link secondary-link" to={progressReportPath(selection)}>
             <Icon name="print" size={16} /> Скачать отчёт
           </AppLink>
         </div>
@@ -833,20 +1091,23 @@ export function ProgressExperience({
       ) : summary.data ? (
         <>
           <SummaryOverview summary={summary.data} />
-          <TrainingSection analytics={analytics} summary={summary.data} />
-          <CardioHistory
-            periodDays={period}
-            summary={summary.data.cardio}
-            timeZone={timeZone ?? undefined}
-          />
-          <BodySection
-            isStale={summary.isPlaceholderData}
-            measurementDiary={measurementDiary}
-            summary={summary.data}
-          />
-          <NutritionSection isStale={summary.isPlaceholderData} summary={summary.data} />
-          <NutritionPeriodReport />
-          <AdherenceSection summary={summary.data} />
+          <div className="progress-details" aria-label="Подробности прогресса">
+            <TrainingSection analytics={analytics} summary={summary.data} />
+            <CardioHistory
+              dateFrom={summary.data.period_start}
+              dateTo={summary.data.period_end}
+              summary={summary.data.cardio}
+              timeZone={resolvedTimeZone}
+            />
+            <BodySection
+              measurementDiary={measurementDiary}
+              summary={summary.data}
+              weightChartInOverview
+            />
+            <NutritionSection summary={summary.data} />
+            <NutritionPeriodReport controlledPeriod={controlledNutritionPeriod} showSelector={false} />
+            <AdherenceSection summary={summary.data} />
+          </div>
         </>
       ) : null}
 

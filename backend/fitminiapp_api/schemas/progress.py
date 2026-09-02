@@ -10,15 +10,19 @@ from fitminiapp_api.schemas.user import BodyPriorityPreference
 
 
 class ProgressPeriodDays(IntEnum):
+    DAYS_1 = 1
     DAYS_7 = 7
     DAYS_30 = 30
     DAYS_90 = 90
+    DAYS_365 = 365
 
 
 class NutritionReportPeriod(StrEnum):
+    DAYS_1 = "days_1"
     DAYS_7 = "days_7"
     DAYS_30 = "days_30"
     DAYS_90 = "days_90"
+    DAYS_365 = "days_365"
     CURRENT_WEEK = "current_week"
     CURRENT_MONTH = "current_month"
     PREVIOUS_MONTH = "previous_month"
@@ -234,7 +238,7 @@ class BodyPeriodSummary(BaseModel):
 
 class ProgressSummaryResponse(BaseModel):
     user_id: int
-    period_days: ProgressPeriodDays
+    period_days: int = Field(ge=1, le=366)
     period_start: date
     period_end: date
     training: TrainingPeriodSummary

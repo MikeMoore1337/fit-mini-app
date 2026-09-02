@@ -41,6 +41,10 @@ from fitminiapp_api.services.data_quality import (
     build_training_data_sufficiency,
     collect_training_data_counts,
 )
+from fitminiapp_api.services.period_bounds import (
+    MAX_REPORT_DAYS,
+    resolve_progress_bounds,
+)
 from fitminiapp_api.services.profile import serialize_body_priority
 from fitminiapp_api.services.workouts import working_volume_set_filter
 
@@ -250,18 +254,51 @@ def _active_clients(
 def build_trainer_client_summaries(
     db: Session,
     coach: User,
-    period_days: int,
+    period_days: int | None = None,
     *,
     limit: int,
     offset: int,
+    date_from: date | None = None,
+    date_to: date | None = None,
 ) -> dict:
     client_rows, total = _active_clients(db, coach, limit=limit, offset=offset)
     clients = [client for client, _private_name in client_rows]
+    period_bounds = None
+    effective_period_days = 30 if period_days is None else int(period_days)
+    if date_from is not None or date_to is not None:
+        if period_days is not None:
+            resolve_progress_bounds(
+                coach,
+                period_days,
+                date_from=date_from,
+                date_to=date_to,
+            )
+        period_bounds = {
+            client.id: (
+                bounds.start,
+                bounds.end,
+            )
+            for client in clients
+            for bounds in [
+                resolve_progress_bounds(
+                    client,
+                    date_from=date_from,
+                    date_to=date_to,
+                )
+            ]
+        }
+        if period_bounds:
+            first_start, first_end = next(iter(period_bounds.values()))
+            effective_period_days = (first_end - first_start).days + 1
+        else:
+            bounds = resolve_progress_bounds(coach, date_from=date_from, date_to=date_to)
+            effective_period_days = (bounds.end - bounds.start).days + 1
     summaries = build_progress_summaries(
         db,
         clients,
-        period_days,
+        effective_period_days,
         nutrition_visible_user_ids={client.id for client in clients},
+        period_bounds=period_bounds,
     )
     names = {
         client.id: private_name or (client.profile.full_name if client.profile else None)
@@ -278,11 +315,13 @@ def build_trainer_client_summaries(
 
 
 def build_progress_summary(db: Session, user: User, period_days: int) -> dict:
+    bounds = resolve_progress_bounds(user, period_days)
     return build_progress_summaries(
         db,
         [user],
-        period_days,
+        (bounds.end - bounds.start).days + 1,
         nutrition_visible_user_ids={user.id},
+        period_bounds={user.id: (bounds.start, bounds.end)},
     )[0]
 
 
@@ -294,10 +333,13 @@ def build_progress_summary_for_range(
 ) -> dict:
     if period_end < period_start:
         raise ValueError("period_end must not be before period_start")
+    period_days = (period_end - period_start).days + 1
+    if period_days > MAX_REPORT_DAYS:
+        raise ValueError(f"period cannot exceed {MAX_REPORT_DAYS} days")
     return build_progress_summaries(
         db,
         [user],
-        (period_end - period_start).days + 1,
+        period_days,
         nutrition_visible_user_ids={user.id},
         period_bounds={user.id: (period_start, period_end)},
     )[0]
@@ -311,8 +353,10 @@ def build_progress_summaries(
     nutrition_visible_user_ids: set[int],
     period_bounds: dict[int, tuple[date, date]] | None = None,
 ) -> list[dict]:
-    if period_bounds is None and period_days not in {7, 30, 90}:
-        raise ValueError("period_days must be 7, 30, or 90")
+    if period_days < 1 or period_days > MAX_REPORT_DAYS:
+        raise ValueError(f"period_days must be between 1 and {MAX_REPORT_DAYS}")
+    if period_bounds is None and period_days not in {1, 7, 30, 90, 365}:
+        raise ValueError("period_days must be 1, 7, 30, or 90, or 365")
     if not users:
         return []
 
