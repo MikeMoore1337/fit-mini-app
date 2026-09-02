@@ -6059,7 +6059,7 @@ export interface components {
          * NutritionReportPeriod
          * @enum {string}
          */
-        NutritionReportPeriod: "days_7" | "days_30" | "days_90" | "current_week" | "current_month" | "previous_month" | "custom";
+        NutritionReportPeriod: "days_1" | "days_7" | "days_30" | "days_90" | "days_365" | "current_week" | "current_month" | "previous_month" | "custom";
         /** NutritionReportResponse */
         NutritionReportResponse: {
             period: components["schemas"]["NutritionReportPeriod"];
@@ -6660,7 +6660,7 @@ export interface components {
          * ProgressPeriodDays
          * @enum {integer}
          */
-        ProgressPeriodDays: 7 | 30 | 90;
+        ProgressPeriodDays: 1 | 7 | 30 | 90 | 365;
         /** ProgressReportCheckIn */
         ProgressReportCheckIn: {
             /**
@@ -6875,7 +6875,8 @@ export interface components {
         ProgressSummaryResponse: {
             /** User Id */
             user_id: number;
-            period_days: components["schemas"]["ProgressPeriodDays"];
+            /** Period Days */
+            period_days: number;
             /**
              * Period Start
              * Format: date
@@ -7256,7 +7257,8 @@ export interface components {
         TrainerClientProgressSummary: {
             /** User Id */
             user_id: number;
-            period_days: components["schemas"]["ProgressPeriodDays"];
+            /** Period Days */
+            period_days: number;
             /**
              * Period Start
              * Format: date
@@ -10668,7 +10670,9 @@ export interface operations {
     coach_client_progress_summary_api_v1_coach_clients__client_id__summary_get: {
         parameters: {
             query?: {
-                period_days?: components["schemas"]["ProgressPeriodDays"];
+                period_days?: components["schemas"]["ProgressPeriodDays"] | null;
+                date_from?: string | null;
+                date_to?: string | null;
             };
             header?: never;
             path: {
@@ -10875,7 +10879,9 @@ export interface operations {
     coach_client_training_analytics_api_v1_coach_clients__client_id__training_analytics_get: {
         parameters: {
             query?: {
-                period_days?: components["schemas"]["ProgressPeriodDays"];
+                period_days?: components["schemas"]["ProgressPeriodDays"] | null;
+                date_from?: string | null;
+                date_to?: string | null;
                 exercise_history_limit?: number;
             };
             header?: never;
@@ -10909,7 +10915,9 @@ export interface operations {
     coach_client_progress_summaries_api_v1_coach_client_summaries_get: {
         parameters: {
             query?: {
-                period_days?: components["schemas"]["ProgressPeriodDays"];
+                period_days?: components["schemas"]["ProgressPeriodDays"] | null;
+                date_from?: string | null;
+                date_to?: string | null;
                 limit?: number;
                 offset?: number;
             };
@@ -11702,7 +11710,9 @@ export interface operations {
     workout_progress_summary_api_v1_workouts_progress_summary_get: {
         parameters: {
             query?: {
-                period_days?: components["schemas"]["ProgressPeriodDays"];
+                period_days?: components["schemas"]["ProgressPeriodDays"] | null;
+                date_from?: string | null;
+                date_to?: string | null;
             };
             header?: never;
             path?: never;
@@ -11896,7 +11906,9 @@ export interface operations {
     workout_training_analytics_api_v1_workouts_progress_training_analytics_get: {
         parameters: {
             query?: {
-                period_days?: components["schemas"]["ProgressPeriodDays"];
+                period_days?: components["schemas"]["ProgressPeriodDays"] | null;
+                date_from?: string | null;
+                date_to?: string | null;
                 exercise_history_limit?: number;
             };
             header?: never;

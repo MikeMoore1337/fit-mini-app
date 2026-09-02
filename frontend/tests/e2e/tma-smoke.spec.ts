@@ -832,8 +832,8 @@ test('nutrition report keeps period analytics and diary return aligned in Mobile
   const tmaApi = await installPlatformApi(tmaPage);
   const mobileApi = await installPlatformApi(mobilePage, { browserSession: true });
   await Promise.all([
-    tmaPage.goto('/app?section=progress&nutrition_period=days_7'),
-    mobilePage.goto('/app?section=progress&nutrition_period=days_7'),
+    tmaPage.goto('/app?section=progress&progress_period=days_7'),
+    mobilePage.goto('/app?section=progress&progress_period=days_7'),
   ]);
 
   for (const currentPage of [tmaPage, mobilePage]) {
@@ -850,10 +850,8 @@ test('nutrition report keeps period analytics and diary return aligned in Mobile
   expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
 
   const tmaReport = tmaPage.locator('#nutrition-period-report');
-  const tmaSelector = tmaReport.getByRole('tablist', { name: 'Период отчёта по питанию' });
-  const mobileSelector = mobilePage
-    .locator('#nutrition-period-report')
-    .getByRole('tablist', { name: 'Период отчёта по питанию' });
+  const tmaSelector = tmaPage.getByRole('tablist', { name: 'Период прогресса' });
+  const mobileSelector = mobilePage.getByRole('tablist', { name: 'Период прогресса' });
   for (const period of ['30 дней', '90 дней', '7 дней']) {
     await Promise.all([
       tmaSelector.getByRole('tab', { name: period }).click(),
@@ -915,7 +913,7 @@ test('nutrition report keeps period analytics and diary return aligned in Mobile
   await expect(tmaPage).toHaveURL(/section=nutrition&date=.*return_to=/);
   await expect(tmaPage.getByRole('heading', { name: 'Питание', exact: true })).toBeVisible();
   await tmaPage.getByRole('link', { name: 'К отчёту по питанию' }).click();
-  await expect(tmaPage).toHaveURL(/section=progress&nutrition_period=days_7/);
+  await expect(tmaPage).toHaveURL(/section=progress&progress_period=days_7/);
   await expect(tmaSelector.getByRole('tab', { name: '7 дней' })).toHaveAttribute(
     'aria-selected',
     'true',
