@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BotTimezoneUpdateRequest(BaseModel):
@@ -203,3 +203,60 @@ class BotNewsReconcileRequest(BaseModel):
 
 class BotNewsRetryRequest(BaseModel):
     admin_telegram_user_id: int = Field(..., ge=1, le=9_223_372_036_854_775_807)
+
+
+class HermesSourcePacket(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_id: str = Field(..., pattern=r"^[a-z0-9][a-z0-9_-]{1,63}$")
+    external_id: str = Field(..., min_length=1, max_length=512)
+    canonical_url: str = Field(..., min_length=1, max_length=2048)
+    primary_url: str | None = Field(default=None, max_length=2048)
+    title: str = Field(..., min_length=1, max_length=500)
+    summary: str = Field(default="", max_length=4000)
+    author: str | None = Field(default=None, max_length=256)
+    publisher: str | None = Field(default=None, max_length=160)
+    published_at: datetime | None = None
+    updated_at: datetime | None = None
+    doi: str | None = Field(default=None, max_length=255)
+    content_hash: str = Field(..., pattern=r"^[0-9a-f]{64}$")
+
+
+class HermesDraftProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    headline: str = Field(..., min_length=1, max_length=180)
+    summary: str = Field(..., min_length=1, max_length=1200)
+    why_it_matters: str = Field(default="", max_length=320)
+
+
+class HermesGenerationProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str = Field(..., min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_.:-]+$")
+    model: str = Field(..., min_length=1, max_length=128, pattern=r"^[a-zA-Z0-9_.:/@-]+$")
+    prompt_version: str = Field(..., min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_.:-]+$")
+    skill_version: str = Field(..., min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_.:-]+$")
+
+
+class HermesEditorialIntakeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: str = Field(
+        default="hermes-editorial-intake-v1", pattern=r"^hermes-editorial-intake-v1$"
+    )
+    idempotency_key: str = Field(..., min_length=16, max_length=128, pattern=r"^[A-Za-z0-9_.:-]+$")
+    request_nonce: str = Field(..., min_length=16, max_length=128, pattern=r"^[A-Za-z0-9_.:-]+$")
+    source: HermesSourcePacket
+    draft: HermesDraftProposal
+    provenance: HermesGenerationProvenance
+
+
+class HermesEditorialIntakeResponse(BaseModel):
+    status: Literal["accepted", "duplicate"]
+    submission_id: str
+    cluster_id: str
+    draft_id: str
+    publication_policy: Literal["blocked", "manual_required", "auto_eligible"]
+    risk_reasons: list[str]
+    preview_text: str
