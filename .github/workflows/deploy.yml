@@ -161,7 +161,7 @@ jobs:
           set -Eeuo pipefail
           bundle_tar="yfc-deploy-$DEPLOY_SHA.tar"
           bundle_name="$bundle_tar.gz"
-          git archive --format=tar --output="$bundle_tar" "$DEPLOY_SHA" docker-compose.yml deploy scripts
+          git archive --format=tar --output="$bundle_tar" "$DEPLOY_SHA" backend/alembic/versions docker-compose.yml deploy scripts
           tar --append --file="$bundle_tar" deployment-migration-manifest.json
           gzip -n "$bundle_tar"
           echo "name=$bundle_name" >> "$GITHUB_OUTPUT"

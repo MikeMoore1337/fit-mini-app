@@ -75,6 +75,8 @@ def validate_files(
         errors.append(
             "deploy workflow does not transfer an immutable commit bundle and migration manifest"
         )
+    if "backend/alembic/versions" not in deploy:
+        errors.append("deploy workflow bundle does not include migration sources")
     if "${BACKEND_IMAGE" not in compose_text or "${BOT_IMAGE" not in compose_text:
         errors.append("Compose application services do not consume BACKEND_IMAGE/BOT_IMAGE")
     if "GHCR_BACKEND_IMAGE" in deploy or "GHCR_BOT_IMAGE" in deploy:

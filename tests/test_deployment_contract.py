@@ -36,3 +36,11 @@ def test_namespace_mismatch_fixture_is_rejected(tmp_path: Path) -> None:
             compose=compose,
             deploy_script=script,
         )
+
+
+def test_deploy_bundle_includes_migration_sources() -> None:
+    root = Path(__file__).resolve().parents[1]
+    deploy = (root / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
+
+    assert "git archive" in deploy
+    assert "backend/alembic/versions" in deploy
