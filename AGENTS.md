@@ -38,7 +38,6 @@ they exist.
 
 # Workspace hygiene
 
-<<<<<<< HEAD
 - Put caches, temporary files, test artifacts, logs, screenshots, traces, coverage and
   generated reports under `.artifacts/`.
 - Never create ad-hoc scratch paths such as `.tmp*`, `pytest-cache-files-*`, reports,
