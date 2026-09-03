@@ -192,14 +192,14 @@ def _write_gate_evidence(
     base_sha: str,
     terminal_result: str = "PRE_PUSH_CI_PASS",
 ) -> Path:
-    from scripts.ci_contract import contract_digest
+    from scripts.ci_contract import CONTRACT_VERSION, contract_digest
     from scripts.pre_push_gate import _evidence_digest
 
     path = controller._gate_evidence_path(controller._canonical_root(), task_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "evidence_version": 1,
-        "contract_version": "ci-contract-v1",
+        "contract_version": CONTRACT_VERSION,
         "contract_digest": contract_digest(),
         "task_id": task_id,
         "branch": branch,

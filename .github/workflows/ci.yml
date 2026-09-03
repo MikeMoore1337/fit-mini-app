@@ -125,11 +125,15 @@ jobs:
         run: python scripts/ci_contract.py run-group frontend-checks
 
   frontend-smoke:
-    name: Frontend smoke
-    needs: frontend
+    name: Frontend smoke (${{ matrix.shard }}/3)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -140,29 +144,34 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
+      - name: Build frontend for smoke tests
+        working-directory: frontend
+        run: npx vite build
       - name: Install Playwright Chromium
         working-directory: frontend
         run: npx playwright install --with-deps chromium
-      - name: Build frontend preview
-        working-directory: frontend
-        run: npm run build
       - name: Run shared frontend E2E group
-        run: python scripts/ci_contract.py run-group frontend-e2e
+        run: python scripts/ci_contract.py run-group frontend-e2e --shard "${{ matrix.shard }}/3"
       - name: Upload Playwright traces on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-failure-${{ github.run_id }}
+          name: playwright-failure-${{ github.run_id }}-shard-${{ matrix.shard }}
           path: .artifacts/runtime/tests/playwright
           if-no-files-found: ignore
           include-hidden-files: true
           retention-days: 7
 
   python-tests:
-    name: Python tests
+    name: Python tests (${{ matrix.shard }}/3)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -200,11 +209,10 @@ jobs:
           TELEGRAM_BOT_TOKEN: test-token
           BOT_INTERNAL_TOKEN: test-bot-internal-token
           SECRET_KEY: test-secret-key-at-least-thirty-two-characters
-        run: python scripts/ci_contract.py run-group python-tests
+        run: python scripts/ci_contract.py run-group python-tests --shard "${{ matrix.shard }}/3"
 
   migrated-stack:
     name: Migrated PostgreSQL stack
-    needs: frontend
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
