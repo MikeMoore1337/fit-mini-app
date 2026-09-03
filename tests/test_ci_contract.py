@@ -38,20 +38,19 @@ def test_contract_digest_changes_when_contract_changes(monkeypatch) -> None:
 
 
 def test_shards_parse_and_select_deterministically() -> None:
-    assert ci_contract.parse_shard("1/3") == (0, 3)
-    assert ci_contract.parse_shard("3/3") == (2, 3)
+    assert ci_contract.parse_shard("1/4") == (0, 4)
+    assert ci_contract.parse_shard("4/4") == (3, 4)
     nodes = tuple(f"test_{index}" for index in range(8))
-    assert ci_contract.select_shard(nodes, shard_index=0, shard_count=3) == (
+    assert ci_contract.select_shard(nodes, shard_index=0, shard_count=4) == (
         "test_0",
-        "test_3",
-        "test_6",
+        "test_4",
     )
-    assert ci_contract.select_shard(nodes, shard_index=2, shard_count=3) == (
-        "test_2",
-        "test_5",
+    assert ci_contract.select_shard(nodes, shard_index=3, shard_count=4) == (
+        "test_3",
+        "test_7",
     )
     with pytest.raises(ci_contract.CIContractError):
-        ci_contract.parse_shard("4/3")
+        ci_contract.parse_shard("5/4")
 
 
 def test_python_node_normalization_preserves_escaped_parameter_ids() -> None:
@@ -77,9 +76,9 @@ def test_frontend_e2e_shard_is_forwarded_to_playwright(monkeypatch, tmp_path: Pa
         return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(ci_contract.subprocess, "run", fake_run)
-    ci_contract.run_group("frontend-e2e", root=tmp_path, env={}, shard="2/3")
+    ci_contract.run_group("frontend-e2e", root=tmp_path, env={}, shard="2/4")
 
-    assert calls[0][-2:] == ["--", "--shard=2/3"]
+    assert calls[0][-2:] == ["--", "--shard=2/4"]
 
 
 def test_python_shard_collects_and_runs_only_its_node_ids(monkeypatch, tmp_path: Path) -> None:
@@ -111,13 +110,13 @@ def test_python_shard_collects_and_runs_only_its_node_ids(monkeypatch, tmp_path:
         "python-tests",
         root=tmp_path,
         env={"TEST_DATABASE_URL": "postgresql://test"},
-        shard="2/3",
+        shard="2/4",
     )
 
     assert calls[1][-2:] == ["--collect-only", "-q"]
     assert calls[2][2:4] == [
         "backend/tests/test_b.py::test_b",
-        "backend/tests/test_e.py::test_e",
+        "bot/tests/test_f.py::test_f",
     ]
 
 
@@ -152,17 +151,24 @@ def test_workflow_calls_group_entrypoint_instead_of_inline_command_copy() -> Non
     assert "scripts/run_pytest.py backend/tests" not in workflow
 
 
-def test_workflow_keeps_three_way_smoke_and_python_shards_independent() -> None:
+def test_workflow_keeps_four_way_smoke_and_python_shards_independent() -> None:
     root = Path(__file__).parents[1]
     workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
-    assert "name: Frontend smoke (${{ matrix.shard }}/3)" in workflow
-    assert "name: Python tests (${{ matrix.shard }}/3)" in workflow
-    assert workflow.count("        shard: [1, 2, 3]") == 2
-    assert 'run-group frontend-e2e --shard "${{ matrix.shard }}/3"' in workflow
-    assert 'run-group python-tests --shard "${{ matrix.shard }}/3"' in workflow
+    assert "name: Frontend smoke (${{ matrix.shard }}/4)" in workflow
+    assert "name: Python tests (${{ matrix.shard }}/4)" in workflow
+    assert workflow.count("        shard: [1, 2, 3, 4]") == 2
+    assert 'run-group frontend-e2e --shard "${{ matrix.shard }}/4"' in workflow
+    assert 'run-group python-tests --shard "${{ matrix.shard }}/4"' in workflow
+    assert workflow.count("          path: ~/.cache/ms-playwright") == 2
     assert (
-        "  frontend-smoke:\n    name: Frontend smoke (${{ matrix.shard }}/3)\n    if:" in workflow
+        workflow.count(
+            "          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}"
+        )
+        == 2
+    )
+    assert (
+        "  frontend-smoke:\n    name: Frontend smoke (${{ matrix.shard }}/4)\n    if:" in workflow
     )
     assert "  migrated-stack:\n    name: Migrated PostgreSQL stack\n    if:" in workflow
 
