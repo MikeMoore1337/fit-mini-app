@@ -148,6 +148,7 @@ def test_cleanup_task_blocks_non_terminal_target_lease(tmp_path: Path) -> None:
     assert result["status"] == "blocked"
     assert (target / "open.txt").exists()
     assert result["cleanup_errors"]
+    assert result["preserved"] == ["tasks/133/temporary/run/open.txt"]
 
 
 def test_shared_cleanup_blocks_parallel_lease_and_unfinished_task_132(tmp_path: Path) -> None:

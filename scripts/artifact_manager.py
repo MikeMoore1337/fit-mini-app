@@ -1121,7 +1121,9 @@ class ArtifactManager:
                 sum(int(item.get("size_bytes", 0)) for item in candidates),
                 sum(int(item.get("size_bytes", 0)) for item in candidates),
                 [
-                    str(Path("tasks") / normalized / item["relative"]).replace("\\", "/")
+                    str(Path("tasks") / normalized / "temporary" / item["relative"]).replace(
+                        "\\", "/"
+                    )
                     for item in candidates
                 ],
             )
