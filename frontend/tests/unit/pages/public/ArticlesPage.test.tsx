@@ -152,8 +152,12 @@ describe('ArticlesPage', () => {
   it('renders article evidence, related links, CTA and route metadata', async () => {
     renderPath('/articles/strength-basics');
 
-    expect(await screen.findByRole('heading', { level: 1, name: article.title })).toBeInTheDocument();
-    expect(screen.getByText('Выберите посильные движения и заранее определите дни занятий.')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: article.title }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Выберите посильные движения и заранее определите дни занятий.'),
+    ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Источники' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Physical activity guidance' })).toHaveAttribute(
       'href',
