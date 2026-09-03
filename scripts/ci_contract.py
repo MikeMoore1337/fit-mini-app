@@ -119,8 +119,8 @@ COMMAND_GROUPS: dict[str, GroupSpec] = {
     "migrated-stack": GroupSpec(
         name="migrated-stack",
         commands=(
-            _cmd("migrations-upgrade", "alembic", "upgrade", "head", cwd="backend"),
-            _cmd("migrations-check", "alembic", "check", cwd="backend"),
+            _cmd("migrations-upgrade", "python", "-m", "alembic", "upgrade", "head", cwd="backend"),
+            _cmd("migrations-check", "python", "-m", "alembic", "check", cwd="backend"),
             _cmd(
                 "migrated-api-smoke",
                 "python",
@@ -305,7 +305,13 @@ def _resolve_argv(argv: Sequence[str]) -> list[str]:
 
 
 def _check_prerequisite(root: Path, prerequisite: str, env: Mapping[str, str]) -> str | None:
-    if prerequisite in {"python", "npm", "uvx", "alembic", "pre_commit"}:
+    if prerequisite == "alembic":
+        try:
+            __import__("alembic")
+            return None
+        except ImportError:
+            return "python package alembic"
+    if prerequisite in {"python", "npm", "uvx", "pre_commit"}:
         executable = {
             "python": sys.executable,
             "pre_commit": "pre-commit",

@@ -41,6 +41,12 @@ def test_windows_node_commands_use_cmd_wrappers(monkeypatch) -> None:
     assert ci_contract._resolve_argv(("npx", "vite", "build"))[0] == "npx.cmd"
 
 
+def test_migrations_use_the_selected_python_interpreter() -> None:
+    commands = ci_contract.COMMAND_GROUPS["migrated-stack"].commands
+    assert commands[0].argv[:3] == ("python", "-m", "alembic")
+    assert commands[1].argv[:3] == ("python", "-m", "alembic")
+
+
 def test_workflow_calls_group_entrypoint_instead_of_inline_command_copy() -> None:
     root = Path(__file__).parents[1]
     workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
