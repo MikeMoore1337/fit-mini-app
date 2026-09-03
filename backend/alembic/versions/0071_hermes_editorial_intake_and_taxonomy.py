@@ -17,46 +17,47 @@ depends_on: str | Sequence[str] | None = None
 
 online_rollout_phase = "expand"
 online_rollout_notes = (
-    "Adds nullable taxonomy compatibility through server defaults and an append-only, "
-    "replay-protected Hermes intake receipt table."
+    "Adds nullable taxonomy compatibility columns without rewrite defaults and an "
+    "append-only, replay-protected Hermes intake receipt table."
 )
 
 
 def upgrade() -> None:
-    cluster_columns = (
-        sa.Column("primary_topic", sa.String(length=64), nullable=False, server_default="unknown"),
-        sa.Column("topics", sa.JSON(), nullable=False, server_default="[]"),
-        sa.Column("content_type", sa.String(length=32), nullable=False, server_default="explainer"),
-        sa.Column("product_class", sa.String(length=32), nullable=False, server_default="unknown"),
-        sa.Column("evidence_level", sa.String(length=32), nullable=False, server_default="unknown"),
-        sa.Column("risk_level", sa.String(length=32), nullable=False, server_default="unknown"),
-        sa.Column("audience", sa.String(length=32), nullable=False, server_default="general"),
-        sa.Column("geography", sa.JSON(), nullable=False, server_default="[]"),
-        sa.Column(
-            "classification_version",
-            sa.String(length=64),
-            nullable=False,
-            server_default="news-taxonomy-v1",
-        ),
-        sa.Column("classification_reasons", sa.JSON(), nullable=False, server_default="[]"),
-        sa.Column("discovery_eligible", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column("discovery_reasons", sa.JSON(), nullable=False, server_default="[]"),
-        sa.Column(
-            "publication_policy",
-            sa.String(length=32),
-            nullable=False,
-            server_default="manual_required",
-        ),
-        sa.Column("risk_reasons", sa.JSON(), nullable=False, server_default="[]"),
-        sa.Column(
-            "risk_policy_version",
-            sa.String(length=64),
-            nullable=False,
-            server_default="news-risk-v1",
-        ),
+    op.add_column(
+        "news_clusters", sa.Column("primary_topic", sa.String(length=64), nullable=True)
     )
-    for column in cluster_columns:
-        op.add_column("news_clusters", column)
+    op.add_column("news_clusters", sa.Column("topics", sa.JSON(), nullable=True))
+    op.add_column(
+        "news_clusters", sa.Column("content_type", sa.String(length=32), nullable=True)
+    )
+    op.add_column(
+        "news_clusters", sa.Column("product_class", sa.String(length=32), nullable=True)
+    )
+    op.add_column(
+        "news_clusters", sa.Column("evidence_level", sa.String(length=32), nullable=True)
+    )
+    op.add_column("news_clusters", sa.Column("risk_level", sa.String(length=32), nullable=True))
+    op.add_column("news_clusters", sa.Column("audience", sa.String(length=32), nullable=True))
+    op.add_column("news_clusters", sa.Column("geography", sa.JSON(), nullable=True))
+    op.add_column(
+        "news_clusters", sa.Column("classification_version", sa.String(length=64), nullable=True)
+    )
+    op.add_column(
+        "news_clusters", sa.Column("classification_reasons", sa.JSON(), nullable=True)
+    )
+    op.add_column(
+        "news_clusters", sa.Column("discovery_eligible", sa.Boolean(), nullable=True)
+    )
+    op.add_column(
+        "news_clusters", sa.Column("discovery_reasons", sa.JSON(), nullable=True)
+    )
+    op.add_column(
+        "news_clusters", sa.Column("publication_policy", sa.String(length=32), nullable=True)
+    )
+    op.add_column("news_clusters", sa.Column("risk_reasons", sa.JSON(), nullable=True))
+    op.add_column(
+        "news_clusters", sa.Column("risk_policy_version", sa.String(length=64), nullable=True)
+    )
 
     op.create_table(
         "hermes_editorial_submissions",
