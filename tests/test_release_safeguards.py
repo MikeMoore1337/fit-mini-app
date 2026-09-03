@@ -69,6 +69,8 @@ def test_deploy_recovers_legacy_revision_before_migration_and_rollout() -> None:
     assert "ACTIVE_REVISION: ${{ steps.migration.outputs.active_revision }}" in deploy
     assert "active_marker" in deploy
     assert "last-successful-revision" in deploy
+    assert 'if [ -f \\"\\$active_marker\\" ]; then' in deploy
+    assert 'install -d -m 700 \\"\\$(dirname \\"\\$active_marker\\")\\"' in deploy
 
 
 def test_delivery_contract_is_master_only_and_approval_gated() -> None:

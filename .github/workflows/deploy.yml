@@ -225,11 +225,11 @@ jobs:
              export DEPLOY_MIGRATION_MANIFEST=deployment-migration-manifest.json
              export DEPLOY_SINGLE_SLOT_CONFIRMED_SHA='$DEPLOY_SHA'
              active_marker='$PROD_PATH/.artifacts/operations/deployments/last-successful-revision'
-             if [ -f "\$active_marker" ]; then
-               test "\$(tr -d '\\r\\n' < "\$active_marker")" = '$ACTIVE_REVISION'
+             if [ -f \"\$active_marker\" ]; then
+               test \"\$(tr -d '\\r\\n' < \"\$active_marker\")\" = '$ACTIVE_REVISION'
              else
-               install -d -m 700 "\$(dirname "\$active_marker")"
-               printf '%s\\n' '$ACTIVE_REVISION' > "\$active_marker"
+               install -d -m 700 \"\$(dirname \"\$active_marker\")\"
+               printf '%s\\n' '$ACTIVE_REVISION' > \"\$active_marker\"
              fi
              registry_login_succeeded=false
              DOCKER_CONFIG_DIR=\$(mktemp -d)
