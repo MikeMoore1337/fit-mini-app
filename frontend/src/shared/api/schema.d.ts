@@ -2910,6 +2910,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hermes/editorial/intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Receive Hermes Editorial Intake */
+        post: operations["receive_hermes_editorial_intake_api_v1_hermes_editorial_intake_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -5537,6 +5554,29 @@ export interface components {
             min_bpm: number;
             /** Max Bpm */
             max_bpm: number;
+        };
+        /** HermesEditorialIntakeResponse */
+        HermesEditorialIntakeResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "accepted" | "duplicate";
+            /** Submission Id */
+            submission_id: string;
+            /** Cluster Id */
+            cluster_id: string;
+            /** Draft Id */
+            draft_id: string;
+            /**
+             * Publication Policy
+             * @enum {string}
+             */
+            publication_policy: "blocked" | "manual_required" | "auto_eligible";
+            /** Risk Reasons */
+            risk_reasons: string[];
+            /** Preview Text */
+            preview_text: string;
         };
         /**
          * HydrationBeverageType
@@ -14723,6 +14763,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BotNewsRevisionActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    receive_hermes_editorial_intake_api_v1_hermes_editorial_intake_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Hermes-Key-Id"?: string | null;
+                "X-Hermes-Timestamp"?: string | null;
+                "X-Hermes-Nonce"?: string | null;
+                "X-Hermes-Signature"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HermesEditorialIntakeResponse"];
                 };
             };
             /** @description Validation Error */

@@ -100,6 +100,16 @@ class Settings(BaseSettings):
     news_max_regenerations: int = Field(default=3, ge=0, le=10)
     news_draft_max_chars: int = Field(default=2600, ge=800, le=3200)
     news_daily_draft_limit: int = Field(default=3, ge=1, le=20)
+    news_draft_profile: Literal["standard", "extended"] = "standard"
+    news_auto_publish_low_risk: bool = False
+    hermes_intake_enabled: bool = False
+    hermes_intake_key_id: str = "hermes-local"
+    hermes_intake_shared_secret: SecretStr = SecretStr("")
+    hermes_intake_max_body_bytes: int = Field(default=262_144, ge=16_384, le=1_048_576)
+    hermes_intake_max_source_count: int = Field(default=20, ge=1, le=20)
+    hermes_intake_clock_skew_seconds: int = Field(default=300, ge=30, le=900)
+    hermes_intake_replay_ttl_seconds: int = Field(default=900, ge=60, le=86400)
+    hermes_intake_rate_limit_per_minute: int = Field(default=30, ge=1, le=600)
     news_llm_provider: Literal["disabled", "openai_compatible"] = "disabled"
     news_llm_endpoint: str = ""
     news_llm_api_key: str = ""
@@ -248,6 +258,13 @@ class Settings(BaseSettings):
             )
         if self.weekly_digest_enabled and not self.news_channel_username:
             raise ValueError("NEWS_CHANNEL_USERNAME is required when WEEKLY_DIGEST_ENABLED=true")
+        if self.hermes_intake_enabled:
+            if not re.fullmatch(r"[a-z][a-z0-9_-]{2,63}", self.hermes_intake_key_id.strip()):
+                raise ValueError("HERMES_INTAKE_KEY_ID is invalid")
+            if len(self.hermes_intake_shared_secret.get_secret_value().strip()) < 32:
+                raise ValueError(
+                    "HERMES_INTAKE_SHARED_SECRET must be at least 32 characters when intake is enabled"
+                )
         if (
             self.app_env == "prod"
             and self.news_publication_enabled

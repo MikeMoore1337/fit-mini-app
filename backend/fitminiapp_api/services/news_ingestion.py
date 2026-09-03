@@ -22,6 +22,10 @@ from sqlalchemy.orm import Session
 from fitminiapp_api.models.news import NewsCluster, NewsItem, NewsSource
 from fitminiapp_api.services.news_freshness import is_current_month_publication
 from fitminiapp_api.services.news_state import transition_news_cluster
+from fitminiapp_api.services.news_taxonomy import (
+    classify_editorial_text,
+    evaluate_publication_policy,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1026,10 +1030,32 @@ def ingest_items(
             uncertain_duplicate=uncertain,
             now=current,
         )
+        classification = classify_editorial_text(
+            primary.title,
+            primary.summary,
+            source_type=primary_source.source_type,
+            geography=tuple(primary_source.fetch_options.get("jurisdiction", []))
+            if isinstance(primary_source.fetch_options, dict)
+            else (),
+        )
+        policy = evaluate_publication_policy(classification)
         cluster.score = score
         cluster.topic = topic
         cluster.score_reasons = reasons
         cluster.risk_flags = risks
+        cluster.primary_topic = classification.primary_topic
+        cluster.topics = list(classification.topics)
+        cluster.content_type = classification.content_type
+        cluster.product_class = classification.product_class
+        cluster.evidence_level = classification.evidence_level
+        cluster.risk_level = classification.risk_level
+        cluster.audience = classification.audience
+        cluster.geography = list(classification.geography)
+        cluster.classification_version = classification.classification_version
+        cluster.classification_reasons = list(classification.classification_reasons)
+        cluster.publication_policy = policy.publication_policy
+        cluster.risk_reasons = list(dict.fromkeys((*classification.risk_reasons, *risks)))
+        cluster.risk_policy_version = policy.risk_policy_version
         cluster.merge_reason = merge_reason
         conflicts: list[str] = []
         dates = [value.published_at for value in items if value.published_at]
@@ -1043,6 +1069,38 @@ def ingest_items(
             counts["clustered"] += 1
             continue
         prohibited = any(flag.startswith("prohibited_") for flag in risks)
+        current_month = "source_not_current_month" not in risks
+        broad_recall_candidate = (
+            current_month
+            and source.source_type
+            in {"primary_research", "systematic_review", "official_organization", "yfc"}
+            and topic == "other"
+            and bool(classification.topics)
+            and not (
+                "esport" in f"{primary.title} {primary.summary}".lower()
+                and not any(
+                    marker in f"{primary.title} {primary.summary}".lower()
+                    for marker in ESPORTS_PHYSICAL_CONTEXT
+                )
+            )
+            and not prohibited
+        )
+        discovery_eligible = not prohibited and (
+            score >= candidate_threshold or broad_recall_candidate
+        )
+        cluster.discovery_eligible = discovery_eligible
+        cluster.discovery_reasons = list(
+            dict.fromkeys(
+                [
+                    "score_threshold_met"
+                    if score >= candidate_threshold
+                    else "broad_source_recall",
+                    *classification.classification_reasons,
+                    *(["source_not_current_month"] if not current_month else []),
+                    *(["prohibited_content"] if prohibited else []),
+                ]
+            )
+        )
         if prohibited:
             transition_news_cluster(
                 db,
@@ -1061,7 +1119,7 @@ def ingest_items(
             )
         else:
             item.status = "clustered"
-            if score >= candidate_threshold:
+            if discovery_eligible:
                 if cluster.status in {"clustered", "candidate"}:
                     transition_news_cluster(
                         db,
@@ -1089,7 +1147,7 @@ def ingest_items(
                 if "source_not_current_month" in risks:
                     counts["stale"] += 1
                     reason = "source_not_current_month"
-                elif "topic_not_allowlisted" in risks:
+                elif "topic_not_allowlisted" in risks and not broad_recall_candidate:
                     reason = "topic_not_allowlisted"
                 else:
                     counts["below_threshold"] += 1

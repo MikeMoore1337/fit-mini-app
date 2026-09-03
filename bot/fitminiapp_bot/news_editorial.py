@@ -51,6 +51,7 @@ class NewsEditorialStates(StatesGroup):
     awaiting_text = State()
     awaiting_schedule = State()
     awaiting_schedule_confirmation = State()
+    awaiting_publish_confirmation = State()
     awaiting_image = State()
     awaiting_post_text = State()
     awaiting_reconcile_message_id = State()
@@ -198,6 +199,94 @@ def _control_revision_line(message: Message, *, draft_id: str, image_revision: i
     return f"Материал {draft_id[:8]} · image r{image_revision}"
 
 
+def _publish_confirmation_markup(
+    *, draft_id: str, image_revision: int, artifact_hash: str
+) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Подтвердить публикацию",
+                    callback_data=f"newsp:c:{draft_id}:{image_revision}:{artifact_hash}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Отмена",
+                    callback_data=f"newsp:n:{draft_id}:{image_revision}:{artifact_hash}",
+                )
+            ],
+        ]
+    )
+
+
+def _restore_publish_actions_markup(
+    *, draft_id: str, image_revision: int, artifact_hash: str
+) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Опубликовать сейчас",
+                    callback_data=f"newsp:p:{draft_id}:{image_revision}:{artifact_hash}",
+                ),
+                InlineKeyboardButton(
+                    text="Запланировать",
+                    callback_data=f"newsp:s:{draft_id}:{image_revision}:{artifact_hash}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Изменить текст",
+                    callback_data=f"newsp:e:{draft_id}:{image_revision}",
+                ),
+                InlineKeyboardButton(
+                    text="Перегенерировать текст",
+                    callback_data=f"news:r:{draft_id}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Перегенерировать изображение",
+                    callback_data=f"newsp:i:{draft_id}:{image_revision}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Заменить изображение",
+                    callback_data=f"newsp:u:{draft_id}:{image_revision}",
+                ),
+                InlineKeyboardButton(
+                    text="Убрать изображение",
+                    callback_data=f"newsp:n:{draft_id}:{image_revision}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Отклонить",
+                    callback_data=f"newsp:x:{draft_id}:{image_revision}",
+                ),
+                InlineKeyboardButton(
+                    text="Отложить рассмотрение",
+                    callback_data=f"news:d:{draft_id}",
+                ),
+            ],
+        ]
+    )
+
+
+async def _edit_card_status(message: Message, status_text: str) -> None:
+    """Keep the original card and add only an outcome line after the exact action."""
+
+    current_text = getattr(message, "text", None)
+    if isinstance(current_text, str):
+        await message.edit_text(f"{current_text.rstrip()}\n\nСтатус: {status_text}")
+        return
+    current_caption = getattr(message, "caption", None)
+    if isinstance(current_caption, str):
+        await message.edit_caption(caption=f"{current_caption.rstrip()}\n\nСтатус: {status_text}")
+
+
 @router.callback_query(F.data.startswith("news:"))
 async def news_editorial_callback(callback: CallbackQuery) -> None:
     telegram_user_id = callback.from_user.id
@@ -253,25 +342,31 @@ async def news_publishing_callback(callback: CallbackQuery, state: FSMContext) -
         return
 
     if action == "p":
-        confirmation_text = (
-            "Подтвердите публикацию exact preview.\n"
-            f"{_control_channel_line(callback.message)}\n"
-            "Режим: опубликовать сейчас\n"
-            f"{_control_revision_line(callback.message, draft_id=draft_id, image_revision=image_revision)}\n"
-            f"Artifact: {artifact_hash}"
+        assert artifact_hash is not None
+        markup = _publish_confirmation_markup(
+            draft_id=draft_id,
+            image_revision=image_revision,
+            artifact_hash=artifact_hash,
         )
-        markup = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="Подтвердить публикацию",
-                        callback_data=(f"newsp:c:{draft_id}:{image_revision}:{artifact_hash}"),
-                    )
-                ],
-                [InlineKeyboardButton(text="Отмена", callback_data=f"newsp:n:{draft_id}:99999")],
-            ]
+        await state.set_state(NewsEditorialStates.awaiting_publish_confirmation)
+        await state.set_data(
+            {
+                "mode": "publish_confirmation",
+                "draft_id": draft_id,
+                "image_revision": image_revision,
+                "artifact_hash": artifact_hash,
+                "channel_line": _control_channel_line(callback.message),
+                "revision_line": _control_revision_line(
+                    callback.message,
+                    draft_id=draft_id,
+                    image_revision=image_revision,
+                ),
+                "started_at": time.monotonic(),
+            }
         )
-        await callback.message.answer(confirmation_text, reply_markup=markup)
+        # The preview text/caption is deliberately untouched. Only the original card's markup
+        # changes, so Telegram keeps the same message_id and exact artifact preview.
+        await callback.message.edit_reply_markup(reply_markup=markup)
         await callback.answer()
         return
     if action in {"s", "e", "u"}:
@@ -331,7 +426,41 @@ async def news_publishing_callback(callback: CallbackQuery, state: FSMContext) -
             await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer(message, show_alert=status in {"unavailable", "quality_blocked"})
         return
+    if action == "c":
+        data = await state.get_data()
+        if not (
+            isinstance(data, dict)
+            and data.get("mode") == "publish_confirmation"
+            and data.get("draft_id") == draft_id
+            and data.get("image_revision") == image_revision
+            and data.get("artifact_hash") == artifact_hash
+            and not _state_expired(data)
+        ):
+            await callback.answer("Подтверждение устарело", show_alert=True)
+            return
+    if action == "n" and artifact_hash is not None:
+        data = await state.get_data()
+        if (
+            data.get("mode") == "publish_confirmation"
+            and data.get("draft_id") == draft_id
+            and data.get("image_revision") == image_revision
+            and data.get("artifact_hash") == artifact_hash
+            and not _state_expired(data)
+        ):
+            await state.clear()
+            await callback.message.edit_reply_markup(
+                reply_markup=_restore_publish_actions_markup(
+                    draft_id=draft_id,
+                    image_revision=image_revision,
+                    artifact_hash=artifact_hash,
+                )
+            )
+            await callback.answer("Отменено")
+            return
+        await callback.answer("Подтверждение устарело", show_alert=True)
+        return
     if action == "n" and image_revision == 99999:
+        await state.clear()
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Отменено")
         return
@@ -381,6 +510,8 @@ async def news_publishing_callback(callback: CallbackQuery, state: FSMContext) -
         message += ": " + ", ".join(blockers[:5])
     if status in {"queued", "scheduled", "already_queued"}:
         await callback.message.edit_reply_markup(reply_markup=None)
+        await state.clear()
+        await _edit_card_status(callback.message, message)
     await callback.answer(message, show_alert=status in {"unavailable", "quality_blocked"})
 
 

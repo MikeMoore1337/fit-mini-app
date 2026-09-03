@@ -97,6 +97,27 @@ class NewsCluster(Base):
     score_reasons: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     risk_flags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     conflict_notes: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    primary_topic: Mapped[str] = mapped_column(String(64), nullable=False, default="unknown")
+    topics: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    content_type: Mapped[str] = mapped_column(String(32), nullable=False, default="explainer")
+    product_class: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
+    evidence_level: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
+    risk_level: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
+    audience: Mapped[str] = mapped_column(String(32), nullable=False, default="general")
+    geography: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    classification_version: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="news-taxonomy-v1"
+    )
+    classification_reasons: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    discovery_eligible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    discovery_reasons: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    publication_policy: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="manual_required"
+    )
+    risk_reasons: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    risk_policy_version: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="news-risk-v1"
+    )
     merge_reason: Mapped[str] = mapped_column(String(160), nullable=False, default="new_event")
     latest_draft_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     latest_image_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -444,3 +465,50 @@ class NewsPublicationSnapshot(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.now()
     )
+
+
+class HermesEditorialSubmission(Base):
+    """Replay-protected, privacy-safe receipt for the external Hermes intake boundary."""
+
+    __tablename__ = "hermes_editorial_submissions"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('accepted', 'rejected', 'expired')",
+            name="ck_hermes_editorial_submissions_status",
+        ),
+        CheckConstraint("source_count BETWEEN 1 AND 20", name="ck_hermes_source_count"),
+        UniqueConstraint("idempotency_key", name="uq_hermes_submission_idempotency"),
+        UniqueConstraint("request_nonce", name="uq_hermes_submission_nonce"),
+        Index("ix_hermes_submissions_created", "created_at"),
+        Index("ix_hermes_submissions_expires_status", "expires_at", "status"),
+    )
+
+    submission_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    source_id: Mapped[str] = mapped_column(
+        ForeignKey("news_sources.id", ondelete="RESTRICT"), nullable=False
+    )
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    request_nonce: Mapped[str] = mapped_column(String(128), nullable=False)
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="accepted")
+    cluster_id: Mapped[str | None] = mapped_column(
+        ForeignKey("news_clusters.id", ondelete="SET NULL"), nullable=True
+    )
+    draft_id: Mapped[str | None] = mapped_column(
+        ForeignKey("news_draft_revisions.id", ondelete="SET NULL"), nullable=True
+    )
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    skill_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    taxonomy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    risk_policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    response_metadata: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    rejection_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.now()
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

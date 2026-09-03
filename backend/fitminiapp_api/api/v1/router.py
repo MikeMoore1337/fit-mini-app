@@ -7,6 +7,7 @@ from fitminiapp_api.api.v1 import (
     check_ins,
     coach,
     demo,
+    hermes,
     me,
     notifications,
     nutrition,
@@ -29,3 +30,4 @@ api_router.include_router(nutrition.router, prefix="/nutrition", tags=["nutritio
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(bot.router, prefix="/bot", tags=["bot"])
+api_router.include_router(hermes.router, prefix="/hermes", tags=["hermes"])

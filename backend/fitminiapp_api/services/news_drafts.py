@@ -15,9 +15,16 @@ from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.models.news import NewsCluster, NewsDraftRevision, NewsItem, NewsSource
+from fitminiapp_api.services.news_growth import article_candidate_handoff
 from fitminiapp_api.services.news_ingestion import latest_items_by_source
 from fitminiapp_api.services.news_publication import TELEGRAM_PHOTO_CAPTION_LIMIT
 from fitminiapp_api.services.news_state import transition_news_cluster
+from fitminiapp_api.services.news_taxonomy import (
+    VOICE_PROFILE_VERSION,
+    classify_editorial_text,
+    evaluate_publication_policy,
+    style_checklist_warnings,
+)
 
 EDITORIAL_FIELDS = (
     "headline",
@@ -231,6 +238,7 @@ def quality_warnings(
     visible_length = len("\n\n".join(visible_parts).encode("utf-16-le")) // 2
     if visible_length > TELEGRAM_PHOTO_CAPTION_LIMIT:
         warnings.append("telegram_photo_caption_too_long")
+    warnings.extend(style_checklist_warnings(output))
     return warnings
 
 
@@ -480,6 +488,30 @@ async def create_draft_revision(
             )
     else:
         generated = await fallback.generate(packet)
+    classification = classify_editorial_text(
+        packet.title,
+        packet.summary,
+        source_type=packet.source_type,
+    )
+    policy = evaluate_publication_policy(
+        classification,
+        quality_warnings=tuple(generated.warnings),
+        source_provenance_valid=bool(packet.primary_url or packet.canonical_url),
+        auto_publish_enabled=settings.news_auto_publish_low_risk,
+    )
+    cluster.primary_topic = classification.primary_topic
+    cluster.topics = list(classification.topics)
+    cluster.content_type = classification.content_type
+    cluster.product_class = classification.product_class
+    cluster.evidence_level = classification.evidence_level
+    cluster.risk_level = classification.risk_level
+    cluster.audience = classification.audience
+    cluster.geography = list(classification.geography)
+    cluster.classification_version = classification.classification_version
+    cluster.classification_reasons = list(classification.classification_reasons)
+    cluster.publication_policy = policy.publication_policy
+    cluster.risk_reasons = list(policy.risk_reasons)
+    cluster.risk_policy_version = policy.risk_policy_version
     draft_text = render_draft(generated.fields, packet)
     revision = cluster.latest_draft_revision + 1
     row = NewsDraftRevision(
@@ -508,6 +540,27 @@ async def create_draft_revision(
             "editorial_contract_version": "news-editorial-v2",
             "editorial_fields": dict(generated.fields),
             "trusted_source_url": packet.primary_url or packet.canonical_url,
+            "primary_topic": classification.primary_topic,
+            "topics": list(classification.topics),
+            "content_type": classification.content_type,
+            "product_class": classification.product_class,
+            "evidence_level": classification.evidence_level,
+            "risk_level": classification.risk_level,
+            "audience": classification.audience,
+            "geography": list(classification.geography),
+            "classification_version": classification.classification_version,
+            "classification_reasons": list(classification.classification_reasons),
+            "publication_policy": policy.publication_policy,
+            "risk_reasons": list(policy.risk_reasons),
+            "risk_policy_version": policy.risk_policy_version,
+            "editorial_profile": settings.news_draft_profile,
+            "voice_profile_version": VOICE_PROFILE_VERSION,
+            "article_candidate": article_candidate_handoff(
+                cluster_id=cluster.id,
+                draft_revision=revision,
+                primary_topic=classification.primary_topic,
+                content_type=classification.content_type,
+            ),
         },
         draft_text=draft_text,
         warnings=list(generated.warnings),

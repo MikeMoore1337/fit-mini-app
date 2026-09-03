@@ -204,6 +204,22 @@ describe('product event contract', () => {
         action: 'workout_completed',
       }),
     ).toBe(false);
+    expect(
+      isProductEvent({
+        name: 'telegram_news_cta_clicked',
+        surface: 'telegram',
+        destination: 'tma',
+        campaign: 'telegram_editorial_v1',
+      }),
+    ).toBe(false);
+    expect(
+      isProductEvent({
+        name: 'telegram_news_cta_clicked',
+        surface: 'tma',
+        destination: 'article',
+        campaign: 'telegram_editorial_v1',
+      }),
+    ).toBe(true);
   });
 
   it('rejects unknown schema versions, legacy surfaces and malformed timestamps', () => {
