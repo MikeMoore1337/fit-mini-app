@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://your-fitness-coach.local/schemas/task129-hermes-worker-config-v1.json",
+  "title": "Task 129 bounded Hermes editorial worker configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "description": "Environment contract. Until Gate A, provider, intake and preview URLs are local-only HTTP endpoints.",
+  "properties": {
+    "HERMES_HOME": {"type": "string", "const": "/opt/data", "default": "/opt/data"},
+    "HERMES_SOURCE_ALLOWLIST": {"type": "string", "minLength": 1, "description": "Comma-separated YFC source IDs; the worker never fetches the URL."},
+    "HERMES_PROVIDER_BASE_URL": {"type": "string", "pattern": "^http://(127\\.0\\.0\\.1|localhost|host\\.docker\\.internal):[1-9][0-9]{1,5}/v1$"},
+    "HERMES_PROVIDER_API_KEY": {"type": "string", "minLength": 1, "writeOnly": true},
+    "HERMES_PROVIDER_MODEL": {"type": "string", "pattern": "^[A-Za-z0-9_.:/@-]{1,128}$"},
+    "HERMES_PROVIDER_TIMEOUT_SECONDS": {"type": "number", "minimum": 0.1, "maximum": 30, "default": 3},
+    "YFC_INTAKE_URL": {"type": "string", "pattern": "^http://(127\\.0\\.0\\.1|localhost|host\\.docker\\.internal):[1-9][0-9]{1,5}/api/v1/hermes/editorial/intake$"},
+    "YFC_HERMES_KEY_ID": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,64}$"},
+    "YFC_HERMES_SHARED_SECRET": {"type": "string", "minLength": 32, "writeOnly": true},
+    "YFC_INTAKE_TIMEOUT_SECONDS": {"type": "number", "minimum": 0.1, "maximum": 30, "default": 5},
+    "TELEGRAM_PREVIEW_URL": {"type": "string", "pattern": "^http://(127\\.0\\.0\\.1|localhost|host\\.docker\\.internal):[1-9][0-9]{1,5}/preview$"},
+    "TELEGRAM_PREVIEW_TIMEOUT_SECONDS": {"type": "number", "minimum": 0.1, "maximum": 30, "default": 5}
+  },
+  "required": [
+    "HERMES_SOURCE_ALLOWLIST",
+    "HERMES_PROVIDER_BASE_URL",
+    "HERMES_PROVIDER_API_KEY",
+    "HERMES_PROVIDER_MODEL",
+    "YFC_INTAKE_URL",
+    "YFC_HERMES_KEY_ID",
+    "YFC_HERMES_SHARED_SECRET",
+    "TELEGRAM_PREVIEW_URL"
+  ]
+}

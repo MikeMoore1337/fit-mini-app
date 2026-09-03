@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "task129-hermes-worker-provenance-v1",
+  "upstream": {
+    "repository": "https://github.com/NousResearch/hermes-agent.git",
+    "version": "0.21.0",
+    "tag": "v2026.8.31",
+    "commit": "29112bef099274229cadff79cdff7bf7b99c4b77",
+    "license": "MIT",
+    "licenseSha256": "821556e6336796450ab852d375117b48a4887e71d255794fd6318d99982a5ab6"
+  },
+  "base": {
+    "image": "python:3.13-alpine",
+    "digest": "sha256:46ee549c88617e9bc8acb843a326f1a5c0fa5608d7f9703509efe6d53b55f318",
+    "platform": "linux/amd64",
+    "alpine": "3.24.1"
+  },
+  "worker": {
+    "version": "editorial-worker-v1",
+    "jobSchema": "hermes-editorial-job-v1",
+    "intakeSchema": "hermes-editorial-intake-v1",
+    "promptVersion": "task129-editorial-worker-v1",
+    "skillVersion": "yfc-hermes-editorial-v1",
+    "sourceBehaviorPatches": 0,
+    "provider": "OpenAI-compatible HTTP, local-only before Gate A",
+    "publishCapability": false,
+    "telegramCapability": false,
+    "toolCapability": false
+  },
+  "dependencies": {
+    "lock": "requirements.lock",
+    "floatingVersions": false
+  }
+}

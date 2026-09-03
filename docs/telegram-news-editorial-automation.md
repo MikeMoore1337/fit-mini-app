@@ -163,3 +163,130 @@ indexing state, Landing block or Web publish state is created here.
 
 Production source coverage, live Hermes/provider behavior, real Telegram/channel sends and device
 smoke are deliberately unclaimed until the owner authorizes the corresponding external gates.
+
+## Hardened editorial worker: repository integration
+
+The tracked worker is a narrow, provider-compatible editorial adapter. It is not the official
+monolithic Hermes image and does not expose the general Hermes agent loop. Its upstream provenance
+is recorded in `deploy/hermes-editorial-worker/hermes-provenance.json`:
+
+```text
+Hermes version: 0.21.0
+tag: v2026.8.31
+commit: 29112bef099274229cadff79cdff7bf7b99c4b77
+source behavior patches: 0
+```
+
+The exact upstream license is kept in `deploy/hermes-editorial-worker/LICENSES/HERMES-LICENSE`.
+`license_bundle.py` builds a deterministic `/opt/licenses` bundle from the pinned Python lock,
+installed distribution metadata and the Alpine APK database during the image build. The image
+also contains the generated Python/Alpine inventory and the upstream license; no credential or
+source content is included. The build fails if the lock and declared inventory diverge.
+
+### Reproducible local verification
+
+Run from a clean checkout with Docker available:
+
+```powershell
+python scripts/hermes_worker.py provenance --source-dir <exact-hermes-checkout>
+python scripts/hermes_worker.py verify
+```
+
+`verify` checks the exact base digest and lock, builds with `--pull=false`, runs the hardening
+boundary, executes the local HTTP E2E harness, generates CycloneDX and SPDX SBOM files, and runs
+the pinned Trivy CRITICAL/HIGH gate. The source checkout is used only for offline provenance
+verification; it is not copied into the runtime image. Build context is the tracked
+`deploy/hermes-editorial-worker` directory and its `.dockerignore`; `.artifacts/` contains only
+evidence and is never a build input or commit target.
+
+The lock contains only the worker closure and has no floating versions or provider SDK:
+`httpx`, Pydantic and their exact transitive dependencies. The base is
+`python:3.13-alpine@sha256:46ee549c88617e9bc8acb843a326f1a5c0fa5608d7f9703509efe6d53b55f318`.
+The final image runs as UID/GID `10000:10000`, drops all capabilities, sets
+`no-new-privileges`, removes the package shell/tooling surfaces, declares `/opt/data` as the only
+state volume, and is tested with a read-only root filesystem. The verification budget is 0.50
+CPU, 512 MiB RAM and 64 PIDs per container; these are safety bounds, not a production capacity
+benchmark.
+
+The worker accepts one bounded job, sends the source packet only to an OpenAI-compatible provider
+endpoint, validates a structured response, and signs the YFC intake payload. The current tracked
+configuration allows only local/mock provider, intake and preview endpoints. It has no terminal,
+browser, MCP, plugin, Telegram, dashboard, database, publish or Docker-socket capability. A
+request for an unsupported capability, malformed endpoint, oversized input/output, prompt
+injection marker, failed provider response, invalid schema, invalid HMAC, duplicate replay or
+source outside the allowlist fails closed.
+
+The local E2E path is:
+
+```text
+tracked source fixture
+  -> hardened Docker worker
+  -> local OpenAI-compatible fake HTTP provider
+  -> structured draft response
+  -> HMAC-signed YFC intake contract
+  -> local YFC FastAPI intake
+  -> taxonomy/risk classification
+  -> immutable draft revision, manual_required
+  -> local editorial preview mock (published=false)
+```
+
+The fake provider is an HTTP server, so this verifies the actual transport/protocol path; it does
+not claim real-model quality. Local tests set `HERMES_INTAKE_ENABLED=true` only inside the
+test-process YFC server. They set the local news flags to false and cannot change production.
+
+### Deployment boundary and operations
+
+The selected production topology remains a separate Linux `x86_64` VM; it has not been created.
+The current YFC host is not a placement target: the earlier read-only baseline was 1 vCPU, about
+958 MiB RAM with about 163 MiB available and swap pressure, and about 4.37 GiB free disk. The
+planning minimum for a dedicated VM is 2 vCPU, 4 GiB RAM and 30 GiB SSD (20 GiB is only a short,
+stateless-shadow floor), with cgroup v2, default-deny host ingress/egress firewall, no public
+inbound ports, no host mounts, no Docker socket and no YFC DB/Redis/SSH access. Expected external
+LLM editor workload is an unbenchmarked 0.25-1.0 vCPU and 0.5-1.5 GiB RAM; confirm the budget in
+an owner-approved shadow run.
+
+Before Gate A approval the network is local-only: the test harness uses loopback and Docker's
+`host.docker.internal` mapping solely for local services. No production allowlist is changed.
+After a separate approval, the VM allowlist must explicitly name the approved provider API host,
+the YFC intake host/path and approved source hosts; it must deny Telegram Bot API, YFC
+PostgreSQL/Redis/internal services, Docker API/socket, SSH, cloud metadata, arbitrary redirects,
+registries and wildcard internet egress. There are no inbound Hermes ports.
+
+The exact variable names reserved for a later approved setup are:
+
+```text
+HERMES_INTAKE_ENABLED
+HERMES_SOURCE_ALLOWLIST
+HERMES_PROVIDER_BASE_URL
+HERMES_PROVIDER_API_KEY
+HERMES_PROVIDER_MODEL
+HERMES_PROVIDER_TIMEOUT_SECONDS
+HERMES_YFC_INTAKE_URL
+HERMES_YFC_INTAKE_KEY_ID
+HERMES_YFC_INTAKE_SHARED_SECRET
+HERMES_YFC_INTAKE_TIMEOUT_SECONDS
+HERMES_PREVIEW_URL
+HERMES_PREVIEW_TIMEOUT_SECONDS
+```
+
+Only provider API key and YFC shared secret are secret values. No Telegram token, database
+credential, user health data or host credential belongs in this worker. The pre-Gate build uses
+empty local/mock secret values from `.env.example`; it does not create accounts, keys or service
+identities. Source content is sent only to the local fake provider in the E2E test and is not
+sent to YFC intake. A future external provider must be separately approved for retention,
+training/model-improvement use, region, privacy terms, rate limits and cost before any source
+content leaves the controlled environment.
+
+The kill switch is `HERMES_INTAKE_ENABLED=false`; keep it off until Gate A. The existing
+production `NEWS_INGESTION_ENABLED` and `NEWS_PUBLICATION_ENABLED` values are not changed by this
+integration, and `NEWS_AUTO_PUBLISH_LOW_RISK=false` remains required. Rollback is to stop/remove
+the separate worker workload, revoke only its approved intake/provider identities, remove its
+egress rules, and return to the existing YFC manual/editorial path. Existing news pipeline flags
+and publisher ownership are not rollback targets. Any later production rollback must use the
+previously verified immutable application/image SHA and the normal release procedure; no blind
+migration downgrade is permitted.
+
+The evidence boundary is explicit: local/mock proves deterministic contracts, hardening,
+idempotency, HMAC, taxonomy/risk and manual-required behavior; a shadow run requires owner approval
+and a real provider; production and Telegram/channel proof require later external gates. This
+repository integration grants neither Gate A nor any deployment authorization.

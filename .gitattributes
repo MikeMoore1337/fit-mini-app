@@ -5,3 +5,6 @@
 
 # Generated exercise-guide vectors must hash identically on every platform.
 /backend/assets/exercise-guides/*.svg text eol=lf
+
+# Preserve the exact upstream license bytes used by the image compliance checksum.
+/deploy/hermes-editorial-worker/LICENSES/HERMES-LICENSE -text -diff
