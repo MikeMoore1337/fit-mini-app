@@ -1,5 +1,7 @@
 from pathlib import Path
+from types import SimpleNamespace
 
+import pytest
 from scripts import ci_contract
 
 
@@ -35,6 +37,81 @@ def test_contract_digest_changes_when_contract_changes(monkeypatch) -> None:
     assert ci_contract.contract_digest() != original_digest
 
 
+def test_shards_parse_and_select_deterministically() -> None:
+    assert ci_contract.parse_shard("1/3") == (0, 3)
+    assert ci_contract.parse_shard("3/3") == (2, 3)
+    nodes = tuple(f"test_{index}" for index in range(8))
+    assert ci_contract.select_shard(nodes, shard_index=0, shard_count=3) == (
+        "test_0",
+        "test_3",
+        "test_6",
+    )
+    assert ci_contract.select_shard(nodes, shard_index=2, shard_count=3) == (
+        "test_2",
+        "test_5",
+    )
+    with pytest.raises(ci_contract.CIContractError):
+        ci_contract.parse_shard("4/3")
+
+
+def test_frontend_e2e_shard_is_forwarded_to_playwright(monkeypatch, tmp_path: Path) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr(
+        ci_contract,
+        "missing_prerequisites",
+        lambda group, *, root, env: [],
+    )
+
+    def fake_run(argv, **kwargs):
+        del kwargs
+        calls.append(list(argv))
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(ci_contract.subprocess, "run", fake_run)
+    ci_contract.run_group("frontend-e2e", root=tmp_path, env={}, shard="2/3")
+
+    assert calls[0][-2:] == ["--", "--shard=2/3"]
+
+
+def test_python_shard_collects_and_runs_only_its_node_ids(monkeypatch, tmp_path: Path) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr(
+        ci_contract,
+        "missing_prerequisites",
+        lambda group, *, root, env: [],
+    )
+    collected = "\n".join(
+        [
+            "backend/tests/test_a.py::test_a",
+            "backend/tests/test_b.py::test_b",
+            "bot/tests/test_c.py::test_c",
+            "bot/tests/test_d.py::test_d",
+            "backend/tests/test_e.py::test_e",
+            "bot/tests/test_f.py::test_f",
+        ]
+    )
+
+    def fake_run(argv, **kwargs):
+        calls.append(list(argv))
+        if "--collect-only" in argv:
+            return SimpleNamespace(returncode=0, stdout=collected, stderr="")
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(ci_contract.subprocess, "run", fake_run)
+    ci_contract.run_group(
+        "python-tests",
+        root=tmp_path,
+        env={"TEST_DATABASE_URL": "postgresql://test"},
+        shard="2/3",
+    )
+
+    assert calls[1][-2:] == ["--collect-only", "-q"]
+    assert calls[2][2:4] == [
+        "backend/tests/test_b.py::test_b",
+        "backend/tests/test_e.py::test_e",
+    ]
+
+
 def test_windows_node_commands_use_cmd_wrappers(monkeypatch) -> None:
     monkeypatch.setattr(ci_contract.os, "name", "nt")
     assert ci_contract._resolve_argv(("npm", "run", "test"))[0] == "npm.cmd"
@@ -64,6 +141,21 @@ def test_workflow_calls_group_entrypoint_instead_of_inline_command_copy() -> Non
     assert "npm run typecheck" not in workflow
     assert "npm run e2e:ci" not in workflow
     assert "scripts/run_pytest.py backend/tests" not in workflow
+
+
+def test_workflow_keeps_three_way_smoke_and_python_shards_independent() -> None:
+    root = Path(__file__).parents[1]
+    workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "name: Frontend smoke (${{ matrix.shard }}/3)" in workflow
+    assert "name: Python tests (${{ matrix.shard }}/3)" in workflow
+    assert workflow.count("        shard: [1, 2, 3]") == 2
+    assert 'run-group frontend-e2e --shard "${{ matrix.shard }}/3"' in workflow
+    assert 'run-group python-tests --shard "${{ matrix.shard }}/3"' in workflow
+    assert (
+        "  frontend-smoke:\n    name: Frontend smoke (${{ matrix.shard }}/3)\n    if:" in workflow
+    )
+    assert "  migrated-stack:\n    name: Migrated PostgreSQL stack\n    if:" in workflow
 
 
 def test_cross_stack_profile_includes_delivery_policy_gates() -> None:

@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -18,7 +19,10 @@ from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-CONTRACT_VERSION = "ci-contract-v1"
+CONTRACT_VERSION = "ci-contract-v2"
+CI_SHARD_COUNT = 3
+SHARDABLE_GROUPS = frozenset({"frontend-e2e", "python-tests"})
+SHARD_RE = re.compile(r"(?P<number>[1-9][0-9]*)/(?P<count>[1-9][0-9]*)\Z")
 
 
 class CIContractError(RuntimeError):
@@ -285,6 +289,13 @@ def contract_payload() -> dict[str, object]:
             for name, spec in sorted(COMMAND_GROUPS.items())
         },
         "profiles": {name: list(groups) for name, groups in sorted(PROFILE_GROUPS.items())},
+        "sharding": {
+            "frontend-e2e": {"count": CI_SHARD_COUNT, "strategy": "playwright"},
+            "python-tests": {
+                "count": CI_SHARD_COUNT,
+                "strategy": "pytest-node-round-robin",
+            },
+        },
     }
 
 
@@ -345,25 +356,165 @@ def missing_prerequisites(
     ]
 
 
+def parse_shard(value: str) -> tuple[int, int]:
+    """Convert a human-facing ``N/M`` shard label to a zero-based index."""
+
+    match = SHARD_RE.fullmatch(value)
+    if match is None:
+        raise CIContractError(f"Invalid shard {value!r}; expected N/M with 1 <= N <= M")
+    number = int(match.group("number"))
+    count = int(match.group("count"))
+    if number > count:
+        raise CIContractError(f"Invalid shard {value!r}; shard number cannot exceed shard count")
+    return number - 1, count
+
+
+def select_shard(items: Sequence[str], *, shard_index: int, shard_count: int) -> tuple[str, ...]:
+    """Select a deterministic round-robin subset from an ordered item list."""
+
+    if shard_count < 1 or not 0 <= shard_index < shard_count:
+        raise CIContractError(
+            f"Invalid shard coordinates: index={shard_index}, count={shard_count}"
+        )
+    return tuple(
+        item for position, item in enumerate(items) if position % shard_count == shard_index
+    )
+
+
+def _collect_python_test_nodes(root: Path, env: Mapping[str, str]) -> tuple[str, ...]:
+    argv = _resolve_argv(
+        (
+            "python",
+            "scripts/run_pytest.py",
+            "backend/tests",
+            "bot/tests",
+            "--collect-only",
+            "-q",
+        )
+    )
+    print(f"$ (cd . && {' '.join(argv)})", flush=True)
+    completed = subprocess.run(
+        argv,
+        cwd=root,
+        env=dict(env),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        details = "\n".join(
+            part.strip() for part in (completed.stdout, completed.stderr) if part.strip()
+        )
+        if len(details) > 4000:
+            details = details[-4000:]
+        suffix = f"\n{details}" if details else ""
+        raise CIContractError(
+            f"Python test collection failed with exit code {completed.returncode}{suffix}"
+        )
+
+    nodes = tuple(
+        normalized
+        for line in completed.stdout.splitlines()
+        if (normalized := line.strip().replace("\\", "/"))
+        and normalized.startswith(("backend/tests/", "bot/tests/"))
+        and "::" in normalized
+    )
+    if not nodes:
+        raise CIContractError("Python test collection returned no test node IDs")
+    return nodes
+
+
+def _sharded_python_command(
+    command: CommandSpec,
+    *,
+    root: Path,
+    env: Mapping[str, str],
+    shard_index: int,
+    shard_count: int,
+) -> CommandSpec:
+    all_nodes = _collect_python_test_nodes(root, env)
+    selected_nodes = select_shard(all_nodes, shard_index=shard_index, shard_count=shard_count)
+    if not selected_nodes:
+        raise CIContractError(f"No Python tests selected for shard {shard_index + 1}/{shard_count}")
+
+    target_paths = {"backend/tests", "bot/tests"}
+    target_positions = [
+        position for position, argument in enumerate(command.argv) if argument in target_paths
+    ]
+    if not target_positions:
+        raise CIContractError("Python test command has no test target paths to shard")
+    first_target = min(target_positions)
+    last_target = max(target_positions) + 1
+    argv = (
+        *command.argv[:first_target],
+        *selected_nodes,
+        *command.argv[last_target:],
+    )
+    print(
+        f"Selected {len(selected_nodes)} of {len(all_nodes)} Python tests "
+        f"for shard {shard_index + 1}/{shard_count}",
+        flush=True,
+    )
+    return CommandSpec(name=f"{command.name}-shard", argv=argv, cwd=command.cwd)
+
+
+def _sharded_frontend_command(
+    command: CommandSpec, *, shard_index: int, shard_count: int
+) -> CommandSpec:
+    shard_label = f"{shard_index + 1}/{shard_count}"
+    return CommandSpec(
+        name=f"{command.name}-shard",
+        argv=(*command.argv, "--", f"--shard={shard_label}"),
+        cwd=command.cwd,
+    )
+
+
 def run_group(
-    group: str, *, root: Path | None = None, env: Mapping[str, str] | None = None
+    group: str,
+    *,
+    root: Path | None = None,
+    env: Mapping[str, str] | None = None,
+    shard: str | None = None,
 ) -> None:
+    if group not in COMMAND_GROUPS:
+        raise CIContractError(f"Unknown CI command group: {group}")
     project_root = (root or Path.cwd()).resolve()
     effective_env = dict(os.environ) | dict(env or {})
+    shard_index: int | None = None
+    shard_count: int | None = None
+    if shard is not None:
+        if group not in SHARDABLE_GROUPS:
+            raise CIContractError(f"CI group {group} does not support sharding")
+        shard_index, shard_count = parse_shard(shard)
     missing = missing_prerequisites(group, root=project_root, env=effective_env)
     if missing:
         raise CIContractError(f"Required prerequisite missing for {group}: {', '.join(missing)}")
     spec = COMMAND_GROUPS[group]
     for command in spec.commands:
-        argv = _resolve_argv(command.argv)
+        effective_command = command
+        if shard_index is not None and shard_count is not None:
+            if group == "python-tests" and command.name == "python-suite":
+                effective_command = _sharded_python_command(
+                    command,
+                    root=project_root,
+                    env=effective_env,
+                    shard_index=shard_index,
+                    shard_count=shard_count,
+                )
+            elif group == "frontend-e2e":
+                effective_command = _sharded_frontend_command(
+                    command, shard_index=shard_index, shard_count=shard_count
+                )
+        argv = _resolve_argv(effective_command.argv)
         if argv[0] == "git":
             argv = ["git", "-c", f"safe.directory={project_root.as_posix()}", *argv[1:]]
-        cwd = (project_root / command.cwd).resolve()
-        print(f"$ (cd {command.cwd} && {' '.join(argv)})", flush=True)
+        cwd = (project_root / effective_command.cwd).resolve()
+        print(f"$ (cd {effective_command.cwd} && {' '.join(argv)})", flush=True)
         completed = subprocess.run(argv, cwd=cwd, env=effective_env, check=False)
         if completed.returncode != 0:
             raise CIContractError(
-                f"CI command group {group} failed at {command.name} with exit code {completed.returncode}"
+                f"CI command group {group} failed at {effective_command.name} "
+                f"with exit code {completed.returncode}"
             )
 
 
@@ -395,6 +546,7 @@ def _parser() -> argparse.ArgumentParser:
     run = subparsers.add_parser("run-group")
     run.add_argument("group", choices=sorted(COMMAND_GROUPS))
     run.add_argument("--root", type=Path, default=Path.cwd())
+    run.add_argument("--shard")
     return parser
 
 
@@ -416,7 +568,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(json.dumps(list(groups), ensure_ascii=False))
             return 0
         if args.command == "run-group":
-            run_group(args.group, root=args.root)
+            run_group(args.group, root=args.root, shard=args.shard)
             return 0
         raise AssertionError(f"Unhandled command: {args.command}")
     except (CIContractError, OSError) as error:
