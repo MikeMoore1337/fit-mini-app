@@ -22,7 +22,7 @@ import '../landing/landing.css';
 import './public-content.css';
 import NotFoundPage from '../NotFoundPage';
 
-function PublicHeader({ theme }: { theme: 'light' | 'dark' }) {
+export function PublicHeader({ theme }: { theme: 'light' | 'dark' }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
 
@@ -64,6 +64,9 @@ function PublicHeader({ theme }: { theme: 'light' | 'dark' }) {
         </AppLink>
         <AppLink to="/knowledge" onClick={closeMenu}>
           База знаний
+        </AppLink>
+        <AppLink to="/articles" onClick={closeMenu}>
+          Статьи
         </AppLink>
         <AppLink to="/exercises" onClick={closeMenu}>
           Упражнения
@@ -401,7 +404,7 @@ function RelatedContent({ page }: { page: PublicContentPageData }) {
   );
 }
 
-function PublicFooter({ theme }: { theme: 'light' | 'dark' }) {
+export function PublicFooter({ theme }: { theme: 'light' | 'dark' }) {
   return (
     <footer className="landing-footer public-footer">
       <AppLink className="landing-brand" to="/" aria-label="Your Fitness Coach — на главную">
@@ -415,6 +418,7 @@ function PublicFooter({ theme }: { theme: 'light' | 'dark' }) {
         <AppLink to="/training">Тренировки</AppLink>
         <AppLink to="/nutrition">Питание</AppLink>
         <AppLink to="/knowledge">База знаний</AppLink>
+        <AppLink to="/articles">Статьи</AppLink>
         <AppLink to="/exercises">Упражнения</AppLink>
         <AppLink to="/for-trainers">Тренерам</AppLink>
       </nav>

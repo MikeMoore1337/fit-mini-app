@@ -32,6 +32,10 @@ const publicContentRoots = new Set([
   '/exercises',
 ]);
 
+function isArticleRoute(path: string): boolean {
+  return path === '/articles' || path.startsWith('/articles/');
+}
+
 function isPublicContentRoute(path: string): boolean {
   return (
     publicContentRoots.has(path) || path.startsWith('/knowledge/') || path.startsWith('/exercises/')
@@ -45,6 +49,7 @@ const AdminPage = lazy(() => import('./pages/admin/AdminPage'));
 const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
 const DemoPage = lazy(() => import('./pages/demo/DemoPage'));
 const PublicContentPage = lazy(() => import('./pages/public/PublicContentPage'));
+const ArticlesPage = lazy(() => import('./pages/public/ArticlesPage'));
 const KnowledgeHandoffPage = lazy(() => import('./pages/public/KnowledgeHandoffPage'));
 const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
@@ -87,9 +92,12 @@ function AppRoutes() {
     Boolean(window.Telegram?.WebApp?.initData?.trim()) || isTelegramLaunch(window.location);
   const legacyKnowledgePath = publicKnowledgePathFromLegacyRoute(path);
   useEffect(() => {
-    if (path !== '/' && !isPublicContentRoute(path)) applyRouteMetadata(path);
+    if (path !== '/' && !isPublicContentRoute(path) && !isArticleRoute(path)) {
+      applyRouteMetadata(path);
+    }
   }, [path]);
   if (path === '/') return <LandingPage />;
+  if (isArticleRoute(path)) return <ArticlesPage />;
   if (path === '/demo') {
     if (isTelegramLaunch(window.location)) return <Redirect to="/app" />;
     return <DemoPage />;

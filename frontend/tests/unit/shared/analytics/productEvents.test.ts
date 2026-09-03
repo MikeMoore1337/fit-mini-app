@@ -222,6 +222,39 @@ describe('product event contract', () => {
     ).toBe(true);
   });
 
+  it('keeps public article analytics limited to a slug and canonical CTA destination', () => {
+    expect(
+      isProductEvent({
+        name: 'article_viewed',
+        surface: 'mobile_web',
+        content_key: 'kak-nachat-silovye-trenirovki',
+      }),
+    ).toBe(true);
+    expect(
+      isProductEvent({
+        name: 'article_cta_clicked',
+        surface: 'desktop_web',
+        content_key: 'kak-nachat-silovye-trenirovki',
+        destination: 'tma',
+      }),
+    ).toBe(true);
+    expect(
+      isProductEvent({
+        name: 'article_viewed',
+        surface: 'desktop_web',
+        content_key: 'article?query=private',
+      }),
+    ).toBe(false);
+    expect(
+      isProductEvent({
+        name: 'article_cta_clicked',
+        surface: 'desktop_web',
+        content_key: 'article-slug',
+        destination: 'https://example.com/private',
+      } as unknown as ProductEvent),
+    ).toBe(false);
+  });
+
   it('rejects unknown schema versions, legacy surfaces and malformed timestamps', () => {
     const envelope = {
       name: 'workout_started',

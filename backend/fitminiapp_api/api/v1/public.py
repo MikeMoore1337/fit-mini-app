@@ -1,8 +1,18 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.config import settings
+from fitminiapp_api.db.session import get_db
+from fitminiapp_api.models.news import WebArticle
+from fitminiapp_api.schemas.articles import WebArticleCard, WebArticleResponse
 from fitminiapp_api.schemas.public import PublicExerciseDetail, PublicExerciseSummary
+from fitminiapp_api.seo import NOINDEX_ROBOTS
 from fitminiapp_api.services.public_exercises import public_exercise, public_exercises
+from fitminiapp_api.services.web_articles import (
+    article_card,
+    article_public_response,
+    published_articles,
+)
 
 router = APIRouter()
 
@@ -30,3 +40,32 @@ def get_public_exercise(slug: str) -> dict[str, object]:
     if exercise is None:
         raise HTTPException(status_code=404, detail="Упражнение не опубликовано")
     return exercise
+
+
+@router.get("/public/articles", response_model=list[WebArticleCard])
+def get_public_articles(db: Session = Depends(get_db)) -> list[WebArticleCard]:
+    return [article_card(article) for article in published_articles(db)]
+
+
+@router.get("/public/articles/{slug}", response_model=WebArticleResponse)
+def get_public_article(slug: str, db: Session = Depends(get_db)) -> WebArticleResponse:
+    article = db.query(WebArticle).filter(WebArticle.slug == slug).one_or_none()
+    if article is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Статья не опубликована",
+            headers={"X-Robots-Tag": NOINDEX_ROBOTS},
+        )
+    if article.status in {"archived", "retracted"}:
+        raise HTTPException(
+            status_code=410,
+            detail="Статья снята с публикации",
+            headers={"X-Robots-Tag": NOINDEX_ROBOTS},
+        )
+    if article.status != "published":
+        raise HTTPException(
+            status_code=404,
+            detail="Статья не опубликована",
+            headers={"X-Robots-Tag": NOINDEX_ROBOTS},
+        )
+    return article_public_response(article)

@@ -8,15 +8,21 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import cast
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from fitminiapp_api.core.config import settings
+from fitminiapp_api.models.news import WebArticle
 from fitminiapp_api.services.public_exercises import public_exercise
 
 INDEX_ROBOTS = "index, follow"
 NOINDEX_ROBOTS = "noindex, nofollow"
 SOCIAL_IMAGE_PATH = "/assets/brand/yfc-social-preview.png"
 SOCIAL_IMAGE_ALT = "Your Fitness Coach — тренировки, питание и прогресс в браузере и Telegram"
+ARTICLE_INDEX_TITLE = "Статьи о тренировках, питании и прогрессе — Your Fitness Coach"
+ARTICLE_INDEX_DESCRIPTION = (
+    "Понятные статьи о тренировках, питании, спортивном питании и прогрессе: "
+    "источники, ограничения и практический смысл без громких обещаний."
+)
 _PUBLIC_FALLBACK_PATTERN = re.compile(
     r"<!-- public-fallback-start -->.*?<!-- public-fallback-end -->",
     re.DOTALL,
@@ -162,6 +168,31 @@ def _absolute_public_url(path: str) -> str:
     return f"{public_origin()}/" if path == "/" else f"{public_origin()}{path}"
 
 
+def public_article_cta_url(destination: object) -> str:
+    """Resolve the allowlisted article CTA destinations for server-rendered HTML."""
+
+    if destination == "landing":
+        return _absolute_public_url("/")
+    if destination == "tma":
+        username = settings.telegram_bot_username.strip().removeprefix("@")
+        if not username:
+            username = "your_fitness_coach_bot"
+        return f"https://t.me/{quote(username, safe='')}?startapp"
+    return f"{settings.frontend_base_url.rstrip('/')}/app"
+
+
+def _safe_https_url(value: object) -> str | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    normalized = value.strip()
+    if any(ord(character) < 0x20 for character in normalized):
+        return None
+    parsed = urlparse(normalized)
+    if parsed.scheme.lower() != "https" or not parsed.netloc or parsed.username or parsed.password:
+        return None
+    return normalized
+
+
 def _breadcrumbs_schema(page: dict[str, object]) -> dict[str, object] | None:
     raw_breadcrumbs = page.get("breadcrumbs")
     if not isinstance(raw_breadcrumbs, list) or len(raw_breadcrumbs) < 2:
@@ -278,6 +309,76 @@ def metadata_for_path(path: str) -> SeoMetadata:
     )
 
 
+def metadata_for_articles() -> SeoMetadata:
+    return SeoMetadata(
+        title=ARTICLE_INDEX_TITLE,
+        description=ARTICLE_INDEX_DESCRIPTION,
+        robots=INDEX_ROBOTS,
+        canonical_url=_absolute_public_url("/articles"),
+        og_description=ARTICLE_INDEX_DESCRIPTION,
+        structured_data=(
+            {
+                "@context": "https://schema.org",
+                "@type": "CollectionPage",
+                "name": ARTICLE_INDEX_TITLE,
+                "description": ARTICLE_INDEX_DESCRIPTION,
+                "url": _absolute_public_url("/articles"),
+                "isPartOf": {
+                    "@type": "WebSite",
+                    "name": "Your Fitness Coach",
+                    "url": _absolute_public_url("/"),
+                },
+            },
+        ),
+    )
+
+
+def metadata_for_article(article: WebArticle) -> SeoMetadata:
+    if article.status != "published" or article.published_at is None or article.updated_at is None:
+        return metadata_for_path("/articles")
+    canonical_url = _absolute_public_url(f"/articles/{article.slug}")
+    author = article.author if isinstance(article.author, dict) else {}
+    editor = article.editor if isinstance(article.editor, dict) else {}
+    reviewer = article.domain_reviewer if isinstance(article.domain_reviewer, dict) else None
+    entity: dict[str, object] = {
+        "@type": "Article",
+        "headline": article.title,
+        "description": article.description,
+        "url": canonical_url,
+        "mainEntityOfPage": canonical_url,
+        "datePublished": article.published_at.date().isoformat(),
+        "dateModified": article.updated_at.date().isoformat(),
+        "author": {
+            "@type": author.get("type", "Organization"),
+            "name": author.get("name", "Your Fitness Coach"),
+        },
+        "editor": {
+            "@type": editor.get("type", "Organization"),
+            "name": editor.get("name", "YFC Editorial Desk"),
+        },
+        "publisher": {"@type": "Organization", "name": "Your Fitness Coach"},
+    }
+    if reviewer:
+        entity["reviewedBy"] = {
+            "@type": reviewer.get("type", "Organization"),
+            "name": reviewer.get("name", "YFC Domain Review"),
+        }
+    return SeoMetadata(
+        title=article.title,
+        description=article.description,
+        robots=INDEX_ROBOTS,
+        canonical_url=canonical_url,
+        og_description=article.description,
+        og_type="article",
+        structured_data=(
+            {
+                "@context": "https://schema.org",
+                **entity,
+            },
+        ),
+    )
+
+
 def render_metadata(metadata: SeoMetadata) -> str:
     """Render only server-controlled metadata; no user content is inserted here."""
 
@@ -336,6 +437,114 @@ def _link_markup(item: dict[str, object]) -> str:
     description = item.get("description")
     detail = f"<span>{html.escape(description)}</span>" if isinstance(description, str) else ""
     return f'<li><a href="{path}">{label}</a>{detail}</li>'
+
+
+def _article_person_markup(label: str, person: object) -> str:
+    if not isinstance(person, dict):
+        return ""
+    name = person.get("name")
+    if not isinstance(name, str) or not name.strip():
+        return ""
+    return f"<dt>{html.escape(label)}</dt><dd>{html.escape(name)}</dd>"
+
+
+def render_article_fallback(article: WebArticle, related: tuple[WebArticle, ...] = ()) -> str:
+    """Render published article meaningfully before React hydration."""
+
+    published_at = article.published_at
+    updated_at = article.updated_at
+    if article.status != "published" or published_at is None or updated_at is None:
+        return ""
+    parts = [
+        '<main class="seo-fallback seo-article-fallback">',
+        '<nav aria-label="Публичные разделы"><a href="/">Главная</a> '
+        '<a href="/articles">Статьи</a></nav>',
+        f'<p class="landing-kicker">{html.escape(article.article_kind)}</p>',
+        f"<h1>{html.escape(article.title)}</h1>",
+        f'<p class="public-hero__lead">{html.escape(article.lead)}</p>',
+        '<dl class="public-guide-meta">',
+        _article_person_markup("Автор", article.author),
+        _article_person_markup("Редактор", article.editor),
+        _article_person_markup("Проверил", article.domain_reviewer),
+        f'<dt>Опубликовано</dt><dd><time datetime="{published_at.date().isoformat()}">'
+        f"{published_at.date().isoformat()}</time></dd>",
+        f'<dt>Обновлено</dt><dd><time datetime="{updated_at.date().isoformat()}">'
+        f"{updated_at.date().isoformat()}</time></dd>",
+        "</dl>",
+    ]
+    for raw_section in article.body_sections:
+        if not isinstance(raw_section, dict):
+            continue
+        heading = raw_section.get("heading")
+        paragraphs = raw_section.get("paragraphs", [])
+        if not isinstance(heading, str) or not isinstance(paragraphs, list):
+            continue
+        parts.append(f"<section><h2>{html.escape(heading)}</h2>")
+        parts.extend(
+            f"<p>{html.escape(value)}</p>" for value in paragraphs if isinstance(value, str)
+        )
+        points = raw_section.get("points", [])
+        if isinstance(points, list):
+            items = "".join(
+                f"<li>{html.escape(value)}</li>" for value in points if isinstance(value, str)
+            )
+            if items:
+                parts.append(f"<ul>{items}</ul>")
+        parts.append("</section>")
+    sources = article.sources if isinstance(article.sources, list) else []
+    if sources:
+        parts.append("<section><h2>Источники</h2><ol>")
+        for source in sources:
+            if not isinstance(source, dict):
+                continue
+            url = _safe_https_url(source.get("url"))
+            title = source.get("title")
+            publisher = source.get("publisher")
+            if not (isinstance(url, str) and isinstance(title, str) and isinstance(publisher, str)):
+                continue
+            parts.append(
+                f'<li><a href="{html.escape(url, quote=True)}">{html.escape(title)}</a>'
+                f" — {html.escape(publisher)}</li>"
+            )
+        parts.append("</ol></section>")
+    if related:
+        parts.append("<section><h2>Связанные статьи</h2><ul>")
+        for item in related:
+            parts.append(
+                f'<li><a href="/articles/{html.escape(item.slug, quote=True)}">'
+                f"{html.escape(item.title)}</a></li>"
+            )
+        parts.append("</ul></section>")
+    cta = article.cta if isinstance(article.cta, dict) else {}
+    cta_label = cta.get("label", "Открыть Your Fitness Coach")
+    cta_description = cta.get("description", "Продолжите работу с фактами в приложении.")
+    cta_destination = cta.get("destination", "web")
+    if isinstance(cta_label, str) and isinstance(cta_description, str):
+        cta_href = public_article_cta_url(cta_destination)
+        parts.append(
+            f"<section><h2>{html.escape(cta_label)}</h2><p>{html.escape(cta_description)}</p>"
+            f'<a href="{html.escape(cta_href, quote=True)}">{html.escape(cta_label)}</a></section>'
+        )
+    parts.append("</main>")
+    return "".join(parts)
+
+
+def render_articles_index_fallback(articles: tuple[WebArticle, ...]) -> str:
+    parts = [
+        '<main class="seo-fallback seo-articles-index-fallback">',
+        '<nav aria-label="Публичные разделы"><a href="/">Главная</a> '
+        '<a href="/articles">Статьи</a></nav>',
+        f"<h1>{html.escape(ARTICLE_INDEX_TITLE)}</h1>",
+        f"<p>{html.escape(ARTICLE_INDEX_DESCRIPTION)}</p>",
+        "<section><h2>Опубликованные статьи</h2><ul>",
+    ]
+    for article in articles:
+        parts.append(
+            f'<li><a href="/articles/{html.escape(article.slug, quote=True)}">'
+            f"{html.escape(article.title)}</a> — {html.escape(article.description)}</li>"
+        )
+    parts.extend(("</ul></section>", "</main>"))
+    return "".join(parts)
 
 
 def render_public_fallback(path: str) -> str:
@@ -496,15 +705,30 @@ def render_public_fallback(path: str) -> str:
     return "".join(parts)
 
 
-def render_frontend_document(template: str, path: str) -> tuple[str, SeoMetadata]:
+def render_frontend_document(
+    template: str,
+    path: str,
+    *,
+    article: WebArticle | None = None,
+    articles: tuple[WebArticle, ...] = (),
+) -> tuple[str, SeoMetadata]:
     """Inject route metadata and public fallback into the Vite HTML entry."""
 
-    metadata = metadata_for_path(path)
+    if article is not None:
+        metadata = metadata_for_article(article)
+        fallback = render_article_fallback(
+            article, tuple(item for item in articles if item.slug in article.related_slugs)
+        )
+    elif path == "/articles":
+        metadata = metadata_for_articles()
+        fallback = render_articles_index_fallback(articles)
+    else:
+        metadata = metadata_for_path(path)
+        fallback = render_public_fallback(path)
     rendered = template.replace("<!-- seo-head -->", render_metadata(metadata))
     if rendered == template:
         rendered = template.replace("</head>", f"    {render_metadata(metadata)}\n  </head>")
 
-    fallback = render_public_fallback(path)
     marked_fallback = f"<!-- public-fallback-start -->{fallback}<!-- public-fallback-end -->"
     if _PUBLIC_FALLBACK_PATTERN.search(rendered):
         rendered = _PUBLIC_FALLBACK_PATTERN.sub(marked_fallback, rendered, count=1)

@@ -16,6 +16,7 @@ export type ProductCoreAction =
 export type LandingTelegramPlacement = 'hero' | 'continuity' | 'footer';
 export type EditorialCtaDestination = 'tma' | 'web' | 'landing' | 'article';
 export type EditorialCtaCampaign = 'telegram_editorial_v1';
+export type PublicArticleCtaDestination = 'tma' | 'web' | 'landing';
 
 type ContextFreeProductEventName =
   | 'landing_viewed'
@@ -104,6 +105,17 @@ export type ProductEvent =
       surface: ProductSurface;
       destination: EditorialCtaDestination;
       campaign: EditorialCtaCampaign;
+    }
+  | {
+      name: 'article_viewed';
+      surface: ProductSurface;
+      content_key: string;
+    }
+  | {
+      name: 'article_cta_clicked';
+      surface: ProductSurface;
+      content_key: string;
+      destination: PublicArticleCtaDestination;
     };
 
 export type ProductEventName = ProductEvent['name'];
@@ -244,6 +256,8 @@ function eventPropertyKeys(name: string): readonly string[] {
   if (name === 'food_log_started' || name === 'food_logged') return ['entry_method'];
   if (name === 'tma_core_action_completed') return ['action'];
   if (name === 'telegram_news_cta_clicked') return ['destination', 'campaign'];
+  if (name === 'article_viewed') return ['content_key'];
+  if (name === 'article_cta_clicked') return ['content_key', 'destination'];
   return [];
 }
 
@@ -271,6 +285,18 @@ function hasValidEventProperties(value: Record<string, unknown>): boolean {
     return (
       ['tma', 'web', 'landing', 'article'].includes(value.destination as string) &&
       value.campaign === 'telegram_editorial_v1'
+    );
+  }
+  if (value.name === 'article_viewed') {
+    return (
+      typeof value.content_key === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.content_key)
+    );
+  }
+  if (value.name === 'article_cta_clicked') {
+    return (
+      typeof value.content_key === 'string' &&
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.content_key) &&
+      ['tma', 'web', 'landing'].includes(value.destination as string)
     );
   }
   return false;
