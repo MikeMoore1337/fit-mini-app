@@ -558,7 +558,7 @@ class ArtifactManager:
         for path in sorted(set(files)):
             try:
                 text = path.read_text(encoding="utf-8")
-            except OSError, UnicodeError:
+            except (OSError, UnicodeError):  # fmt: skip
                 continue
             for match in pattern.finditer(text):
                 top = match.group(1)
@@ -861,7 +861,7 @@ class ArtifactManager:
                 if stale_runtime and runtime_ttl is not None and not guard:
                     try:
                         age = now - datetime.fromtimestamp(item["mtime_ns"] / 1_000_000_000, tz=UTC)
-                    except KeyError, ValueError, OSError:
+                    except (KeyError, ValueError, OSError):  # fmt: skip
                         age = timedelta(0)
                     if age >= runtime_ttl:
                         disposition, reason = "DELETE", "bounded stale runtime candidate"
