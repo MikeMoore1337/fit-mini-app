@@ -243,6 +243,44 @@ def test_task_ids_and_branch_traceability_accept_suffix_ids(task_id: str) -> Non
     assert task_session.task_id_from_branch(f"task/{task_id}-valid-kebab") == task_id
 
 
+def test_task_commit_messages_allow_only_declared_hard_dependencies() -> None:
+    messages = [
+        "feat: [Task 133] provide dependency",
+        "feat: [Task 135] consume dependency\n\nDepends-on: [Task 133], [Task 134]",
+    ]
+
+    task_session.validate_task_commit_messages("135", messages, dependency_ids=("133", "134"))
+
+    with pytest.raises(task_session.TaskSessionError, match="declared hard dependency"):
+        task_session.validate_task_commit_messages(
+            "135",
+            [*messages, "fix: [Task 136] unrelated change"],
+            dependency_ids=("133", "134"),
+        )
+
+
+def test_task_pr_accepts_dependency_provenance_declared_in_task_commit() -> None:
+    base_sha = "a" * 40
+    head_sha = "b" * 40
+    pull_request = _task_pr(135, "135", base_sha, head_sha)
+    pull_request["commits"] = 2
+    commits = [
+        _task_commit("133"),
+        {"commit": {"message": "feat: [Task 135] consume dependency\n\nDepends-on: [Task 133]"}},
+    ]
+
+    assert (
+        task_session.validate_task_pull_request(
+            pull_request,
+            commits,
+            [_success_check(head_sha)],
+            expected_base_sha=base_sha,
+            dependency_ids=None,
+        )
+        == "135"
+    )
+
+
 @pytest.mark.parametrize(
     "branch", ["feature/127-x", "task/127", "task/127-Bad-Slug", "task/127_bad", "task/A127-test"]
 )

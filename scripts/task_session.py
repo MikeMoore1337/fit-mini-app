@@ -35,6 +35,7 @@ TASK_BRANCH_RE = re.compile(
     re.IGNORECASE,
 )
 TASK_COMMIT_RE = re.compile(rf"\[Task (?P<task_id>{TASK_ID_PATTERN})\]", re.IGNORECASE)
+TASK_DEPENDENCY_RE = re.compile(r"(?im)^Depends-on:\s*(?P<value>.+)$")
 TASK_FILE_RE = re.compile(rf"^(?P<task_id>{TASK_ID_PATTERN})-(?P<slug>.+)\.md$", re.IGNORECASE)
 TASK_STATE_VERSION = 2
 STATE_DIRECTORY_NAME = "codex-task-sessions-v1"
@@ -80,15 +81,68 @@ def write_lanes_compatible(first: str, second: str) -> bool:
     return left == right == "independent-write"
 
 
-def validate_task_commit_messages(task_id: str, messages: Sequence[str]) -> None:
+def _task_commit_ids(message: str) -> set[str]:
+    without_dependency_trailers = TASK_DEPENDENCY_RE.sub("", message)
+    return {
+        match.group("task_id").upper()
+        for match in TASK_COMMIT_RE.finditer(without_dependency_trailers)
+    }
+
+
+def declared_task_dependency_ids(messages: Sequence[str]) -> set[str]:
+    result: set[str] = set()
+    for message in messages:
+        for trailer in TASK_DEPENDENCY_RE.finditer(message):
+            result.update(
+                match.group("task_id").upper()
+                for match in TASK_COMMIT_RE.finditer(trailer.group("value"))
+            )
+    return result
+
+
+def validate_task_commit_messages(
+    task_id: str,
+    messages: Sequence[str],
+    *,
+    dependency_ids: Sequence[str] | None = (),
+) -> None:
     expected = normalize_task_id(task_id)
     if not messages:
         raise TaskSessionError("Task branch contains no task commits")
+    declared_dependencies = declared_task_dependency_ids(messages)
+    allowed_dependencies = (
+        declared_dependencies
+        if dependency_ids is None
+        else {normalize_task_id(item) for item in dependency_ids}
+    )
+    if dependency_ids is not None and declared_dependencies - allowed_dependencies:
+        unexpected = ", ".join(sorted(declared_dependencies - allowed_dependencies))
+        raise TaskSessionError(
+            f"Commit dependency declaration contains undeclared task IDs: {unexpected}"
+        )
+    allowed = {expected, *allowed_dependencies}
+    task_ids: set[str] = set()
     for message in messages:
-        ids = {match.group("task_id").upper() for match in TASK_COMMIT_RE.finditer(message)}
-        if ids != {expected}:
+        ids = _task_commit_ids(message)
+        task_ids.update(ids)
+        if len(ids) != 1 or not ids <= allowed:
             headline = message.splitlines()[0] if message else "<empty>"
-            raise TaskSessionError(f"Commit {headline!r} must contain exactly [Task {expected}]")
+            if dependency_ids is None:
+                requirement = f"[Task {expected}] or an explicitly declared dependency"
+            else:
+                requirement = f"[Task {expected}] or a declared hard dependency"
+            raise TaskSessionError(f"Commit {headline!r} must contain exactly {requirement}")
+    if expected not in task_ids:
+        raise TaskSessionError(f"Task branch contains no [Task {expected}] commit")
+    foreign_ids = task_ids - {expected}
+    if foreign_ids - declared_dependencies:
+        unexpected = ", ".join(sorted(foreign_ids - declared_dependencies))
+        raise TaskSessionError(
+            f"Dependency commit provenance is missing Depends-on declaration: {unexpected}"
+        )
+    if dependency_ids is not None and foreign_ids - allowed_dependencies:
+        unexpected = ", ".join(sorted(foreign_ids - allowed_dependencies))
+        raise TaskSessionError(f"Commit provenance contains undeclared task IDs: {unexpected}")
 
 
 def _run(
@@ -518,6 +572,7 @@ def validate_task_pull_request(
     expected_base_sha: str,
     expected_base_branch: str = TARGET_BASE_BRANCH,
     require_checks: bool = True,
+    dependency_ids: Sequence[str] | None = (),
 ) -> str:
     base = pull_request.get("base", {})
     head = pull_request.get("head", {})
@@ -542,7 +597,7 @@ def validate_task_pull_request(
         raise TaskSessionError(
             "Task PR commit inventory is incomplete; split/review the PR instead of truncating provenance"
         )
-    validate_task_commit_messages(task_id, messages)
+    validate_task_commit_messages(task_id, messages, dependency_ids=dependency_ids)
     head_sha = str(head.get("sha", ""))
     if require_checks and not _successful_exact_check(checks, "checks", head_sha):
         raise TaskSessionError(
@@ -629,6 +684,7 @@ def validate_pr_event(
         [],
         expected_base_sha=event_base_sha,
         require_checks=False,
+        dependency_ids=None,
     )
     validate_task_pull_request_files(
         files, expected_count=int(pull_request.get("changed_files", len(files)))
@@ -1123,7 +1179,12 @@ class TaskController:
             )
         if not self.repository.is_ancestor(base_sha, head_sha):
             raise TaskSessionError("Task HEAD does not descend from leased origin/master base")
-        validate_task_commit_messages(expected, self.repository.commits(f"{base_sha}..{head_sha}"))
+        document = find_task_document(self._canonical_root(), expected)
+        validate_task_commit_messages(
+            expected,
+            self.repository.commits(f"{base_sha}..{head_sha}"),
+            dependency_ids=document.dependencies,
+        )
         gate = self._current_gate_evidence(expected, lease, head_sha)
         with self.store.lock():
             current = self.store.read_json(lease_path)
@@ -1171,6 +1232,7 @@ class TaskController:
             checks,
             expected_base_sha=str(pull_request["base"]["sha"]),
             require_checks=True,
+            dependency_ids=None,
         )
         if actual != expected or pull_request.get("merge_commit_sha") != merge_sha:
             raise TaskSessionError("Merged PR does not match the task lease and deployed SHA")
