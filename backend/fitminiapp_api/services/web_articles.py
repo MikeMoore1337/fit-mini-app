@@ -570,7 +570,7 @@ def accept_hermes_article_submission(
 def article_card(article: WebArticle) -> WebArticleCard:
     if article.status != "published" or article.published_at is None or article.updated_at is None:
         raise WebArticleError("article_not_public")
-    canonical_url = article.canonical_url or f"{_article_origin()}/articles/{article.slug}"
+    canonical_url = f"{_article_origin()}/articles/{article.slug}"
     return WebArticleCard.model_validate(
         {
             "slug": article.slug,

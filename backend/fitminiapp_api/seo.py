@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import cast
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.models.news import WebArticle
@@ -168,6 +168,31 @@ def _absolute_public_url(path: str) -> str:
     return f"{public_origin()}/" if path == "/" else f"{public_origin()}{path}"
 
 
+def public_article_cta_url(destination: object) -> str:
+    """Resolve the allowlisted article CTA destinations for server-rendered HTML."""
+
+    if destination == "landing":
+        return _absolute_public_url("/")
+    if destination == "tma":
+        username = settings.telegram_bot_username.strip().removeprefix("@")
+        if not username:
+            username = "your_fitness_coach_bot"
+        return f"https://t.me/{quote(username, safe='')}?startapp"
+    return f"{settings.frontend_base_url.rstrip('/')}/app"
+
+
+def _safe_https_url(value: object) -> str | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    normalized = value.strip()
+    if any(ord(character) < 0x20 for character in normalized):
+        return None
+    parsed = urlparse(normalized)
+    if parsed.scheme.lower() != "https" or not parsed.netloc or parsed.username or parsed.password:
+        return None
+    return normalized
+
+
 def _breadcrumbs_schema(page: dict[str, object]) -> dict[str, object] | None:
     raw_breadcrumbs = page.get("breadcrumbs")
     if not isinstance(raw_breadcrumbs, list) or len(raw_breadcrumbs) < 2:
@@ -311,7 +336,7 @@ def metadata_for_articles() -> SeoMetadata:
 def metadata_for_article(article: WebArticle) -> SeoMetadata:
     if article.status != "published" or article.published_at is None or article.updated_at is None:
         return metadata_for_path("/articles")
-    canonical_url = article.canonical_url or _absolute_public_url(f"/articles/{article.slug}")
+    canonical_url = _absolute_public_url(f"/articles/{article.slug}")
     author = article.author if isinstance(article.author, dict) else {}
     editor = article.editor if isinstance(article.editor, dict) else {}
     reviewer = article.domain_reviewer if isinstance(article.domain_reviewer, dict) else None
@@ -472,7 +497,7 @@ def render_article_fallback(article: WebArticle, related: tuple[WebArticle, ...]
         for source in sources:
             if not isinstance(source, dict):
                 continue
-            url = source.get("url")
+            url = _safe_https_url(source.get("url"))
             title = source.get("title")
             publisher = source.get("publisher")
             if not (isinstance(url, str) and isinstance(title, str) and isinstance(publisher, str)):
@@ -493,11 +518,12 @@ def render_article_fallback(article: WebArticle, related: tuple[WebArticle, ...]
     cta = article.cta if isinstance(article.cta, dict) else {}
     cta_label = cta.get("label", "Открыть Your Fitness Coach")
     cta_description = cta.get("description", "Продолжите работу с фактами в приложении.")
+    cta_destination = cta.get("destination", "web")
     if isinstance(cta_label, str) and isinstance(cta_description, str):
-        app_url = f"{settings.frontend_base_url.rstrip('/')}/app"
+        cta_href = public_article_cta_url(cta_destination)
         parts.append(
             f"<section><h2>{html.escape(cta_label)}</h2><p>{html.escape(cta_description)}</p>"
-            f'<a href="{html.escape(app_url, quote=True)}">Открыть приложение</a></section>'
+            f'<a href="{html.escape(cta_href, quote=True)}">{html.escape(cta_label)}</a></section>'
         )
     parts.append("</main>")
     return "".join(parts)

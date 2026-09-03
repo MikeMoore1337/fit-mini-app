@@ -22,7 +22,12 @@ from fitminiapp_api.middleware.canonical_host import redirect_landing_applicatio
 from fitminiapp_api.middleware.request_body_limit import RequestBodyLimitMiddleware
 from fitminiapp_api.middleware.request_context import RequestContextMiddleware
 from fitminiapp_api.models.news import WebArticle
-from fitminiapp_api.seo import public_origin, public_page_paths, render_frontend_document
+from fitminiapp_api.seo import (
+    NOINDEX_ROBOTS,
+    public_origin,
+    public_page_paths,
+    render_frontend_document,
+)
 from fitminiapp_api.services.web_articles import published_articles
 
 APP_DIR = Path(__file__).resolve().parent
@@ -250,13 +255,25 @@ def articles_index_page() -> HTMLResponse:
 @app.get("/articles/{slug}")
 def article_page(slug: str) -> HTMLResponse:
     with SessionLocal() as db:
-        article = (
-            db.query(WebArticle)
-            .filter(WebArticle.slug == slug, WebArticle.status == "published")
-            .one_or_none()
-        )
+        article = db.query(WebArticle).filter(WebArticle.slug == slug).one_or_none()
         if article is None:
-            raise HTTPException(status_code=404, detail="Article not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Article not found",
+                headers={"X-Robots-Tag": NOINDEX_ROBOTS},
+            )
+        if article.status in {"archived", "retracted"}:
+            raise HTTPException(
+                status_code=410,
+                detail="Article removed",
+                headers={"X-Robots-Tag": NOINDEX_ROBOTS},
+            )
+        if article.status != "published":
+            raise HTTPException(
+                status_code=404,
+                detail="Article not found",
+                headers={"X-Robots-Tag": NOINDEX_ROBOTS},
+            )
         articles = tuple(published_articles(db))
     return _frontend_index(f"/articles/{slug}", article=article, articles=articles)
 

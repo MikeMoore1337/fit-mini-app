@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from xml.etree import ElementTree
 
+import pytest
+
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.news import WebArticle, WebArticleRevision
@@ -152,6 +154,39 @@ def test_draft_article_is_not_public_or_in_sitemap(client, monkeypatch) -> None:
 
     assert client.get("/articles/internal-draft").status_code == 404
     assert "internal-draft" not in client.get("/sitemap.xml").text
+
+
+@pytest.mark.parametrize("status", ["archived", "retracted"])
+def test_removed_article_returns_explicit_gone_status(client, status) -> None:
+    with get_session_context() as db:
+        article = _published_article()
+        article.status = status
+        db.add(article)
+
+    page = client.get("/articles/strength-basics")
+    api = client.get("/api/v1/public/articles/strength-basics")
+    assert page.status_code == 410
+    assert api.status_code == 410
+    assert page.headers["x-robots-tag"] == "noindex, nofollow"
+    assert api.headers["x-robots-tag"] == "noindex, nofollow"
+
+
+def test_server_article_fallback_resolves_allowlisted_cta(client, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "landing_domain", "your-fitness-coach.ru")
+    monkeypatch.setattr(settings, "telegram_bot_username", "hermes_yfc_bot")
+    with get_session_context() as db:
+        article = _published_article()
+        article.cta = {
+            "destination": "tma",
+            "label": "Открыть в Telegram",
+            "description": "Продолжить в Mini App.",
+        }
+        db.add(article)
+
+    response = client.get("/articles/strength-basics", headers={"Host": "your-fitness-coach.ru"})
+    assert response.status_code == 200
+    assert 'href="https://t.me/hermes_yfc_bot?startapp"' in response.text
+    assert ">Открыть в Telegram</a>" in response.text
 
 
 def test_public_article_api_exposes_only_published_records(client) -> None:
