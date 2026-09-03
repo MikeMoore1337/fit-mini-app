@@ -381,6 +381,17 @@ def select_shard(items: Sequence[str], *, shard_index: int, shard_count: int) ->
     )
 
 
+def _normalize_python_test_node(line: str) -> str | None:
+    candidate = line.strip()
+    path, separator, test_id = candidate.partition("::")
+    if not separator:
+        return None
+    normalized_path = path.replace("\\", "/")
+    if not normalized_path.startswith(("backend/tests/", "bot/tests/")):
+        return None
+    return f"{normalized_path}::{test_id}"
+
+
 def _collect_python_test_nodes(root: Path, env: Mapping[str, str]) -> tuple[str, ...]:
     argv = _resolve_argv(
         (
@@ -415,9 +426,7 @@ def _collect_python_test_nodes(root: Path, env: Mapping[str, str]) -> tuple[str,
     nodes = tuple(
         normalized
         for line in completed.stdout.splitlines()
-        if (normalized := line.strip().replace("\\", "/"))
-        and normalized.startswith(("backend/tests/", "bot/tests/"))
-        and "::" in normalized
+        if (normalized := _normalize_python_test_node(line)) is not None
     )
     if not nodes:
         raise CIContractError("Python test collection returned no test node IDs")
