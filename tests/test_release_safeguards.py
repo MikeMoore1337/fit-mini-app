@@ -60,6 +60,17 @@ def test_deploy_is_master_only_immutable_bundle_flow_without_vps_git_checkout() 
     assert "scripts/zero_downtime_deploy.py" in deploy_script
 
 
+def test_deploy_recovers_legacy_revision_before_migration_and_rollout() -> None:
+    deploy = _sources()["deploy"]
+
+    assert "latest_summary" in deploy
+    assert "com.docker.compose.service=\\$service" in deploy
+    assert "org.opencontainers.image.revision" in deploy
+    assert "ACTIVE_REVISION: ${{ steps.migration.outputs.active_revision }}" in deploy
+    assert "active_marker" in deploy
+    assert "last-successful-revision" in deploy
+
+
 def test_delivery_contract_is_master_only_and_approval_gated() -> None:
     sources = _sources()
     controller = sources["controller"]
