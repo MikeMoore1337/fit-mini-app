@@ -27,6 +27,7 @@ _CLIENT_ERROR_CODES = {
     "cluster_missing",
     "draft_schema_invalid",
     "schema_version_unsupported",
+    "skill_version_unsupported",
 }
 _CONFLICT_CODES = {
     "idempotency_conflict",
