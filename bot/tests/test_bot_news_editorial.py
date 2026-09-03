@@ -18,6 +18,8 @@ class FakeMessage:
         )
         self.caption = None
         self.edit_reply_markup = AsyncMock()
+        self.edit_text = AsyncMock()
+        self.edit_caption = AsyncMock()
         self.answer = AsyncMock()
 
 
@@ -87,7 +89,7 @@ def test_destructive_news_action_requires_confirmation(monkeypatch) -> None:
     callback.answer.assert_awaited_once_with()
 
 
-def test_publish_confirmation_repeats_channel_mode_revision_and_artifact(monkeypatch) -> None:
+def test_publish_confirmation_stays_on_same_card_and_keeps_exact_preview(monkeypatch) -> None:
     artifact_hash = "f" * 16
     callback = _callback(user_id=7001, data=f"newsp:p:{'a' * 32}:2:{artifact_hash}")
     state = AsyncMock()
@@ -95,15 +97,14 @@ def test_publish_confirmation_repeats_channel_mode_revision_and_artifact(monkeyp
 
     asyncio.run(news_editorial.news_publishing_callback(callback, state))
 
-    confirmation = callback.message.answer.await_args.args[0]
-    assert "Канал: @yfc_test_news (staging)" in confirmation
-    assert "Режим: опубликовать сейчас" in confirmation
-    assert f"Artifact: {artifact_hash}" in confirmation
-    assert "не финальный preview" not in confirmation
-    markup = callback.message.answer.await_args.kwargs["reply_markup"]
+    callback.message.answer.assert_not_awaited()
+    state.set_state.assert_awaited_once_with(
+        news_editorial.NewsEditorialStates.awaiting_publish_confirmation
+    )
+    markup = callback.message.edit_reply_markup.await_args.kwargs["reply_markup"]
     callback_values = [button.callback_data for row in markup.inline_keyboard for button in row]
-    assert "Материал aaaaaaaa · text r7 · image r2" in confirmation
     assert f"newsp:c:{'a' * 32}:2:{artifact_hash}" in callback_values
+    assert f"newsp:n:{'a' * 32}:2:{artifact_hash}" in callback_values
     assert all(value is not None and len(value.encode()) <= 64 for value in callback_values)
     callback.answer.assert_awaited_once_with()
 
@@ -135,6 +136,13 @@ def test_confirmed_publish_calls_exact_hash_bound_revision(monkeypatch) -> None:
     artifact_hash = "d" * 16
     callback = _callback(user_id=7001, data=f"newsp:c:{'a' * 32}:2:{artifact_hash}")
     state = AsyncMock()
+    state.get_data.return_value = {
+        "mode": "publish_confirmation",
+        "draft_id": "a" * 32,
+        "image_revision": 2,
+        "artifact_hash": artifact_hash,
+        "started_at": news_editorial.time.monotonic(),
+    }
     backend_call = AsyncMock(return_value=("queued", []))
     monkeypatch.setattr(news_editorial, "Message", FakeMessage)
     monkeypatch.setattr(news_editorial, "revision_action", backend_call)
@@ -149,6 +157,28 @@ def test_confirmed_publish_calls_exact_hash_bound_revision(monkeypatch) -> None:
         artifact_hash=artifact_hash,
     )
     callback.answer.assert_awaited_once_with("Публикация поставлена в очередь", show_alert=False)
+
+
+def test_publish_confirmation_cancel_restores_actions_on_same_card(monkeypatch) -> None:
+    artifact_hash = "d" * 16
+    callback = _callback(user_id=7001, data=f"newsp:n:{'a' * 32}:2:{artifact_hash}")
+    state = AsyncMock()
+    state.get_data.return_value = {
+        "mode": "publish_confirmation",
+        "draft_id": "a" * 32,
+        "image_revision": 2,
+        "artifact_hash": artifact_hash,
+        "started_at": news_editorial.time.monotonic(),
+    }
+    monkeypatch.setattr(news_editorial, "Message", FakeMessage)
+
+    asyncio.run(news_editorial.news_publishing_callback(callback, state))
+
+    state.clear.assert_awaited_once_with()
+    callback.message.answer.assert_not_awaited()
+    restored = callback.message.edit_reply_markup.await_args.kwargs["reply_markup"]
+    assert restored.inline_keyboard[0][0].callback_data == (f"newsp:p:{'a' * 32}:2:{artifact_hash}")
+    callback.answer.assert_awaited_once_with("Отменено")
 
 
 def test_schedule_input_requires_explicit_channel_time_and_hash_confirmation(monkeypatch) -> None:
