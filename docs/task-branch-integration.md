@@ -1,14 +1,10 @@
-# Task-ветки, worktree и сериализованная интеграция в `dev`
+# Task-ветки, worktree и прямой PR-flow в `master`
 
 Статус ADR: **принято и действует в repository contract и live GitHub enforcement**.
 
-## Контекст и решение
+## Контракт
 
-До Task `127` основной worktree одновременно использовался для реализации и интеграции. Несколько
-writer-сессий могли разделить branch, index и незакоммиченные файлы, а Ruleset `dev` запрещал только
-удаление и non-fast-forward. Обычный fast-forward push в `dev` оставался технически возможен.
-
-Принято следующее решение:
+Нормальный delivery-flow намеренно короткий:
 
 ```text
 1 executable task
@@ -16,255 +12,120 @@ writer-сессий могли разделить branch, index и незако�
   = 1 branch task/<ID>-<slug>
   = 1 отдельный worktree
   = 1 writer lease
-  = 1 PR в dev
+  = 1 task PR в master
 
-dev = clean integration-only worktree + строго один merge candidate
-master = production source + только canonical checked release PR
+task branch -> current origin/master -> local PRE_PUSH_CI_PASS
+  -> PR master -> exact-head checks -> merge master
+  -> post-merge provenance/image publication
+  -> immutable bundle deploy -> smoke/observation
+  -> controller finish -> archive/check
 ```
 
-Task branch создаётся только от exact `origin/dev`. Stacked branches по умолчанию запрещены.
-Research-only сессии могут сосуществовать только с отдельными `research-readonly` leases; они не
-получают право merge. `integration` и `release` leases глобально эксклюзивны.
+`master` — защищённая release-ветка и единственный normal release base. Task branch создаётся
+только от exact `origin/master`; stacked branches по умолчанию запрещены. Canonical controller
+worktree используется для координации и closeout, но не для feature implementation. Legacy `dev`
+refs могут оставаться в repository для recovery/inventory, но не являются частью normal delivery.
 
-Remote serialization использует поддерживаемые GitHub primitives без отдельного сервиса:
+GitHub Ruleset для `master` обязан быть active и требовать pull request, deletion protection,
+non-fast-forward protection, strict current-base required checks и aggregate check `checks`.
+Direct/force push и удаление ветки запрещены. Merge PR — release authorization; отдельный generic
+approval между merge и normal deploy не создаётся.
 
-- PR-only Ruleset для `dev`;
-- strict required check `checks`, поэтому merge первого PR делает все остальные candidates stale;
-- task provenance job в `.github/workflows/ci.yml`;
-- один локальный integration lease/queue head до merge;
-- `auto-merge` для task PR не используется.
+## Shared gate
 
-Git ref update на GitHub атомарен. Поэтому два PR, проверенные относительно одного `dev`, не могут
-оба сохранить current-base eligibility после merge первого: второй обязан обновиться от нового
-`dev` и пройти checks заново.
+`scripts/ci_contract.py` — единственный registry команд CI. Он содержит детерминированные профили:
+`frontend`, `backend`, `cross-stack`, `workflow-platform`, `documentation`. GitHub workflow и
+локальный `scripts/pre_push_gate.py` вызывают одни и те же group IDs; profile выбирается по
+изменённым путям консервативно, а отсутствующий prerequisite даёт `PRE_PUSH_CI_BLOCKED`.
 
-### Рассмотренные альтернативы
+`pre-push` gate выполняет metadata preflight, проверяет lease, task branch, current
+`origin/master`, clean worktree и ancestry, затем записывает evidence в
+`.artifacts/tasks/<ID>/evidence/pre-push/gate.json`. Evidence содержит HEAD, base, branch, task,
+target base, scope/profile, группы, timestamps, contract version/digest, clean-worktree marker и
+самопроверяемый evidence digest. `PRE_PUSH_CI_PASS` действителен только для exact HEAD и exact
+base; изменение кода, CI contract, base или рабочей директории инвалидирует его.
 
-- Реализация прямо в permanent `dev` отклонена: общий index/worktree не изолирует writer-сессии.
-- Stacked task branches отклонены по умолчанию: provenance и dependency становятся неявными.
-- Отдельный orchestration service/queue отклонён: для текущего масштаба достаточно atomic local
-  leases и strict GitHub current-base enforcement.
-- PR-based `master -> dev` sync отклонён: merge PR создаёт новый commit и не сохраняет равенство
-  exact успешно задеплоенному `master` SHA.
-- Broad PAT/admin bypass отклонён. Выбран узкий GitHub App actor только для exact deployed sync.
+`scripts/task_session.py mark-ready` не принимает произвольное утверждение о gate: он заново
+проверяет clean task worktree, current `origin/master`, commit provenance, exact evidence digest,
+все applicable successful groups и approved review/QA. Поэтому readiness невозможен без текущего
+`PRE_PUSH_CI_PASS`, а failed candidate требует нового exact HEAD.
 
-## Runtime state и atomic leases
+## Leases и безопасный closeout
 
-Controller `scripts/task_session.py` хранит состояние в shared Git common dir:
+Controller хранит machine-local coordination state в shared Git common dir:
 
 ```text
 <git-common-dir>/codex-task-sessions-v1/
 ├── contract.json
 ├── state.lock
-├── integration-queue.json
-├── leases/
-│   ├── task-<ID>.json
-│   ├── integration.json
-│   └── release.json
+├── leases/task-<ID>.json
 └── history/task-<ID>.json
 ```
 
-Путь machine-local и содержимое leases не коммитятся. Create использует `O_EXCL`, update — temporary
-file + atomic replace под глобальным `state.lock`. Повреждённый JSON, оставшийся lock или отсутствующее
-обязательное состояние являются blocker; controller не удаляет их автоматически.
+State не коммитится. Create использует `O_EXCL`, update — temporary file + atomic replace под
+`state.lock`. Corrupted JSON, оставшийся lock, duplicate branch/worktree, dirty/interrupted state
+и неизвестная lease являются blocker; controller не удаляет их автоматически.
 
-Task lease содержит task ID/path, branch, абсолютный worktree path, base SHA, mode, timestamps,
-lifecycle state и session label без secrets. После terminal successful production deploy и exact
-deployed `master -> dev` sync команда `finish` запускается из canonical `dev` worktree. Она
-автоматически удаляет только exact matching clean task worktree и локальную task branch, уже
-содержащуюся в synchronized `origin/dev`, обычными `git worktree remove` и `git branch -d` без
-`--force`. Dirty state, Git operation, unique commits, duplicate/mismatched branch/worktree,
-divergence refs или запуск из удаляемого worktree останавливают closeout с точным blocker; lease и
-сохранившиеся данные не очищаются.
+Task lease содержит task ID/path, branch, абсолютный worktree, exact `base_origin_master_sha`,
+target base, mode, timestamps, lifecycle state и session label без secrets. `finish` запускается
+из canonical controller worktree только после exact merged master SHA и terminal production success.
+Он удаляет только matching clean task worktree и локальную task branch без `--force`; unique
+commits, divergence refs, changed head и artifact cleanup error останавливают closeout с
+сохранением данных.
 
-## Машинно проверяемые task metadata
-
-Команда `validate-metadata` строит единственное представление непосредственно из owner-local task
-files; отдельной ручной очереди нет. Для legacy task безопасные defaults: `exclusive-write`,
-`explicit-launch`, `task-pr-to-dev`; dependencies извлекаются из поля `Зависимости`. Для новой task
-рекомендуется точный block:
-
-```text
-<!-- task-session
-dependencies: 120D, 90B
-executable: true
-concurrency: exclusive-write
-owner_gate: explicit-launch
-integration: task-pr-to-dev
--->
-```
-
-`exclusive-write` несовместим с любой другой write-сессией. Параллельные writer-сессии разрешены
-только когда владелец явно присвоил обеим task `independent-write` после проверки
-непересекающегося scope. Смешанные классы, отсутствующая metadata и любые неизвестные значения
-остаются несовместимыми fail-closed.
-
-Umbrella IDs и `executable: false` не запускаются. Start всегда требует явный `--owner-launch`;
-approval другой task не наследуется.
+`recover` — read-only диагностика. Он сохраняет dirty files, unique commits и interrupted Git
+operations для owner-safe решения. Ни `recover`, ни `finish` не выполняют `reset --hard`, force
+delete или несанкционированное восстановление.
 
 ## Один пользовательский запуск
-
-Обычный путь запускается одной командой из canonical repository:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\run_task_delivery.py <ID>
 ```
 
 Явный выбор task владельцем или эта команда являются standing authorization для normal delivery
-этой task: отдельный worktree, implementation/review/QA, commit, task PR в `dev`, serial
-integration, release PR в `master`, automatic production deploy и safe closeout. Повторные generic
-approval на этих стадиях не запрашиваются. Launcher сам ждёт занятую serial lane, отдаёт компактные
-состояния `STARTED`/`WAITING_FOR_LANE`/`DONE` и останавливается только на точном terminal blocker
-либо реально объявленном human/legal/external/destructive/task-specific gate.
+этой task: отдельный worktree, implementation/review/QA, commit, task PR в `master`, CI, immutable
+bundle deploy и safe closeout. Launcher останавливается только на точном terminal blocker либо
+явно объявленном human/legal/external/destructive/task-specific gate. Следующая product task
+автоматически не запускается.
 
-## Низкоуровневые команды controller
-
-Эти команды являются внутренней coordination/recovery boundary и не являются обычными действиями
-владельца. Они запускаются launcher/worker из canonical repository или нужного worktree.
+Низкоуровневые команды:
 
 ```powershell
 python scripts/task_session.py doctor
 python scripts/task_session.py validate-metadata
-python scripts/task_session.py start 119 --owner-launch --session-label codex-119
-python scripts/task_session.py adopt-current 127 --owner-launch --session-label codex-127-resume
+python scripts/task_session.py start 135 --owner-launch --session-label codex-135
+python scripts/task_session.py adopt-current 135 --owner-launch --session-label codex-135-resume
 python scripts/task_session.py status
-python scripts/task_session.py recover 119
-python scripts/task_session.py mark-ready 119 --head-sha <sha> --review-verdict APPROVED --qa-verdict PASS
-python scripts/task_session.py enqueue-integration 119 --pr 123
-python scripts/task_session.py prepare-integration 119
-python scripts/task_session.py withdraw-integration 119 --reason "blocking review fix"
-python scripts/task_session.py complete-integration 119 --merge-sha <exact-dev-merge-sha>
-python scripts/task_session.py --repo <canonical-dev-worktree> finish 119
+python scripts/task_session.py recover 135
+python scripts/task_session.py mark-ready 135 --head-sha <sha> --review-verdict APPROVED --qa-verdict PASS
+python scripts/task_session.py complete-production 135 --pr <number> --merge-sha <sha> --deployed-sha <sha>
+python scripts/task_session.py finish 135
 ```
 
-`start` печатает абсолютный worktree, branch/base SHA, canonical task path, metadata, запреты и
-recovery command. Task-файл не копируется в worktree: owner-local canonical file остаётся единственным
-источником backlog state.
+Task-файл не копируется в worktree: owner-local canonical path остаётся единственным источником
+backlog metadata. `validate-metadata` проверяет dependencies, `executable`, concurrency, owner gate
+и integration policy. Неполные или unknown значения остаются fail-closed.
 
-### Нормальный task lifecycle
+## CI и production provenance
 
-1. `doctor` подтверждает clean/current main `dev`, отсутствие Git operation, release freeze и
-   несовместимого lease.
-2. `start` создаёт reservation lease, branch и отдельный worktree от exact `origin/dev`.
-3. Writer завершает implementation/review/QA и один logical commit с `[Task <ID>]`.
-4. `mark-ready` на clean exact HEAD фиксирует успешные review/QA verdicts; research lease эту стадию
-   пройти не может. Branch push и PR `[Task <ID>] ...` идут только в `dev`.
-5. CI task PR проверяет branch/title/commit IDs и выполняет полный aggregate `checks`.
-6. `enqueue-integration` фиксирует immutable candidate evidence.
-7. `prepare-integration` выдаёт eligibility только queue head при current `dev` и exact successful
-   checks; создаёт global integration lease.
-8. Merge выполняется ровно один. Controller ждёт exact merge SHA и successful push-CI `dev`.
-9. `complete-integration` открывает следующего candidate, но сохраняет task lease до production
-   closeout.
-10. После terminal successful deploy и exact deployed `master -> dev` sync выполнить `git fetch
-    --prune origin`, затем из canonical `dev` worktree запустить `finish`. Controller автоматически
-    удалит только проверенные clean task worktree и merged local branch.
-11. Без отдельного owner prompt выполнить `scripts/archive_backlog_task.py archive`, затем
-    `scripts/archive_backlog_task.py check` и только после успешной проверки сформировать terminal
-    final report.
+PR в `master` обязан быть same-repository task branch с `[Task <ID>]` в title и commit messages,
+его base SHA должен быть current, а `checks` — successful на exact PR head. PR-triggered CI выполняет
+полный применимый профиль. После merge push-CI не повторяет full regression suite: он подтверждает
+merged task PR provenance и публикует immutable backend/bot images через
+`scripts/deployment_contract.py`.
 
-При release lease/open `dev -> master` PR task PR могут оставаться open/draft, но merge и branch
-update в `dev` запрещены.
+`deploy.yml` принимает только successful `master` workflow run, ещё раз проверяет association с
+merged task PR и current master, checkout выполняется только на GitHub runner. Runner создаёт
+bundle из exact commit и migration manifest. Production host получает bundle по SSH, распаковывает
+его в release directory, проверяет `.deployment-sha`, запускает `deploy_production.sh` с
+immutable image refs и persistent state, а затем сохраняет release `.env`. На production host нет
+шага `git fetch`, `git reset`, `git rev-parse` или зависимости от Git checkout.
 
-## CI provenance
+Post-merge CI и deployment используют exact SHA; rollback/skip/manual-intervention verdict не
+маскируется успешным job. Smoke, migration gate, image revision/digest, slot ownership, worker/bot
+handoff и host lock остаются в deployment evidence под persistent `.artifacts/operations`.
 
-Job `Task provenance` выполняется до aggregate `checks`:
-
-- task PR обязан иметь base `dev`, same-repository branch `task/<ID>-<slug>`, title с `[Task <ID>]`
-  и только commits того же Task ID;
-- normal PR в `master` обязан идти из `dev`; exceptional recovery/hotfix остаётся отдельным
-  owner-approved процессом;
-- каждый push SHA в `dev` обязан быть merge result task PR, exact successfully deployed current
-  `master` sync от configured GitHub App или SHA из owner-controlled
-  `DEV_RECOVERY_APPROVED_SHA`;
-- failure/cancel/timeout/stale check не даёт integration eligibility.
-
-Task PR CI не публикует images и не запускает deployment: publish остаётся только для push в
-`master`, deploy — только после successful post-merge master CI. Exact merged `dev` push повторно
-подтверждает полный release-candidate suite. Поэтому canonical same-repository PR `dev -> master`
-не запускает этот тяжёлый suite третий раз: в нём выполняются только release-sequence, provenance и
-aggregate `checks`, который требует успешный exact `dev` push-CI. Любой exceptional/non-canonical
-PR в `master` по-прежнему проходит полный suite.
-
-## Exact `master -> dev` sync
-
-Sync является последним job `sync-dev` в `.github/workflows/deploy.yml` (`Release production`) и
-имеет dependency от успешного `deploy`. Он повторно проверяет, что workflow SHA равен current
-`master`, и допускает только fast-forward текущего `dev` к этому exact SHA. При failure deploy,
-смене `master` или divergence sync не выполняется/блокируется, а весь release run не становится
-terminal successful.
-
-Workflow включается только при `ENABLE_DEPLOYED_MASTER_DEV_SYNC=true`. В текущем repository path
-активирован: узкий GitHub App установлен только в этот repository с минимальным permission
-`Contents: Read and write`, является единственным bypass actor Ruleset `dev` в режиме `always`, а
-последние automatic deployed sync runs завершались успешно. Secrets `DEV_SYNC_APP_ID` и
-`DEV_SYNC_APP_PRIVATE_KEY` хранятся в protected `production` environment. Широкий PAT/admin bypass
-не используется.
-
-Expected App actor хранится как несекретный repository contract в
-`.github/deployed-sync-app.json`. `doctor` сравнивает Ruleset `actor_id` с этим exact ID, а не
-принимает произвольный GitHub App. CI push trigger сохраняет `branches: [dev, master]`, но использует
-`paths: ["**"]`: GitHub вычисляет two-dot tree diff, поэтому обычный task/master update с
-изменёнными файлами запускает полный exact-SHA CI, а content-equivalent fast-forward deployed
-`master -> dev` без changed files не создаёт workflow run. Для нетипичного sync с реальным tree
-diff остаётся fail-closed fallback: provenance требует одновременно actor `${app_slug}[bot]`,
-равенство exact SHA текущему `master` и successful `production` deployment этого SHA; только тогда
-тяжёлая matrix остаётся `skipped`. Кроме локального `origin/dev`, online `doctor` и `start`
-сравнивают live GitHub `dev` SHA; stale tracking ref требует fetch/нормализации до новой task.
-
-## Live GitHub enforcement
-
-Действующий контракт уже применён и проверяется online controller preflight:
-
-1. создание/установку узкого GitHub App и его actor ID;
-2. добавление двух environment secrets без передачи значений в chat/log;
-3. изменение Ruleset `permanent-development-dev`:
-   `deletion`, `non_fast_forward`, `pull_request`, strict `required_status_checks: checks`;
-4. единственный bypass actor — этот App; user/team/admin bypass отсутствует;
-5. `allow_auto_merge=false` либо организационный запрет использовать auto-merge для task PR;
-6. включение `ENABLE_DEPLOYED_MASTER_DEV_SYNC=true` только после successful dry read-back.
-
-При отдельном owner-authorized изменении enforcement выполнить API read-back и сохранить evidence
-без secret values:
-
-```powershell
-gh api repos/MikeMoore1337/fit-mini-app/rulesets/21801287
-gh api repos/MikeMoore1337/fit-mini-app
-gh api repos/MikeMoore1337/fit-mini-app/actions/variables/ENABLE_DEPLOYED_MASTER_DEV_SYNC
-```
-
-Проверяемые свойства: exact `refs/heads/dev` condition, active enforcement, PR-only, strict
-`checks`, delete/non-FF protection, только expected App bypass, expected auto-merge setting.
-
-### Rollback настроек
-
-Fail-safe rollback сначала ставит variable в `false`, затем возвращает сохранённый pre-change
-Ruleset snapshot `deletion + non_fast_forward` через точечный API update. Ruleset не удаляется,
-master contract не меняется, branch history не переписывается. После rollback повторить read-back и
-оставить integration blocked до разбора причины.
-
-## Recovery
-
-`recover <ID>` только классифицирует состояние. Он не выполняет reset, stash, worktree remove,
-branch delete или force-push.
-
-- dirty/index/Git operation → `DIRTY_NEEDS_OWNER`;
-- unique commits → `RECOVERY_ANCHOR`;
-- branch/worktree без lease или несколько совпадений → `RECOVERY_REQUIRED`;
-- detached clean state без active exact task lease → потенциальный `SAFE_TO_REMOVE`, но не входит в
-  automatic `finish` и требует отдельной recovery-классификации;
-- corrupted/stale lease/lock → blocker с точным path.
-
-Main `dev` ahead/behind/dirty блокирует `start`. Candidate после чужого merge становится stale и
-обязан обновиться от нового `dev`, повторить affected review/QA при conflict resolution и весь CI.
-
-## Глобальный auto-continue contract
-
-Если текущая task не объявляет `OWNER_CHECKPOINT`, `HUMAN_EVIDENCE`, `MANUAL_VISUAL_APPROVAL`,
-`LEGAL_COUNSEL_REQUIRED`, `EXTERNAL_AUTHORIZATION`, `DESTRUCTIVE_ACTION` или terminal blocker,
-controller/lifecycle после terminal success автоматически продолжает применимые review, QA,
-commit, task PR, serial integration, `dev` CI и normal release без дополнительного owner prompt.
-Тишина владельца не является gate. Следующая product task автоматически не запускается.
-
-Для Task `127` открытый owner checkpoint выше блокирует только live apply/activation. Локальные
-изменения, tests, synthetic rehearsal и review/QA продолжаются автоматически до этого checkpoint.
+Любая exceptional операция — history rewrite, direct/force push, manual production command,
+bootstrap, infrastructure recovery или deployment SHA вне current merged `master` — требует
+отдельного owner authorization, backup и operator preflight.

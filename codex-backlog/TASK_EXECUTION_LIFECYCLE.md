@@ -6,9 +6,33 @@
 
 Явный выбор task владельцем или запуск `scripts/run_task_delivery.py <ID>` является одним standing
 authorization на весь normal path этой task. Launcher/controller автоматически выполняют внутренние
-стадии `task branch -> dev -> master -> production -> closeout`, не превращая commit/push/PR/merge,
+стадии `task branch -> PR master -> production -> closeout`, не превращая commit/push/PR/merge,
 ожидание CI/deploy и безопасную cleanup в новые вопросы владельцу. Отдельный ответ нужен только для
 явно объявленного human/legal/external/destructive/task-specific gate или terminal blocker.
+
+## 0A. Structured task artifacts
+
+Every new task artifact uses one canonical `.artifacts/` layout:
+
+```text
+.artifacts/tasks/<TASK_ID>/{temporary,evidence,deliverables,logs}/
+.artifacts/tasks/<TASK_ID>/manifest.json
+.artifacts/runtime/{cache,tmp,tests}/
+.artifacts/shared/
+.artifacts/operations/{backups,deployments,recovery}/
+```
+
+`temporary` is reproducible and may be removed after terminal success; `evidence` is selected
+durable proof; `deliverables` are owner materials and require an exact owner disposition; `logs`
+have limited retention. Registered worktrees, active task data, backups, deployment evidence and
+recovery anchors are protected from generic cleanup. Producers should allocate task paths through
+`scripts/artifact_manager.py`, which records purpose, owner, command context and retention in the
+task manifest.
+
+The manager's `audit`/`dry-run` is read-only. A cleanup plan is applied only with the exact
+owner-approved SHA256, unchanged target fingerprints and no incompatible controller lease or
+unfinished Task 132. On drift or any unsafe/unclassified path, cleanup stops fail-closed; it never
+deletes `REVIEW` data or follows a symlink/junction/reparse point.
 
 ## 0. Контракты task имеют приоритет
 
@@ -265,15 +289,14 @@ Review/QA не могут сами по себе быть основанием �
 8. Создать один логический commit в lease-bound `task/<ID>-<slug>` branch/worktree при tracked
    changes, если task не задаёт другой stage strategy.
    Новый registry entry считается tracked change даже для read-only audit/review task.
-9. Проверить `[Task <ID>]` provenance, push task branch, открыть только task PR в `dev`, дождаться
-   exact-head `checks` и пройти `scripts/task_session.py` serial integration queue. Merge разрешён
-   только queue head при current `origin/dev`; после merge дождаться terminal successful exact-SHA
-   `dev` push-CI. Direct feature push в `dev` запрещён.
+9. Проверить `[Task <ID>]` provenance, получить текущий `origin/master`, выполнить local
+   `PRE_PUSH_CI_PASS` для exact HEAD и открыть только task PR в `master`. Дождаться exact-head
+   `checks` на current base; direct push в `master` запрещён.
 10. Классифицировать уже интегрированную task как `AUTO_RELEASE_ELIGIBLE` либо
     `AUTO_RELEASE_BLOCKED` по разделу 9A.
 11. Выполнить разрешённый canonical release final либо остановиться на точном owner/blocker gate.
 12. Не переходить к следующей task автоматически; после eligible release сначала подтвердить
-    terminal deploy success и синхронизацию `dev`.
+    terminal deploy success и immutable bundle provenance.
 13. Если task не содержит явно обязательного owner checkpoint, human/device evidence, legal-counsel
     gate, destructive/external authorization или terminal blocker, не ждать отдельного сообщения
     владельца: автоматически продолжать следующий разрешённый lifecycle step после terminal success.
@@ -281,7 +304,7 @@ Review/QA не могут сами по себе быть основанием �
 Если текущая task не объявляет `OWNER_CHECKPOINT`, `HUMAN_EVIDENCE`, `MANUAL_VISUAL_APPROVAL`,
 `LEGAL_COUNSEL_REQUIRED`, `EXTERNAL_AUTHORIZATION`, `DESTRUCTIVE_ACTION` или terminal blocker,
 controller/lifecycle после terminal success автоматически продолжает применимые review, QA,
-commit, task PR, serial integration, `dev` CI и normal release без дополнительного owner prompt.
+commit, task PR в `master`, required CI и normal release без дополнительного owner prompt.
 Тишина владельца не является gate. Следующая product task автоматически не запускается.
 
 ## 9A. Release eligibility и автоматический normal path
@@ -296,85 +319,54 @@ Task является `AUTO_RELEASE_ELIGIBLE`, только если однов�
 5. task не содержит незавершённый явно обязательный owner checkpoint/approve, human/device evidence,
    legal-counsel gate или manual visual gate;
 6. нет unresolved production/recovery blocker;
-7. task PR уже serially merged в `dev`, exact merge SHA имеет terminal successful push-CI,
-   `origin/dev` содержит актуальный `origin/master`, а integration worktree чист от accidental
-   scope, secrets и debug artifacts.
+7. task PR уже merged в `master`, exact PR head прошёл required `checks`, post-merge provenance
+   подтвердил merge SHA, а task worktree чист от accidental scope, secrets и debug artifacts.
 
 Иначе task получает `AUTO_RELEASE_BLOCKED` с точной причиной. `LOW`, `NIT` и `OUT_OF_SCOPE` сами по
 себе release не блокируют. `no commit` не создаёт искусственный PR/deploy.
 
 Для `AUTO_RELEASE_ELIGIBLE` task агент без дополнительного owner prompt обязан:
 
-1. `git fetch --prune origin`, проверить, что `origin/master` является ancestor текущего
-   `origin/dev`. Если deployed master ещё не synchronized, direct merge/push запрещён: дождаться
-   узкого `sync-dev-after-deploy` либо остановиться на recovery blocker;
-2. подтвердить, что task PR был merge ровно как queue head, а **push-triggered CI run exact merged
-   `dev` SHA** имеет `status=completed` + `conclusion=success`. PR-triggered CI task branch не
-   заменяет этот branch CI gate;
-3. проверить отсутствие открытого release PR `head=dev`, `base=master` во время task integration.
-   Если matching release PR уже открыт и новый task merge/update действительно нужен, controller
-   блокирует `dev`; PR сначала закрывается, затем candidate заново проходит current-base checks;
-4. только после успешного exact merged-dev push-CI создать соответствующий scope PR `dev -> master` либо
-   переоткрыть ранее закрытый matching PR, если его base/scope остаются корректными. Если после
-   открытия PR требуется ещё один code/config/docs commit или новый task merge, PR необходимо
-   закрыть, вернуть change в task branch/worktree и повторить task PR + serial integration;
-5. проверить expected PR head SHA и required check `checks`. Для canonical same-repository
-   `dev -> master` PR этот быстрый check проверяет release sequence/provenance и terminal successful
-   exact merged-dev push-CI; тяжёлые jobs намеренно `skipped`, потому что уже выполнены для того же
-   tree. Exceptional/non-canonical PR в `master` обязан пройти полный suite;
-6. включить GitHub auto-merge либо после green required PR checks выполнить эквивалентный обычный
+1. `git fetch --prune origin`, проверить, что `origin/master` совпадает с live protected `master`,
+   и получить task branch от exact current base. До первого push выполнить shared command profile,
+   записать `PRE_PUSH_CI_PASS` с HEAD/base/profile/contract digest и только затем открыть task PR;
+2. проверить expected PR head SHA и required check `checks`. PR-triggered CI выполняет полный
+   regression profile, а post-merge `master` CI выполняет только provenance, immutable image
+   publication и deployment-source checks для того же exact tree;
+3. включить GitHub auto-merge либо после green required PR checks выполнить эквивалентный обычный
    PR merge только для ожидаемого head SHA;
-7. проверить post-merge CI exact merged `master` SHA и затем автоматически запущенный production
-   deploy того же SHA до terminal success. Failure/rollback/manual-intervention verdict останавливает
-   sequence fail-closed. Успешный deploy workflow со встроенными rollout/smoke gates является
-   достаточным production release evidence; дополнительный live smoke выполнять только если task
-   прямо требует его или deploy evidence неоднозначен;
-8. после успешного production deploy job `sync-dev` того же `Release production` workflow выполняет
-   только fast-forward/sync `dev` к **тому же exact successfully deployed current
-   `origin/master` SHA**. Обычный user/PAT/admin direct push или manual merge запрещён; затем
-   подтвердить равенство refs;
-9. pure fast-forward sync `dev` на уже успешно проверенный и задеплоенный exact `master` SHA не
-   создаёт нового release candidate. Если такой push автоматически запускает branch CI на `dev`,
-   normal content-equivalent push не создаёт workflow run благодаря empty two-dot tree diff и
-   `paths: ["**"]`. Если нетипичный sync содержит changed files, post-sync CI выполняет только
-   lightweight actor/current-master/successful-deployment provenance, а тяжёлые jobs остаются
-   `skipped`. Он является **информационным, не release gate**: агент не ждёт его terminal result,
-   не запускает повторный PR/deploy и не задерживает финализацию уже успешной task. Исключение - если
-   sync неожиданно изменил tree/content вместо pure fast-forward; тогда считать это новым изменением,
-   остановиться и разобраться до следующей task.
-10. после подтверждения exact ref sync выполнить `git fetch --prune origin`, перейти в canonical
-    `dev` worktree и запустить `scripts/task_session.py finish <ID>`. `finish` без отдельного owner
-    prompt удаляет только exact matching clean task worktree и merged local branch. Dirty state,
-    Git operation, unique commits, ambiguous/mismatched state или divergence refs останавливают
-    closeout fail-closed без `--force` и без очистки сохранившихся данных;
-11. после successful `finish` автоматически перенести canonical task-файл через
+4. проверить post-merge CI exact merged `master` SHA и затем автоматически запущенный production
+   deploy того же SHA до terminal success. Deploy обязан передать immutable bundle, image refs и
+   migration manifest, а host не должен требовать Git checkout. Failure/rollback/manual-intervention
+   verdict останавливает sequence fail-closed. Failure/rollback/manual-intervention verdict is a
+   terminal release blocker;
+5. после terminal production success выполнить `git fetch --prune origin`, перейти в canonical
+   controller worktree и запустить `scripts/task_session.py finish <ID>`. `finish` без отдельного
+   owner prompt удаляет только exact matching clean task worktree и merged local branch. Dirty state,
+   Git operation, unique commits, ambiguous/mismatched state или divergence refs останавливают
+   closeout fail-closed без `--force` и без очистки сохранившихся данных;
+6. после successful `finish` автоматически перенести canonical task-файл через
     `scripts/archive_backlog_task.py archive`, затем выполнить `scripts/archive_backlog_task.py
     check`. Ошибка archive/manifest check является terminal closeout blocker и не скрывается;
-12. сформировать terminal final report только после successful finish, archive и manifest check.
+7. сформировать terminal final report только после successful finish, archive и manifest check.
 
 Canonical sequencing для нового release candidate:
 
 ```text
-task branch -> PR dev -> exact-head checks
-  -> global integration lease + merge queue head
-  -> WAIT exact merged dev push CI: success
-  -> ensure NO open release PR dev -> master during integration
-  -> create/reopen PR dev -> master
-  -> WAIT quick exact release PR provenance/checks: success
+task branch -> current origin/master -> local PRE_PUSH_CI_PASS
+  -> PR master -> exact-head required checks
   -> merge exact PR head
-  -> WAIT post-merge master CI: success
-  -> WAIT production deploy exact master SHA: success
-  -> narrow GitHub App fast-forward/sync dev to same deployed SHA
-  -> verify refs
+  -> WAIT post-merge master provenance/image publication: success
+  -> immutable bundle deploy exact master SHA
+  -> production smoke and terminal deployment evidence
   -> finish: clean worktree + merged local branch cleanup
   -> archive task + rebuild/check manifests
   -> DONE
 ```
 
-Новый task PR merge/update в `dev` при открытом `dev -> master` PR запрещён. Если release PR уже
-открыт и требуется новая task integration, сначала закрыть release PR; candidate обновляется от
-current `dev`, повторяет checks и serial merge. Также запрещено считать автоматически запустившийся
-post-sync `dev` CI новой стадией уже завершённого release.
+Legacy `dev` refs не являются частью normal delivery и не используются как base, release queue или
+post-deploy synchronization step. Если current `master` изменился до push/merge, candidate заново
+проходит current-base gate и exact-head checks.
 
 Автоматизация никогда не делает direct push в `master`, не обходит ruleset/required checks,
 PR provenance/exact-SHA guard и не запускает manual production command. Task с явно объявленным

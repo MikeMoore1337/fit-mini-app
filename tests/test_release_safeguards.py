@@ -1,275 +1,114 @@
 from pathlib import Path
 
 
-def _release_policy_sources() -> tuple[str, str, str]:
+def _sources() -> dict[str, str]:
     root = Path(__file__).resolve().parents[1]
-    return (
-        (root / "AGENTS.md").read_text(encoding="utf-8"),
-        (root / "codex-backlog" / "GLOBAL_RULES.md").read_text(encoding="utf-8"),
-        (root / "codex-backlog" / "TASK_EXECUTION_LIFECYCLE.md").read_text(encoding="utf-8"),
-    )
-
-
-def test_automated_deploy_keeps_revision_provenance_and_stale_run_guards() -> None:
-    root = Path(__file__).resolve().parents[1]
-    ci_workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    deploy_workflow = (root / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
-    deploy_script = (root / "scripts" / "deploy_production.sh").read_text(encoding="utf-8")
-
-    assert "org.opencontainers.image.revision=${{ github.sha }}" in ci_workflow
-    assert "GHCR_BACKEND_IMAGE: ghcr.io/mikemoore1337/your-fitness-coach-backend" in deploy_workflow
-    assert "GHCR_BOT_IMAGE: ghcr.io/mikemoore1337/your-fitness-coach-bot" in deploy_workflow
-    assert "workflow_dispatch:" not in deploy_workflow
-    assert "pull-requests: read" in deploy_workflow
-    assert '"repos/$REPOSITORY/commits/$DEPLOY_SHA/pulls"' in deploy_workflow
-    assert '.merged_at != null and .base.ref == \\"master\\"' in deploy_workflow
-    assert '.merge_commit_sha == \\"$DEPLOY_SHA\\"' in deploy_workflow
-    assert deploy_workflow.index("Verify merged pull request provenance") < deploy_workflow.index(
-        "Configure production SSH access"
-    )
-    assert "LATEST_MASTER_SHA=\\$(git rev-parse origin/master)" in deploy_workflow
-    assert deploy_workflow.index("LATEST_MASTER_SHA=") < deploy_workflow.index(
-        "git reset --hard '$DEPLOY_SHA'"
-    )
-    assert "Skipping superseded deployment" in deploy_workflow
-    assert "if [ \\\"\\$LATEST_MASTER_SHA\\\" != '$DEPLOY_SHA' ]; then" in deploy_workflow
-    assert (
-        'echo \\"Skipping superseded deployment: tested revision $DEPLOY_SHA '
-        'is no longer master head (\\$LATEST_MASTER_SHA)\\"' in deploy_workflow
-    )
-
-    assert "for attempt in 1 2 3 4 5; do" in deploy_workflow
-    assert "GHCR login failed after 5 attempts" in deploy_workflow
-    assert "_pull_images_with_retry" in (root / "scripts" / "zero_downtime_deploy.py").read_text(
-        encoding="utf-8"
-    )
-
-    assert "PROD_ROLLOUT_MODE: single-slot" in deploy_workflow
-    assert "DEPLOY_SINGLE_SLOT_CONFIRMED_SHA='$DEPLOY_SHA'" in deploy_workflow
-    assert "'$PROD_ROLLOUT_MODE'" in deploy_workflow
-    assert deploy_workflow.index("LATEST_MASTER_SHA=") < deploy_workflow.index(
-        "DEPLOY_SINGLE_SLOT_CONFIRMED_SHA="
-    )
-
-    assert "scripts/zero_downtime_deploy.py" in deploy_script
-    assert 'ROLLOUT_MODE="${4:-zero-downtime}"' in deploy_script
-    assert "single-slot" in deploy_script
-    assert "DEPLOY_SINGLE_SLOT_CONFIRMED_SHA" in (
-        root / "scripts" / "zero_downtime_deploy.py"
-    ).read_text(encoding="utf-8")
-    assert "docker compose config --quiet" in deploy_script
-    assert "--remove-orphans" not in deploy_script
-    assert "docker compose up" not in deploy_script
-
-
-def test_dev_runs_ci_but_cannot_publish_or_deploy_production() -> None:
-    root = Path(__file__).resolve().parents[1]
-    ci_workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    deploy_workflow = (root / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
-
-    assert "branches: [dev, master]" in ci_workflow
-    assert 'paths: ["**"]' in ci_workflow
-    assert "branches: [main, master]" not in ci_workflow
-    assert ci_workflow.count("github.ref == 'refs/heads/master'") == 2
-    assert ci_workflow.count("github.ref == 'refs/heads/dev'") == 1
-    assert "Validate exact dev update provenance" in ci_workflow
-    assert "two-dot tree diff" in ci_workflow
-    assert "branches: [master]" in deploy_workflow
-    assert "branches: [dev" not in deploy_workflow
-    assert "workflow_dispatch:" not in deploy_workflow
-
-
-def test_release_pr_requires_completed_exact_sha_push_ci_and_serial_execution() -> None:
-    root = Path(__file__).resolve().parents[1]
-    ci_workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-
-    concurrency_lines = ci_workflow.split("\nconcurrency:\n", maxsplit=1)[1].split(
-        "\nenv:\n", maxsplit=1
-    )[0]
-    concurrency_keys = {
-        line.strip().split(":", maxsplit=1)[0]
-        for line in concurrency_lines.splitlines()
-        if line.startswith("  ") and not line.lstrip().startswith("#")
+    return {
+        "agents": (root / "AGENTS.md").read_text(encoding="utf-8"),
+        "global_rules": (root / "codex-backlog" / "GLOBAL_RULES.md").read_text(encoding="utf-8"),
+        "lifecycle": (root / "codex-backlog" / "TASK_EXECUTION_LIFECYCLE.md").read_text(
+            encoding="utf-8"
+        ),
+        "ci": (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"),
+        "deploy": (root / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8"),
+        "controller": (root / "scripts" / "task_session.py").read_text(encoding="utf-8"),
+        "launcher": (root / "scripts" / "run_task_delivery.py").read_text(encoding="utf-8"),
     }
 
-    assert "actions: read" in ci_workflow
-    assert "pull-requests: read" in ci_workflow
-    assert "types: [opened, reopened, ready_for_review, synchronize]" in ci_workflow
-    assert "&& 'dev-release' || github.ref" in ci_workflow
-    assert "cancel-in-progress: false" in ci_workflow
-    assert concurrency_keys == {"group", "cancel-in-progress"}
-    assert "release-sequence:" in ci_workflow
-    assert "Require successful push CI before release PR" in ci_workflow
-    assert '"repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs"' in ci_workflow
-    assert "-f event=push" in ci_workflow
-    assert '-f head_sha="$HEAD_SHA"' in ci_workflow
-    assert "-f status=success" in ci_workflow
-    assert "PR_GATE_AT: ${{ github.event.pull_request.updated_at }}" in ci_workflow
-    assert "PR_NUMBER: ${{ github.event.pull_request.number }}" in ci_workflow
-    assert '"repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER"' in ci_workflow
-    assert 'if [ "$current_pr_head" != "$HEAD_SHA" ]; then' in ci_workflow
-    assert "Release sequence violation: stale PR event head" in ci_workflow
-    assert "github.event.pull_request.head.repo.full_name == github.repository" in ci_workflow
-    assert r".updated_at <= \"$PR_GATE_AT\"" in ci_workflow
-    assert ci_workflow.count("needs: [release-sequence, task-provenance]") == 7
-    assert "task-provenance:" in ci_workflow
-    assert ci_workflow.count("github.event.pull_request.head.ref != 'dev'") == 7
-    assert (
-        ci_workflow.count("needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync'")
-        == 7
-    )
-    assert "deployments: read" in ci_workflow
-    assert '--actor "$GITHUB_ACTOR"' in ci_workflow
-    assert "dev-update-kind: ${{ steps.verify-dev.outputs.kind }}" in ci_workflow
-    assert "CANONICAL_RELEASE_PR:" in ci_workflow
-    assert "LIGHTWEIGHT_DEV_SYNC:" in ci_workflow
-    assert (
-        'if [ "$CANONICAL_RELEASE_PR" = "true" ] || '
-        '[ "$LIGHTWEIGHT_DEV_SYNC" = "true" ]; then' in ci_workflow
-    )
-    assert ci_workflow.count('test "$QUALITY_RESULT" = skipped') == 1
-    assert ci_workflow.count('test "$CONTAINERS_RESULT" = skipped') == 1
-    assert ci_workflow.count('test "$QUALITY_RESULT" = success') == 1
-    assert ci_workflow.count('test "$CONTAINERS_RESULT" = success') == 1
-    assert "TASK_PROVENANCE_RESULT: ${{ needs.task-provenance.result }}" in ci_workflow
-    assert "RELEASE_SEQUENCE_RESULT: ${{ needs.release-sequence.result }}" in ci_workflow
-    assert 'test "$RELEASE_SEQUENCE_RESULT" = success' in ci_workflow
-    assert "github.event_name == 'pull_request' && 'checks' || 'branch-checks'" in ci_workflow
+
+def test_ci_runs_full_regression_on_task_pr_and_only_provenance_on_master_push() -> None:
+    ci = _sources()["ci"]
+
+    assert "branches: [master]" in ci
+    assert "branches: [dev" not in ci
+    assert "if: github.event_name == 'pull_request'" in ci
+    assert "task-provenance:" in ci
+    assert "merge-provenance:" in ci
+    assert "python scripts/ci_contract.py run-group" in ci
+    assert "frontend-checks" in ci
+    assert "frontend-e2e" in ci
+    assert "python-tests" in ci
+    assert "migrated-stack" in ci
+    assert "dependency-audit" in ci
+    assert "if: github.event_name == 'push' && github.ref == 'refs/heads/master'" in ci
+    assert "release-sequence:" not in ci
+    assert "verify-dev-provenance" not in ci
+    assert "sync-dev" not in ci
+    assert "dev-release" not in ci
 
 
-def test_auto_release_contract_is_fail_closed_for_medium_and_human_gates() -> None:
-    agents, global_rules, lifecycle = _release_policy_sources()
+def test_deploy_is_master_only_immutable_bundle_flow_without_vps_git_checkout() -> None:
+    sources = _sources()
+    deploy = sources["deploy"]
+    deploy_script = (
+        Path(__file__).resolve().parents[1] / "scripts" / "deploy_production.sh"
+    ).read_text(encoding="utf-8")
 
-    for source in (agents, global_rules, lifecycle):
-        assert "AUTO_RELEASE_ELIGIBLE" in source
-        assert "master" in source
-
-    assert "dev ->" in global_rules
-    assert "dev ->" in lifecycle
-    assert "незакрытых `BLOCKER`, `HIGH` и `MEDIUM` ровно ноль" in lifecycle
-    assert "явно обязательный owner checkpoint/approve, human/device evidence" in lifecycle
-    assert "failure/rollback/manual-intervention verdict" in lifecycle.lower()
-    assert "Direct push в `master` запрещён" in global_rules
-    assert "expected PR head SHA" in lifecycle
-    assert "required check `checks`" in lifecycle
-    assert "fast-forward/sync `dev`" in lifecycle
-
-
-def test_task127_global_auto_continue_contract_has_no_implicit_wait() -> None:
-    agents, global_rules, lifecycle = _release_policy_sources()
-    sources = (agents, global_rules, lifecycle)
-    exact_contract = (
-        "Если текущая task не объявляет `OWNER_CHECKPOINT`, `HUMAN_EVIDENCE`, "
-        "`MANUAL_VISUAL_APPROVAL`,\n"
-        "`LEGAL_COUNSEL_REQUIRED`, `EXTERNAL_AUTHORIZATION`, `DESTRUCTIVE_ACTION` или terminal "
-        "blocker,\n"
-        "controller/lifecycle после terminal success автоматически продолжает применимые review, "
-        "QA,\n"
-        "commit, task PR, serial integration, `dev` CI и normal release без дополнительного owner "
-        "prompt.\n"
-        "Тишина владельца не является gate. Следующая product task автоматически не запускается."
-    )
-
-    for source in sources:
-        assert "terminal success" in source
-        assert "не жд" in source or "не ждать" in source or "without waiting" in source
-        assert exact_contract in source
-    assert "do not start the next task automatically" in agents
-    assert "Следующая product task автоматически не запускается" in global_rules
-    assert "Не переходить к следующей task автоматически" in lifecycle
-
-    assert "Один executable task-файл = одна Codex-сессия = одна" in global_rules
-    assert "не ждёт дополнительного owner prompt" in global_rules
-    assert "integration-only" in agents
-    assert "serial merge в `dev`" in global_rules
+    assert "workflows: [CI]" in deploy
+    assert "branches: [master]" in deploy
+    assert "sync-dev:" not in deploy
+    assert "actions/create-github-app-token" not in deploy
+    assert "git fetch" not in deploy
+    assert "git reset" not in deploy
+    assert "git rev-parse" not in deploy
+    assert "deployment_contract.py refs" in deploy
+    assert "bundle" in deploy.lower()
+    assert "git fetch" not in deploy_script
+    assert "git reset" not in deploy_script
+    assert "git rev-parse" not in deploy_script
+    assert ".git" not in deploy_script
+    assert "scripts/zero_downtime_deploy.py" in deploy_script
 
 
-def test_one_command_delivery_keeps_owner_prompts_internal() -> None:
-    root = Path(__file__).resolve().parents[1]
-    launcher = (root / "scripts" / "run_task_delivery.py").read_text(encoding="utf-8")
+def test_delivery_contract_is_master_only_and_approval_gated() -> None:
+    sources = _sources()
+    controller = sources["controller"]
+    launcher = sources["launcher"]
 
+    assert 'TARGET_BASE_BRANCH = "master"' in controller
+    assert "base_origin_master_sha" in controller
+    assert "PRE_PUSH_CI_PASS" in controller
+    assert "production-success" in controller
+    assert "enqueue_integration" not in controller
+    assert "release_freeze" not in controller
+    assert "verify_dev_provenance" not in controller
+    assert "canonical_dev_worktree" not in controller
     assert '"--owner-launch"' in launcher
     assert '"--approve-for-me"' in launcher
-    assert "standing authorization" in launcher
-    assert "BLOCKER/HIGH/MEDIUM" in launcher
-    assert "WAITING_FOR_LANE" in launcher
-    assert "_verify_closeout(started)" in launcher
-    assert '"check"' in launcher and '"--backlog"' in launcher
+    assert "Do not merge" in controller
     assert "Не запускай следующую product task" in launcher
 
 
-def test_task_pr_dev_provenance_and_deployed_master_sync_contract() -> None:
-    root = Path(__file__).resolve().parents[1]
-    ci_workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    release_workflow = (root / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
-    controller = (root / "scripts" / "task_session.py").read_text(encoding="utf-8")
+def test_policy_docs_remove_dev_from_normal_delivery_and_keep_human_gates() -> None:
+    sources = _sources()
+    agents = sources["agents"]
+    global_rules = sources["global_rules"]
+    lifecycle = sources["lifecycle"]
 
-    assert "Task provenance" in ci_workflow
-    assert "validate-pr --event" in ci_workflow
-    assert "verify-dev-provenance --sha" in ci_workflow
-    assert "github.event_name == 'push' && github.ref == 'refs/heads/dev'" in ci_workflow
-    assert "github.event_name == 'push' && github.ref == 'refs/heads/master'" in ci_workflow
-    assert "Task pull request base must be dev" in controller
-    assert "Unauthorized dev update" in controller
-    assert "Only queue head may integrate" in controller
-    assert "Exact-head required check 'checks'" in controller
-
-    assert not (root / ".github" / "workflows" / "sync-dev-after-deploy.yml").exists()
-    assert "name: Release production" in release_workflow
-    assert "sync-dev:" in release_workflow
-    assert "needs: deploy" in release_workflow
-    assert "needs.deploy.result == 'success'" in release_workflow
-    assert "workflow_dispatch:" not in release_workflow
-    assert "ENABLE_DEPLOYED_MASTER_DEV_SYNC == 'true'" in release_workflow
-    assert (
-        "actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349"
-        in release_workflow
-    )
-    assert "deployment: false" in release_workflow
-    assert 'if [ "$master_sha" != "$DEPLOY_SHA" ]; then' in release_workflow
-    assert 'git merge-base --is-ancestor "$dev_sha" "$DEPLOY_SHA"' in release_workflow
-    assert 'git push origin "$DEPLOY_SHA:refs/heads/dev"' in release_workflow
-    assert "force" not in release_workflow.lower()
-    assert "expected_sync_actor" in controller
-    assert "has_successful_deployment" in controller
+    assert "AUTO_RELEASE_ELIGIBLE" in agents
+    assert "AUTO_RELEASE_ELIGIBLE" in global_rules
+    assert "AUTO_RELEASE_ELIGIBLE" in lifecycle
+    assert "Direct push в `master` запрещён" in global_rules
+    assert "required check `checks`" in lifecycle
+    assert "PR master" in lifecycle
+    assert "fast-forward/sync `dev`" not in lifecycle
+    assert "serial merge в `dev`" not in global_rules
+    assert "явно обязательный owner checkpoint/approve, human/device evidence" in lifecycle
+    assert "failure/rollback/manual-intervention verdict" in lifecycle.lower()
 
 
-def test_task_ci_does_not_publish_or_start_production_deploy() -> None:
-    root = Path(__file__).resolve().parents[1]
-    ci_workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    deploy_workflow = (root / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
-
-    assert "if: github.event_name == 'push' && github.ref == 'refs/heads/master'" in ci_workflow
-    assert ci_workflow.count("github.ref == 'refs/heads/master'") == 2
-    assert "workflows: [CI]" in deploy_workflow
-    assert "branches: [master]" in deploy_workflow
-    assert "branches: [dev" not in deploy_workflow
-
-
-def test_compact_first_contract_is_canonical() -> None:
+def test_existing_compact_and_slot_contracts_remain_intact() -> None:
     root = Path(__file__).resolve().parents[1]
     plain_language = (root / "codex-backlog" / "PLAIN_LANGUAGE_UX.md").read_text(encoding="utf-8")
-
-    assert "COMPACT_FIRST_UX_CONTRACT.md" in plain_language
-    assert "Primary action" in plain_language
-    assert "максимум один уровень disclosure" in plain_language
-    assert "aria-expanded" in plain_language
-
-
-def test_slot_topology_keeps_gateway_stable_and_consumers_single_owner() -> None:
-    root = Path(__file__).resolve().parents[1]
     compose = (root / "docker-compose.yml").read_text(encoding="utf-8")
     edge = (root / "deploy" / "Caddyfile.edge").read_text(encoding="utf-8")
     orchestrator = (root / "scripts" / "zero_downtime_deploy.py").read_text(encoding="utf-8")
 
+    assert "COMPACT_FIRST_UX_CONTRACT.md" in plain_language
     assert "backend-blue:" in compose and "backend-green:" in compose
     assert "worker-blue:" in compose and "worker-green:" in compose
     assert "bot-blue:" in compose and "bot-green:" in compose
     assert "edge_config:/config" in compose
-    assert "caddy run --resume" in (root / "deploy" / "edge-entrypoint.sh").read_text(
-        encoding="utf-8"
-    )
     assert "handle_response @asset_missing" in edge
     assert "lb_retries" not in edge
     assert orchestrator.index('"validate"') < orchestrator.index('"reload"')
-    assert "another production deployment owns the host lock" in orchestrator

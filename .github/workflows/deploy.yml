@@ -1,8 +1,7 @@
 name: Release production
 
 on:
-  # A merged pull request is the only production release entry point. The successful post-merge
-  # CI run deploys that exact master SHA automatically, without a separate human approval.
+  # A successful post-merge CI run is the only production release entry point.
   workflow_run:
     workflows: [CI]
     branches: [master]
@@ -11,14 +10,13 @@ on:
 permissions:
   contents: read
 
-# The protected pull-request merge is the release authorization. A deployment must never be
-# cancelled halfway through by a newer merge.
 concurrency:
   group: production
   cancel-in-progress: false
 
 jobs:
   authorize:
+    name: Authorize exact merged master revision
     if: >-
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.conclusion == 'success'
@@ -29,9 +27,8 @@ jobs:
       pull-requests: read
     env:
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
-
     steps:
-      - name: Verify merged pull request provenance
+      - name: Verify merged task pull request provenance
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
@@ -43,15 +40,16 @@ jobs:
             "repos/$REPOSITORY/commits/$DEPLOY_SHA/pulls" \
             --jq ".[] | select(.merged_at != null and .base.ref == \"master\" and .merge_commit_sha == \"$DEPLOY_SHA\") | .number")"
           if [ -z "$PR_NUMBERS" ]; then
-            echo "Refusing production deployment: $DEPLOY_SHA is not the merge result of a pull request into master" >&2
+            echo "Refusing production deployment: $DEPLOY_SHA is not the merge result of a task pull request into master" >&2
             exit 1
           fi
           echo "Authorized production revision $DEPLOY_SHA from pull request(s): $PR_NUMBERS"
 
   deploy:
+    name: Deploy immutable tested bundle
     needs: authorize
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     permissions:
       contents: read
       packages: read
@@ -65,15 +63,13 @@ jobs:
       PROD_URL: https://app.your-fitness-coach.ru
       PROD_PUBLIC_URL: https://your-fitness-coach.ru
       PROD_ROLLOUT_MODE: single-slot
-      GHCR_BACKEND_IMAGE: ghcr.io/mikemoore1337/your-fitness-coach-backend
-      GHCR_BOT_IMAGE: ghcr.io/mikemoore1337/your-fitness-coach-bot
-
     steps:
       - name: Configure production SSH access
         env:
           PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
           PROD_SSH_KNOWN_HOSTS: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
         run: |
+          set -Eeuo pipefail
           test -n "$PROD_SSH_KEY"
           test -n "$PROD_SSH_KNOWN_HOSTS"
           install -d -m 700 ~/.ssh
@@ -82,11 +78,79 @@ jobs:
           printf '%s\n' "$PROD_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Deploy tested revision
+      - name: Check out exact merge revision on the runner
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+          fetch-depth: 0
+
+      - name: Resolve immutable application image references
+        id: images
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -Eeuo pipefail
+          backend_ref="$(python scripts/deployment_contract.py refs --repository "$REPOSITORY" --revision "$DEPLOY_SHA" --kind backend | sed -n 's/^image_ref=//p')"
+          bot_ref="$(python scripts/deployment_contract.py refs --repository "$REPOSITORY" --revision "$DEPLOY_SHA" --kind bot | sed -n 's/^image_ref=//p')"
+          test -n "$backend_ref" -a -n "$bot_ref"
+          echo "backend_image_ref=$backend_ref" >> "$GITHUB_OUTPUT"
+          echo "bot_image_ref=$bot_ref" >> "$GITHUB_OUTPUT"
+
+      - name: Read the active deployed revision and create migration manifest
+        id: migration
+        run: |
+          set -Eeuo pipefail
+          ACTIVE_REVISION="$(ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -p "$PROD_PORT" "$PROD_USER@$PROD_HOST" "cat '$PROD_PATH/.artifacts/operations/deployments/last-successful-revision'")"
+          if [[ ! "$ACTIVE_REVISION" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Production active revision is missing or not a full lowercase SHA" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$ACTIVE_REVISION" "$DEPLOY_SHA"; then
+            echo "Production active revision $ACTIVE_REVISION is not an ancestor of $DEPLOY_SHA" >&2
+            exit 1
+          fi
+          python scripts/check_online_migrations.py \
+            "$ACTIVE_REVISION" "$DEPLOY_SHA" \
+            --write-manifest --output deployment-migration-manifest.json
+          echo "active_revision=$ACTIVE_REVISION" >> "$GITHUB_OUTPUT"
+
+      - name: Build immutable deployment bundle
+        id: bundle
+        run: |
+          set -Eeuo pipefail
+          bundle_tar="yfc-deploy-$DEPLOY_SHA.tar"
+          bundle_name="$bundle_tar.gz"
+          git archive --format=tar --output="$bundle_tar" "$DEPLOY_SHA" docker-compose.yml deploy scripts
+          tar --append --file="$bundle_tar" deployment-migration-manifest.json
+          gzip -n "$bundle_tar"
+          echo "name=$bundle_name" >> "$GITHUB_OUTPUT"
+
+      - name: Recheck current master before transfer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          CURRENT_MASTER="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/master" --jq '.object.sha')"
+          test "$CURRENT_MASTER" = "$DEPLOY_SHA"
+
+      - name: Transfer immutable bundle to production
+        run: |
+          set -Eeuo pipefail
+          scp -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -P "$PROD_PORT" \
+            "${{ steps.bundle.outputs.name }}" \
+            "$PROD_USER@$PROD_HOST:/tmp/${{ steps.bundle.outputs.name }}"
+
+      - name: Deploy bundle with exact provenance and persistent state
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUNDLE_NAME: ${{ steps.bundle.outputs.name }}
+          BACKEND_IMAGE: ${{ steps.images.outputs.backend_image_ref }}
+          BOT_IMAGE: ${{ steps.images.outputs.bot_image_ref }}
         run: |
+          set -Eeuo pipefail
           test -n "$GHCR_TOKEN"
+          # The refs came from the authoritative deployment contract step above.
+          test -n "$BACKEND_IMAGE" -a -n "$BOT_IMAGE"
           printf '%s\n' "$GHCR_TOKEN" | ssh \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
@@ -95,93 +159,49 @@ jobs:
             "$PROD_USER@$PROD_HOST" \
             "set -Eeuo pipefail
              IFS= read -r GHCR_TOKEN
+             RELEASE_ROOT='$PROD_PATH/releases'
+             RELEASE_PATH=\"\$RELEASE_ROOT/$DEPLOY_SHA\"
+             STAGING_PATH=\"\$RELEASE_ROOT/.staging-$DEPLOY_SHA-${{ github.run_id }}\"
+             mkdir -p \"\$RELEASE_ROOT\" \"\$STAGING_PATH\"
+             tar -xzf '/tmp/$BUNDLE_NAME' -C \"\$STAGING_PATH\"
+             printf '%s\\n' '$DEPLOY_SHA' > \"\$STAGING_PATH/.deployment-sha\"
+             test -f '$PROD_PATH/.env'
+             install -m 600 '$PROD_PATH/.env' \"\$STAGING_PATH/.env\"
+             if [ -e \"\$RELEASE_PATH/.deployment-sha\" ]; then
+               test \"\$(cat \"\$RELEASE_PATH/.deployment-sha\")\" = '$DEPLOY_SHA'
+               rm -rf \"\$STAGING_PATH\"
+             else
+               mv \"\$STAGING_PATH\" \"\$RELEASE_PATH\"
+             fi
+             cd \"\$RELEASE_PATH\"
+             # Keep the project name stable while the compose file moves between immutable releases.
+             export COMPOSE_PROJECT_NAME=fit-mini-app
+             export DEPLOY_ROOT=\"\$RELEASE_PATH\"
+             export DEPLOY_STATE_ROOT='$PROD_PATH/.artifacts/operations/deployments'
+             export DEPLOY_ARTIFACT_ROOT='$PROD_PATH/.artifacts'
+             export DEPLOY_MIGRATION_MANIFEST=deployment-migration-manifest.json
+             export DEPLOY_SINGLE_SLOT_CONFIRMED_SHA='$DEPLOY_SHA'
+             registry_login_succeeded=false
              DOCKER_CONFIG_DIR=\$(mktemp -d)
              trap 'rm -rf \"\$DOCKER_CONFIG_DIR\"' EXIT
              export DOCKER_CONFIG=\"\$DOCKER_CONFIG_DIR\"
-             registry_login_succeeded=false
              for attempt in 1 2 3 4 5; do
                if printf '%s' \"\$GHCR_TOKEN\" | docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null; then
                  registry_login_succeeded=true
                  break
                fi
-               if [ \"\$attempt\" -eq 5 ]; then
-                 break
-               fi
+               if [ \"\$attempt\" -eq 5 ]; then break; fi
                delay=\$((attempt * 10))
                echo \"GHCR login attempt \$attempt failed; retrying in \$delay seconds\" >&2
                sleep \"\$delay\"
              done
              if [ \"\$registry_login_succeeded\" != true ]; then
-               echo \"GHCR login failed after 5 attempts\" >&2
+               echo 'GHCR login failed after 5 attempts' >&2
                exit 1
              fi
-             cd '$PROD_PATH'
-             git fetch --prune origin master
-             LATEST_MASTER_SHA=\$(git rev-parse origin/master)
-             if [ \"\$LATEST_MASTER_SHA\" != '$DEPLOY_SHA' ]; then
-               echo \"Skipping superseded deployment: tested revision $DEPLOY_SHA is no longer master head (\$LATEST_MASTER_SHA)\"
-               exit 0
-             fi
-             git reset --hard '$DEPLOY_SHA'
-             DEPLOY_SINGLE_SLOT_CONFIRMED_SHA='$DEPLOY_SHA' \
-             BACKEND_IMAGE='$GHCR_BACKEND_IMAGE:$DEPLOY_SHA' \
-             BOT_IMAGE='$GHCR_BOT_IMAGE:$DEPLOY_SHA' \
-             bash scripts/deploy_production.sh \
-               '$DEPLOY_SHA' \
-               '$PROD_URL' \
-               '$PROD_PUBLIC_URL' \
-               '$PROD_ROLLOUT_MODE'"
-
-  sync-dev:
-    name: Sync deployed master to dev
-    needs: deploy
-    if: >-
-      needs.deploy.result == 'success' &&
-      vars.ENABLE_DEPLOYED_MASTER_DEV_SYNC == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    environment:
-      name: production
-      deployment: false
-
-    steps:
-      - name: Create narrowly scoped sync token
-        id: app-token
-        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
-        with:
-          app-id: ${{ secrets.DEV_SYNC_APP_ID }}
-          private-key: ${{ secrets.DEV_SYNC_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
-
-      - name: Check out exact deployed master revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token }}
-
-      - name: Fast-forward dev to exact deployed master
-        shell: bash
-        env:
-          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
-        run: |
-          set -Eeuo pipefail
-          git fetch --no-tags origin master dev
-          master_sha="$(git rev-parse refs/remotes/origin/master)"
-          dev_sha="$(git rev-parse refs/remotes/origin/dev)"
-          if [ "$master_sha" != "$DEPLOY_SHA" ]; then
-            echo "Refusing sync: deployed SHA $DEPLOY_SHA is no longer current master $master_sha" >&2
-            exit 1
-          fi
-          if ! git merge-base --is-ancestor "$dev_sha" "$DEPLOY_SHA"; then
-            echo "Refusing sync: dev $dev_sha is not an ancestor of deployed master $DEPLOY_SHA" >&2
-            exit 1
-          fi
-          if [ "$dev_sha" = "$DEPLOY_SHA" ]; then
-            echo "dev already equals deployed master $DEPLOY_SHA"
-            exit 0
-          fi
-          git push origin "$DEPLOY_SHA:refs/heads/dev"
+             BACKEND_IMAGE='$BACKEND_IMAGE' \
+             BOT_IMAGE='$BOT_IMAGE' \
+             bash scripts/deploy_production.sh '$DEPLOY_SHA' '$PROD_URL' '$PROD_PUBLIC_URL' '$PROD_ROLLOUT_MODE'
+             install -m 600 \"\$RELEASE_PATH/.env\" '$PROD_PATH/.env'
+             ln -sfn \"\$RELEASE_PATH\" '$PROD_PATH/current'
+             rm -f '/tmp/$BUNDLE_NAME'"

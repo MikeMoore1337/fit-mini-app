@@ -1,0 +1,71 @@
+from pathlib import Path
+
+from scripts import ci_contract
+
+
+def test_ci_contract_is_valid_and_profiles_are_non_empty() -> None:
+    ci_contract.validate_contract()
+    assert ci_contract.contract_digest()
+    assert all(ci_contract.PROFILE_GROUPS.values())
+
+
+def test_profiles_reference_shared_command_groups() -> None:
+    for groups in ci_contract.PROFILE_GROUPS.values():
+        assert set(groups) <= set(ci_contract.COMMAND_GROUPS)
+
+
+def test_commands_are_stable_and_have_unique_names() -> None:
+    for spec in ci_contract.COMMAND_GROUPS.values():
+        assert len({command.name for command in spec.commands}) == len(spec.commands)
+        assert all(command.argv for command in spec.commands)
+
+
+def test_contract_digest_changes_when_contract_changes(monkeypatch) -> None:
+    original_digest = ci_contract.contract_digest()
+    original = ci_contract.COMMAND_GROUPS["quality"]
+    monkeypatch.setitem(
+        ci_contract.COMMAND_GROUPS,
+        "quality",
+        ci_contract.GroupSpec(
+            name=original.name,
+            commands=(*original.commands, ci_contract.CommandSpec("sentinel", ("true",))),
+            prerequisites=original.prerequisites,
+        ),
+    )
+    assert ci_contract.contract_digest() != original_digest
+
+
+def test_windows_node_commands_use_cmd_wrappers(monkeypatch) -> None:
+    monkeypatch.setattr(ci_contract.os, "name", "nt")
+    assert ci_contract._resolve_argv(("npm", "run", "test"))[0] == "npm.cmd"
+    assert ci_contract._resolve_argv(("npx", "vite", "build"))[0] == "npx.cmd"
+
+
+def test_migrations_use_the_selected_python_interpreter() -> None:
+    commands = ci_contract.COMMAND_GROUPS["migrated-stack"].commands
+    assert commands[0].argv[:3] == ("python", "-m", "alembic")
+    assert commands[1].argv[:3] == ("python", "-m", "alembic")
+
+
+def test_workflow_calls_group_entrypoint_instead_of_inline_command_copy() -> None:
+    root = Path(__file__).parents[1]
+    workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    for group in (
+        "quality",
+        "policy",
+        "frontend-checks",
+        "frontend-e2e",
+        "python-tests",
+        "migrated-stack",
+        "dependency-audit",
+        "container-contract",
+    ):
+        assert f"scripts/ci_contract.py run-group {group}" in workflow
+    assert "npm run typecheck" not in workflow
+    assert "npm run e2e:ci" not in workflow
+    assert "scripts/run_pytest.py backend/tests" not in workflow
+
+
+def test_cross_stack_profile_includes_delivery_policy_gates() -> None:
+    groups = set(ci_contract.PROFILE_GROUPS["cross-stack"])
+    assert {"policy", "workflow-config", "deployment-contract"} <= groups

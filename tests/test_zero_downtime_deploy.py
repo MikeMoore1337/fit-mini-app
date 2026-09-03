@@ -26,7 +26,7 @@ def _config(tmp_path: Path) -> deploy.DeployConfig:
         backend_image=f"registry/backend:{NEW_SHA}",
         bot_image=f"registry/bot:{NEW_SHA}",
         root=tmp_path,
-        state_root=tmp_path / ".artifacts" / "deployments",
+        state_root=tmp_path / ".artifacts" / "operations" / "deployments",
         observation_seconds=1,
         readiness_timeout_seconds=5,
         probe_interval_seconds=0.1,
@@ -48,6 +48,32 @@ def _state(config: deploy.DeployConfig, *, revision: str = OLD_SHA) -> None:
         active_bot_image="registry/bot@sha256:" + "2" * 64,
     )
     deploy._atomic_json(config.state_root / "state.json", asdict(state))
+
+
+def test_production_migration_command_uses_immutable_manifest(monkeypatch) -> None:
+    monkeypatch.setenv("DEPLOY_MIGRATION_MANIFEST", "deployment-migration-manifest.json")
+
+    command = deploy._online_migration_command(OLD_SHA, NEW_SHA)
+
+    assert command[-2:] == ["--manifest", "deployment-migration-manifest.json"]
+
+
+def test_config_can_keep_rollout_state_outside_immutable_release(
+    tmp_path: Path, monkeypatch
+) -> None:
+    state_root = tmp_path / "persistent-deployments"
+    monkeypatch.setenv("DEPLOY_STATE_ROOT", str(state_root))
+    monkeypatch.setenv("BACKEND_IMAGE", f"registry/backend:{NEW_SHA}")
+    monkeypatch.setenv("BOT_IMAGE", f"registry/bot:{NEW_SHA}")
+
+    parser = SimpleNamespace(
+        target_revision=NEW_SHA,
+        base_url="https://app.example.test",
+        public_base_url="https://example.test",
+    )
+    config = deploy._config(parser)
+
+    assert config.state_root == state_root.resolve()
 
 
 def test_public_smoke_uses_bounded_seo_timeout(tmp_path: Path, monkeypatch) -> None:

@@ -15,9 +15,9 @@ _WORKER_ID = os.environ.get("PYTEST_XDIST_WORKER", "main")
 if re.fullmatch(r"[A-Za-z0-9_]+", _WORKER_ID) is None:
     raise RuntimeError(f"unsafe pytest worker id: {_WORKER_ID!r}")
 
-_TEST_DB = ROOT / ".artifacts" / "tests" / "backend" / f"fitmini_pytest-{_WORKER_ID}.db"
+_TEST_DB = ROOT / ".artifacts" / "runtime" / "tests" / "backend" / f"fitmini_pytest-{_WORKER_ID}.db"
 _TEST_DB.parent.mkdir(parents=True, exist_ok=True)
-_TEST_FRONTEND_DIST = ROOT / ".artifacts" / "tests" / f"frontend-dist-{_WORKER_ID}"
+_TEST_FRONTEND_DIST = ROOT / ".artifacts" / "runtime" / "tests" / f"frontend-dist-{_WORKER_ID}"
 _TEST_FRONTEND_ASSETS = _TEST_FRONTEND_DIST / "assets"
 _TEST_FRONTEND_BRAND_ASSETS = _TEST_FRONTEND_ASSETS / "brand"
 _TEST_FRONTEND_BRAND_ASSETS.mkdir(parents=True, exist_ok=True)

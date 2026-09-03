@@ -54,7 +54,10 @@ def test_worker_prompt_carries_one_launch_delivery_contract() -> None:
     prompt = delivery._worker_prompt("131", started)
 
     assert "standing authorization" in prompt
-    assert "task branch -> PR dev -> exact dev checks -> PR master -> production" in prompt
+    assert (
+        "task branch -> local PRE_PUSH_CI_PASS -> PR master -> exact master CI -> production"
+        in prompt
+    )
     assert "BLOCKER/HIGH/MEDIUM" in prompt
     assert "Не запрашивай generic approval" in prompt
     assert "Не запускай следующую product task" in prompt
@@ -65,7 +68,7 @@ def test_only_live_lane_contention_is_retried() -> None:
         "task session error: An incompatible write/integration/release lane is occupied"
     )
     assert delivery._is_transient_start_error(
-        "doctor blockers: active dev/master CI, deploy or sync run blocks mutation"
+        "doctor blockers: active production deployment blocks controller mutation"
     )
     assert not delivery._is_transient_start_error("main dev worktree is dirty")
     assert not delivery._is_transient_start_error("missing task document")
@@ -111,3 +114,40 @@ def test_verify_closeout_rejects_finished_but_unarchived_task(tmp_path: Path) ->
 
     with pytest.raises(delivery.DeliveryError, match="was not archived"):
         delivery._verify_closeout({"lease": {"canonical_task_path": str(source)}})
+
+
+def test_delivery_artifacts_are_task_scoped_and_final_result_is_preserved(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(delivery, "REPOSITORY_ROOT", tmp_path)
+
+    artifacts = delivery._artifact_root("133")
+    assert artifacts.relative_to(tmp_path / ".artifacts").parts[:4] == (
+        "tasks",
+        "133",
+        "temporary",
+        "delivery",
+    )
+    (artifacts / "events.jsonl").write_text('{"stage":"worker"}\n', encoding="utf-8")
+    (artifacts / "final.md").write_text("terminal result\n", encoding="utf-8")
+
+    result = delivery._cleanup_delivery_artifacts("133", artifacts)
+
+    assert result["status"] == "completed"
+    assert result["removed_count"] == 1
+    assert not artifacts.exists()
+    evidence = tmp_path / ".artifacts" / "tasks" / "133" / "evidence" / "delivery"
+    assert [path.read_text(encoding="utf-8") for path in evidence.glob("*-final.md")] == [
+        "terminal result\n"
+    ]
+
+
+def test_delivery_cleanup_refuses_artifacts_outside_exact_task_path(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(delivery, "REPOSITORY_ROOT", tmp_path)
+    outside = tmp_path / ".artifacts" / "temporary" / "delivery"
+    outside.mkdir(parents=True)
+
+    with pytest.raises(delivery.DeliveryError, match="outside exact task root"):
+        delivery._cleanup_delivery_artifacts("133", outside)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly EXPECTED_ROOT="/root/fit-mini-app"
+readonly EXPECTED_ROOT="${DEPLOY_ROOT:-$(pwd -P)}"
 readonly TARGET_SHA="${1:?usage: deploy_production.sh TARGET_SHA BASE_URL}"
 readonly BASE_URL="${2:?usage: deploy_production.sh TARGET_SHA BASE_URL}"
 readonly PUBLIC_BASE_URL="${3:-https://your-fitness-coach.ru}"
@@ -48,8 +48,13 @@ if [[ "$(pwd -P)" != "$EXPECTED_ROOT" ]]; then
   exit 1
 fi
 
-if [[ ! -d .git ]]; then
-  echo "$EXPECTED_ROOT is not a Git checkout" >&2
+if [[ ! -f .deployment-sha ]]; then
+  echo "$EXPECTED_ROOT/.deployment-sha is missing; immutable bundle provenance is unavailable" >&2
+  exit 1
+fi
+
+if [[ "$(tr -d '\r\n' < .deployment-sha)" != "$TARGET_SHA" ]]; then
+  echo "Immutable bundle marker does not match requested revision $TARGET_SHA" >&2
   exit 1
 fi
 
@@ -71,12 +76,6 @@ require_digest_ref() {
 require_digest_ref POSTGRES_IMAGE
 require_digest_ref CADDY_IMAGE
 require_digest_ref CLOUDFLARED_IMAGE
-
-readonly CURRENT_SHA="$(git rev-parse HEAD)"
-if [[ "$CURRENT_SHA" != "$TARGET_SHA" ]]; then
-  echo "Checked-out revision $CURRENT_SHA does not match requested revision $TARGET_SHA" >&2
-  exit 1
-fi
 
 echo "Enabling browser OAuth and keeping email registration disabled"
 python3 scripts/configure_production_auth.py .env

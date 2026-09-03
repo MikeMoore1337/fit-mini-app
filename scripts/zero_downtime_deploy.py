@@ -221,6 +221,19 @@ def _legacy_environment(*, backend_image: str, bot_image: str) -> dict[str, str]
     return env
 
 
+def _online_migration_command(active_revision: str, target_revision: str) -> list[str]:
+    command = [
+        sys.executable,
+        "scripts/check_online_migrations.py",
+        active_revision,
+        target_revision,
+    ]
+    manifest = os.environ.get("DEPLOY_MIGRATION_MANIFEST", "").strip()
+    if manifest:
+        command.extend(["--manifest", manifest])
+    return command
+
+
 def _image_digest(image: str, expected_revision: str) -> str:
     result = _run(
         [
@@ -980,14 +993,7 @@ def deploy(config: DeployConfig) -> Evidence:
             _run([sys.executable, "scripts/db_maintenance.py", "backup"])
 
         with _stage(evidence, "migration"):
-            _run(
-                [
-                    sys.executable,
-                    "scripts/check_online_migrations.py",
-                    state.active_revision,
-                    config.target_revision,
-                ]
-            )
+            _run(_online_migration_command(state.active_revision, config.target_revision))
             _compose("run", "--rm", "--no-deps", "setup", env=candidate_env)
 
         with _stage(evidence, "candidate_start"):
@@ -1371,14 +1377,7 @@ def single_slot_deploy(config: DeployConfig) -> Evidence:
             _run([sys.executable, "scripts/db_maintenance.py", "backup"])
 
         with _stage(evidence, "migration_gate"):
-            _run(
-                [
-                    sys.executable,
-                    "scripts/check_online_migrations.py",
-                    active_revision,
-                    config.target_revision,
-                ]
-            )
+            _run(_online_migration_command(active_revision, config.target_revision))
 
         with _stage(evidence, "pre_stop_capacity"):
             evidence.capacity = _single_slot_capacity()
@@ -1487,7 +1486,11 @@ def _config(args: argparse.Namespace) -> DeployConfig:
         backend_image=os.environ["BACKEND_IMAGE"],
         bot_image=os.environ["BOT_IMAGE"],
         root=root,
-        state_root=root / ".artifacts" / "deployments",
+        state_root=Path(
+            os.environ.get(
+                "DEPLOY_STATE_ROOT", str(root / ".artifacts" / "operations" / "deployments")
+            )
+        ).resolve(),
         observation_seconds=float(_deployment_setting("DEPLOY_OBSERVATION_SECONDS", "900")),
         readiness_timeout_seconds=configured_timeout("DEPLOY_READINESS_TIMEOUT_SECONDS", 180),
         probe_interval_seconds=float(_deployment_setting("DEPLOY_PROBE_INTERVAL_SECONDS", "1")),

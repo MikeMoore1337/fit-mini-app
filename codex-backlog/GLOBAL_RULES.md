@@ -12,6 +12,24 @@ Tasks `109-111` остаются owner-selected pending: Landing offer испо�
 approved security baseline task `108`; avatar сохраняет private-media lifecycle; Progress не
 выдумывает данные из визуального референса. Каждая требует отдельного owner запуска.
 
+## Structured artifact contract
+
+All new ignored files belong to the canonical `.artifacts/` structure: task data lives under
+`.artifacts/tasks/<TASK_ID>/{temporary,evidence,deliverables,logs}` and is described by its
+`manifest.json`; reproducible caches, process temp files and test output use
+`.artifacts/runtime/{cache,tmp,tests}`; reusable local assets use `.artifacts/shared/`; backups,
+deployment evidence and recovery data use the protected `.artifacts/operations/{backups,deployments,recovery}`.
+Controller-managed worktrees remain under `.artifacts/worktrees/` and are never removed by a
+filesystem cleanup.
+
+New producers must use `scripts/artifact_manager.py` or an already configured canonical path.
+Legacy top-level paths are migration inputs only and must not receive new output. Run
+`python scripts/artifact_manager.py --root .artifacts --repo-root . validate` to detect unknown
+top-level paths and ad-hoc source references. Run `audit`/`dry-run` before cleanup; apply only the
+exact owner-approved plan SHA after controller/worktree safety checks. `REVIEW`, active/dirty/
+interrupted/unique-commit/recovery data, deliverables and operational backups are not generic
+cleanup targets.
+
 ## Полный task lifecycle
 
 Перед каждой task обязательно прочитать и выполнить `codex-backlog/TASK_EXECUTION_LIFECYCLE.md`.
@@ -67,19 +85,19 @@ gate, evidence и точки остановки в task-файле.
 - Один executable task-файл = одна Codex-сессия = одна `task/<ID>-<slug>` ветка = один отдельный
   worktree = один законченный логический результат. Umbrella `90`, `92`, `93`, `94`, `95`, `99`,
   `100` являются coordination contracts и отдельно не выполняются.
-- `dev` используется только как интеграционная ветка. Task branch/worktree создаются от чистого,
-  проверенного exact `origin/dev` SHA; feature implementation непосредственно в основном `dev`
-  worktree запрещена.
+- `master` является единственной защищённой release-веткой. Task branch/worktree создаются от
+  чистого, проверенного exact `origin/master` SHA; feature implementation непосредственно в
+  canonical controller worktree запрещена.
 - Внутри текущей task после terminal success автоматически выполняются применимые review, QA,
-  commit, PR, serial merge в `dev`, CI и normal release шаги, если task явно не объявляет checkpoint
-  или blocker. Следующая product task автоматически не запускается.
+  commit, PR в `master`, CI и normal release шаги, если task явно не объявляет checkpoint или
+  blocker. Следующая product task автоматически не запускается.
 - Явный выбор task владельцем или `scripts/run_task_delivery.py <ID>` является одним standing
   authorization на normal path этой task. Низкоуровневые controller stages не являются действиями
   владельца и не создают повторных generic approval prompts.
 - `scripts/task_session.py` и shared Git common-dir leases являются обязательной coordination
-  boundary. Task PR идёт только в `dev`; exact-head `checks`, current-base policy и global
-  integration lease разрешают merge только queue head. Release lease/open `dev -> master` PR
-  замораживает mutations `dev`.
+  boundary. Task PR идёт только в `master`; exact-head `checks` и current-base policy разрешают
+  merge только для текущего task head. Активный production deploy замораживает mutations
+  controller state до terminal result.
 - Новая production revision попадает в remote `master` только через merged PR с обязательным green
   check `checks`; direct push, force-push и удаление `master` запрещены Ruleset. Merge PR является
   release authorization и без отдельного ручного approval запускает post-merge CI, exact-SHA
@@ -87,17 +105,14 @@ gate, evidence и точки остановки в task-файле.
   bootstrap, infrastructure recovery и SHA вне текущего merged `master` остаются exceptional
   actions с отдельным owner approval, backup и preflight.
 - Для `AUTO_RELEASE_ELIGIBLE` task нормальный release path выполняется без дополнительного вопроса
-  владельцу и строго последовательно: `task branch -> task PR dev -> exact-head checks -> serial
-  merge -> exact merged-dev full push CI -> PR master -> quick provenance/checks -> exact-head merge ->
-  post-merge CI -> automatic `Release production` deploy -> same-run narrow App sync dev to exact
-  deployed master -> automatic controller finish/clean task worktree and merged local branch ->
-  archive task -> rebuild/check backlog manifests -> terminal report`. Direct feature push в `dev`
-  и direct push в `master` запрещены.
-- Release flow является **strictly serial**. При release lease/open `dev -> master` PR task merge и
-  любой другой update `dev` запрещены. Если требуется новая task integration, release PR сначала
-  закрывается, candidate обновляется от current `dev`, повторяет exact-head checks и serial merge.
-  Если release PR нельзя однозначно идентифицировать, агент ничего не закрывает автоматически и
-  останавливается с точным blocker.
+  владельцу и строго последовательно: `task branch -> local PRE_PUSH_CI_PASS -> task PR master ->
+  exact-head checks -> merge master -> post-merge provenance/image publish -> immutable bundle
+  deploy -> production smoke -> controller finish/clean task worktree and merged local branch ->
+  archive task -> rebuild/check backlog manifests -> terminal report`. Direct push в `master`
+  запрещён.
+- Release flow является **strictly serial** для protected `master` и production deployment. Если
+  current base изменился или production run активен, candidate повторно проходит current-base gate;
+  ambiguous, dirty или interrupted state останавливается с точным blocker.
 - Task с явно обязательным owner checkpoint/approve, human/device evidence, manual visual approval,
   legal-counsel gate или destructive/external authorization останавливается ровно перед указанным
   gate до фактического прохождения. Task без tracked logical commit не создаёт PR; отсутствие
@@ -106,20 +121,18 @@ gate, evidence и точки остановки в task-файле.
 Если текущая task не объявляет `OWNER_CHECKPOINT`, `HUMAN_EVIDENCE`, `MANUAL_VISUAL_APPROVAL`,
 `LEGAL_COUNSEL_REQUIRED`, `EXTERNAL_AUTHORIZATION`, `DESTRUCTIVE_ACTION` или terminal blocker,
 controller/lifecycle после terminal success автоматически продолжает применимые review, QA,
-commit, task PR, serial integration, `dev` CI и normal release без дополнительного owner prompt.
+commit, task PR в `master`, required CI и normal release без дополнительного owner prompt.
 Тишина владельца не является gate. Следующая product task автоматически не запускается.
 
-После terminal successful normal deploy и exact deployed `master -> dev` sync post-deploy closeout
-тоже не создаёт owner gate: `finish` из canonical `dev` worktree автоматически удаляет только exact
-matching clean task worktree и merged local branch без `--force`, затем canonical archive helper
-переносит task в `tasks/done/` и rebuild/check manifests. Dirty/interrupted/unique/ambiguous state,
-divergence refs или archive/check error останавливают closeout fail-closed с сохранением данных.
+После terminal successful normal deploy post-deploy closeout тоже не создаёт owner gate: `finish`
+из canonical controller worktree автоматически удаляет только exact matching clean task worktree и
+merged local branch без `--force`, затем canonical archive helper переносит task в `tasks/done/` и
+rebuild/check manifests. Dirty/interrupted/unique/ambiguous state, divergence refs или archive/check
+error останавливают closeout fail-closed с сохранением данных.
 
-Direct push в `master` запрещён. Direct feature push в `dev` также запрещён; единственное bypass
-исключение — exact deployed `master -> dev` sync узкого owner-approved GitHub App. Такой push
-при content-equivalent two-dot tree diff не создаёт CI run; при changed files проходит только
-lightweight actor/current-master/successful-deployment provenance. Тяжёлый CI остаётся обязательным
-для любого обычного update `dev` с changed files.
+Direct push в `master` запрещён. Legacy `dev` refs не являются частью normal delivery и не должны
+использоваться как release prerequisite. Required `checks` всегда привязан к exact PR head и
+текущему base.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
 - Tasks `00-73A`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
 - Owner-selected task `103` завершена после owner approval и архивирована.
@@ -296,8 +309,9 @@ checkpoint до массовой реализации.
   `--radius-action` и фиксированной geometry, а не только screenshot;
 - выполнить Human Design Test из `$product-designer`: brand swap, screenshot, card, decoration и
   designer-intent checks; после первого browser render сделать минимум один refinement pass;
-- сохранить representative screenshots в `.artifacts/screenshots/task-XX/`; `.artifacts/` не
-  коммитить.
+- сохранить representative screenshots в `.artifacts/tasks/<TASK_ID>/evidence/screenshots/`;
+  исторические `.artifacts/screenshots/task-XX/` являются legacy evidence и не пополняются;
+  `.artifacts/` не коммитить.
 
 ### Owner visual checkpoint
 
@@ -598,7 +612,7 @@ fix: [Task 76A] prevent mobile keyboard overlap
   заменять task ID только номером workflow run или GitHub PR;
 - служебные изменения, которые действительно выполняются вне backlog task, могут использовать
   обычный Conventional Commit без фиктивного task ID, например
-  `ci: normalize permanent dev release flow` или `chore: update dependencies`;
+  `ci: normalize protected master release flow` или `chore: update dependencies`;
 - если служебное изменение фактически входит в scope текущей backlog task, task ID обязателен:
   `ci: [Task 76A] normalize release checks`;
 - temporary/recovery branch, созданная не для отдельной executable task, не обязана получать
