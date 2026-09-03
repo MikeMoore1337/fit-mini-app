@@ -152,7 +152,9 @@ def _assignment(tree: ast.Module, name: str) -> object | None:
             return None
         try:
             return ast.literal_eval(value)
-        except ValueError, TypeError:
+        except ValueError:
+            return None
+        except TypeError:
             return None
     return None
 
