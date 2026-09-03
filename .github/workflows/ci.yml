@@ -243,6 +243,9 @@ jobs:
         run: |
           uv pip install -r backend/requirements.txt
           npm --prefix frontend ci
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
       - name: Build frontend preview
         working-directory: frontend
         run: npm run build
