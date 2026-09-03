@@ -1,7 +1,7 @@
 """Add canonical Web article candidates, content and immutable revisions.
 
-Revision ID: 0072_web_articles_editorial_lifecycle
-Revises: 0071_hermes_editorial_intake_and_taxonomy
+Revision ID: 0072_web_articles_lifecycle
+Revises: 0071_hermes_intake_taxonomy
 """
 
 from collections.abc import Sequence
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0072_web_articles_editorial_lifecycle"
-down_revision: str | None = "0071_hermes_editorial_intake_and_taxonomy"
+revision: str = "0072_web_articles_lifecycle"
+down_revision: str | None = "0071_hermes_intake_taxonomy"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -60,8 +60,8 @@ def upgrade() -> None:
             "web_article_potential_reasons", sa.JSON(), nullable=False, server_default="[]"
         ),
         sa.Column("status", sa.String(length=16), nullable=False, server_default="candidate"),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
         sa.CheckConstraint(
             "status IN ('candidate', 'approved', 'researching', 'draft', 'review', 'rejected')",
             name="ck_web_article_candidates_status",
@@ -91,7 +91,12 @@ def upgrade() -> None:
     op.create_table(
         "web_articles",
         sa.Column("id", sa.String(length=32), nullable=False),
-        sa.Column("candidate_id", sa.String(length=32), nullable=True),
+        sa.Column(
+            "candidate_id",
+            sa.String(length=32),
+            sa.ForeignKey("web_article_candidates.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("slug", sa.String(length=180), nullable=False),
         sa.Column("status", sa.String(length=24), nullable=False, server_default="draft"),
         sa.Column("title", sa.String(length=180), nullable=False),
@@ -127,13 +132,13 @@ def upgrade() -> None:
         sa.Column("prompt_version", sa.String(length=64), nullable=False),
         sa.Column("skill_version", sa.String(length=64), nullable=False),
         sa.Column("schema_version", sa.String(length=64), nullable=False),
-        sa.Column("generated_with_ai", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column("research_assistance", sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.Column("generated_with_ai", sa.Boolean(), nullable=False, server_default="true"),
+        sa.Column("research_assistance", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column("content_hash", sa.String(length=64), nullable=False),
         sa.Column("correction_reason", sa.String(length=256), nullable=True),
         sa.Column("published_at", sa.DateTime(), nullable=True),
         sa.Column("updated_at", sa.DateTime(), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
         sa.CheckConstraint(
             "status IN ('candidate', 'researching', 'draft', 'review', 'approved', 'published', "
             "'update_required', 'archived', 'retracted')",
@@ -147,7 +152,6 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "editorial_value BETWEEN 0 AND 100", name="ck_web_articles_editorial_value"
         ),
-        sa.ForeignKeyConstraint(["candidate_id"], ["web_article_candidates.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("slug"),
     )
@@ -157,14 +161,18 @@ def upgrade() -> None:
     op.create_table(
         "web_article_revisions",
         sa.Column("id", sa.String(length=32), nullable=False),
-        sa.Column("article_id", sa.String(length=32), nullable=False),
+        sa.Column(
+            "article_id",
+            sa.String(length=32),
+            sa.ForeignKey("web_articles.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("content_version", sa.Integer(), nullable=False),
         sa.Column("status", sa.String(length=24), nullable=False),
         sa.Column("snapshot", sa.JSON(), nullable=False),
         sa.Column("change_reason", sa.String(length=256), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
         sa.CheckConstraint("content_version >= 1", name="ck_web_article_revision_positive"),
-        sa.ForeignKeyConstraint(["article_id"], ["web_articles.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("article_id", "content_version", name="uq_web_article_revision_version"),
     )
@@ -177,8 +185,18 @@ def upgrade() -> None:
     op.create_table(
         "hermes_web_article_submissions",
         sa.Column("submission_id", sa.String(length=64), nullable=False),
-        sa.Column("candidate_id", sa.String(length=32), nullable=False),
-        sa.Column("article_id", sa.String(length=32), nullable=False),
+        sa.Column(
+            "candidate_id",
+            sa.String(length=32),
+            sa.ForeignKey("web_article_candidates.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
+        sa.Column(
+            "article_id",
+            sa.String(length=32),
+            sa.ForeignKey("web_articles.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
         sa.Column("idempotency_key", sa.String(length=128), nullable=False),
         sa.Column("request_nonce", sa.String(length=128), nullable=False),
         sa.Column("payload_hash", sa.String(length=64), nullable=False),
@@ -190,17 +208,13 @@ def upgrade() -> None:
         sa.Column("skill_version", sa.String(length=64), nullable=False),
         sa.Column("response_metadata", sa.JSON(), nullable=False, server_default="{}"),
         sa.Column("status", sa.String(length=16), nullable=False, server_default="accepted"),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
         sa.Column("expires_at", sa.DateTime(), nullable=False),
         sa.Column("processed_at", sa.DateTime(), nullable=True),
         sa.CheckConstraint(
             "status IN ('accepted', 'expired')",
             name="ck_hermes_web_article_submissions_status",
         ),
-        sa.ForeignKeyConstraint(
-            ["candidate_id"], ["web_article_candidates.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(["article_id"], ["web_articles.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("submission_id"),
         sa.UniqueConstraint("idempotency_key", name="uq_hermes_web_article_idempotency"),
         sa.UniqueConstraint("request_nonce", name="uq_hermes_web_article_nonce"),
