@@ -89,6 +89,8 @@ jobs:
           cache-suffix: policy
       - name: Install Python dependencies
         run: uv pip install -r backend/requirements.txt -r bot/requirements.txt
+      - name: Prepare pytest runtime directories
+        run: mkdir -p .artifacts/runtime/tests
       - name: Run shared delivery policy group
         run: python scripts/ci_contract.py run-group policy
 
