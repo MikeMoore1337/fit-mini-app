@@ -12,6 +12,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from fitminiapp_api.core.config import settings
 from fitminiapp_api.models.news import (
     HermesWebArticleSubmission,
     WebArticle,
@@ -460,6 +461,15 @@ def accept_hermes_article_submission(
         raise WebArticleError("schema_version_unsupported")
     if payload.provenance.skill_version != HERMES_WEB_ARTICLE_SKILL_VERSION:
         raise WebArticleError("skill_version_unsupported")
+    if len(payload.article.sources) > settings.hermes_intake_max_source_count:
+        raise WebArticleError("source_count_exceeded")
+    recent_count = (
+        db.query(HermesWebArticleSubmission)
+        .filter(HermesWebArticleSubmission.created_at >= current - timedelta(minutes=1))
+        .count()
+    )
+    if recent_count >= settings.hermes_intake_rate_limit_per_minute:
+        raise WebArticleError("rate_limited")
     candidate = db.get(WebArticleCandidate, payload.candidate_id)
     if candidate is None:
         raise WebArticleError("candidate_missing")
@@ -545,7 +555,7 @@ def accept_hermes_article_submission(
             "source_count": len(payload.article.sources),
             "claim_count": len(payload.article.claims),
         },
-        expires_at=current + timedelta(seconds=900),
+        expires_at=current + timedelta(seconds=settings.hermes_intake_replay_ttl_seconds),
         processed_at=current,
     )
     db.add(submission)

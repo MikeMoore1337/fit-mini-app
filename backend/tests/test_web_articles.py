@@ -242,10 +242,35 @@ def test_signed_hermes_article_intake_is_idempotent_and_never_publishes(
     assert first.json()["article_status"] == "draft"
     assert first.json()["article_id"] == second.json()["article_id"]
 
+    mismatch_nonce = "article-request-nonce-other"
+    mismatch_headers = {
+        **headers,
+        "X-Hermes-Nonce": mismatch_nonce,
+        "X-Hermes-Signature": hermes_signature(
+            "test-hermes-shared-secret-that-is-long-enough",
+            timestamp=timestamp,
+            nonce=mismatch_nonce,
+            body=body,
+        ),
+    }
+    mismatch = client.post("/api/v1/hermes/articles/intake", content=body, headers=mismatch_headers)
+    assert mismatch.status_code == 422
+    assert mismatch.json()["detail"] == "nonce_mismatch"
+
     with SessionLocal() as db:
         article = db.get(WebArticle, first.json()["article_id"])
         assert article is not None
         assert article.status == "draft"
+
+
+def test_hermes_article_intake_enforces_shared_source_limit(db_session, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "hermes_intake_max_source_count", 1)
+    candidate_id = _candidate(db_session)
+    payload = _payload(candidate_id)
+    payload_hash = hashlib.sha256(payload.model_dump_json().encode()).hexdigest()
+
+    with pytest.raises(WebArticleError, match="source_count_exceeded"):
+        accept_hermes_article_submission(db_session, payload, payload_hash=payload_hash)
 
 
 def test_publish_requires_approval_and_update_preserves_revision(db_session) -> None:

@@ -34,7 +34,9 @@ _CLIENT_ERROR_CODES = {
     "cta_contains_unallowed_fields",
     "cta_copy_invalid",
     "cta_destination_invalid",
+    "nonce_mismatch",
     "schema_version_unsupported",
+    "source_count_exceeded",
     "skill_version_unsupported",
     "slug_invalid",
 }
@@ -52,7 +54,7 @@ def _http_error(error: HermesIntakeError | WebArticleError) -> HTTPException:
     if error.code in _CONFLICT_CODES:
         return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error.code)
     if error.code in _CLIENT_ERROR_CODES:
-        return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=error.code)
+        return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=error.code)
     return HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="article_intake_failed"
     )
@@ -92,6 +94,8 @@ async def receive_hermes_web_article_intake(
         payload = _REQUEST_ADAPTER.validate_json(body)
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail="payload_invalid") from exc
+    if payload.request_nonce != (x_hermes_nonce or ""):
+        raise _http_error(WebArticleError("nonce_mismatch"))
     if payload.schema_version != HERMES_WEB_ARTICLE_SCHEMA_VERSION:
         raise _http_error(WebArticleError("schema_version_unsupported"))
     try:
