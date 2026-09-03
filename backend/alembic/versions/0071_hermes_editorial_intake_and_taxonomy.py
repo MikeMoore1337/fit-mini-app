@@ -1,6 +1,6 @@
 """Add Hermes intake receipts and independent news taxonomy fields.
 
-Revision ID: 0071_hermes_editorial_intake_and_taxonomy
+Revision ID: 0071_hermes_intake_taxonomy
 Revises: 0070_browser_oauth_transactions
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0071_hermes_editorial_intake_and_taxonomy"
+revision: str = "0071_hermes_intake_taxonomy"
 down_revision: str | None = "0070_browser_oauth_transactions"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
