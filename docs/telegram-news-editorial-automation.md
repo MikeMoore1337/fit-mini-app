@@ -208,13 +208,22 @@ state volume, and is tested with a read-only root filesystem. The verification b
 CPU, 512 MiB RAM and 64 PIDs per container; these are safety bounds, not a production capacity
 benchmark.
 
-The worker accepts one bounded job, sends the source packet only to an OpenAI-compatible provider
-endpoint, validates a structured response, and signs the YFC intake payload. The current tracked
-configuration allows only local/mock provider, intake and preview endpoints. It has no terminal,
-browser, MCP, plugin, Telegram, dashboard, database, publish or Docker-socket capability. A
-request for an unsupported capability, malformed endpoint, oversized input/output, prompt
-injection marker, failed provider response, invalid schema, invalid HMAC, duplicate replay or
-source outside the allowlist fails closed.
+Worker принимает одну bounded job, отправляет source packet только в OpenAI-compatible provider,
+проверяет structured response и подписывает YFC intake payload. `HERMES_PROVIDER_MODE=local_mock`
+сохраняет текущий local-only contract: только HTTP localhost/`host.docker.internal`, provider
+base path `/v1`, YFC intake path `/api/v1/hermes/editorial/intake` и local Telegram preview mock.
+`external` — отдельный подготовленный режим: только HTTPS, exact provider host `api.groq.com` с
+base path `/openai/v1`, exact YFC host `app.your-fitness-coach.ru` и exact intake path
+`/api/v1/hermes/editorial/intake`. Внешние URL с arbitrary host, HTTP, private/link-local/metadata
+target, userinfo, query/fragment, нестандартным портом или redirect отвергаются. HTTP client не
+следует redirect. Source URLs worker не fetch'ит.
+
+Worker не имеет terminal, browser, MCP, plugin, Telegram Bot API, dashboard, database, publish или
+Docker-socket capability. Запрос unsupported capability, malformed endpoint, oversized
+input/output, prompt-injection marker, failed provider response, invalid schema, invalid HMAC,
+duplicate replay или source outside allowlist fails closed. В external mode `TELEGRAM_PREVIEW_URL`
+не требуется и запрещён конфигурационным контрактом: после accepted YFC intake downstream
+editorial/review flow принадлежит YFC.
 
 The local E2E path is:
 
@@ -252,34 +261,56 @@ the YFC intake host/path and approved source hosts; it must deny Telegram Bot AP
 PostgreSQL/Redis/internal services, Docker API/socket, SSH, cloud metadata, arbitrary redirects,
 registries and wildcard internet egress. There are no inbound Hermes ports.
 
-The exact variable names reserved for a later approved setup are:
+Актуальные имена переменных worker:
 
 ```text
 HERMES_INTAKE_ENABLED
 HERMES_SOURCE_ALLOWLIST
+HERMES_PROVIDER_MODE
 HERMES_PROVIDER_BASE_URL
 HERMES_PROVIDER_API_KEY
 HERMES_PROVIDER_MODEL
 HERMES_PROVIDER_TIMEOUT_SECONDS
-HERMES_YFC_INTAKE_URL
-HERMES_YFC_INTAKE_KEY_ID
-HERMES_YFC_INTAKE_SHARED_SECRET
-HERMES_YFC_INTAKE_TIMEOUT_SECONDS
-HERMES_PREVIEW_URL
-HERMES_PREVIEW_TIMEOUT_SECONDS
+HERMES_PROVIDER_MAX_ATTEMPTS
+HERMES_PROVIDER_RETRY_BACKOFF_SECONDS
+YFC_INTAKE_URL
+YFC_HERMES_KEY_ID
+YFC_HERMES_SHARED_SECRET
+YFC_INTAKE_TIMEOUT_SECONDS
+TELEGRAM_PREVIEW_URL              # local_mock/E2E only
+TELEGRAM_PREVIEW_TIMEOUT_SECONDS  # local_mock/E2E only
 ```
 
-Only provider API key and YFC shared secret are secret values. No Telegram token, database
-credential, user health data or host credential belongs in this worker. The pre-Gate build uses
-empty local/mock secret values from `.env.example`; it does not create accounts, keys or service
-identities. Source content is sent only to the local fake provider in the E2E test and is not
-sent to YFC intake. A future external provider must be separately approved for retention,
-training/model-improvement use, region, privacy terms, rate limits and cost before any source
-content leaves the controlled environment.
+Секретные значения — только `HERMES_PROVIDER_API_KEY` и `YFC_HERMES_SHARED_SECRET`. Telegram
+token, database credential, user health data и host credential worker не нужны. Pre-Gate local
+build использует локальные test values, не создаёт accounts, keys или service identities.
 
-The kill switch is `HERMES_INTAKE_ENABLED=false`; keep it off until Gate A. The existing
-production `NEWS_INGESTION_ENABLED` and `NEWS_PUBLICATION_ENABLED` values are not changed by this
-integration, and `NEWS_AUTO_PUBLISH_LOW_RISK=false` remains required. Rollback is to stop/remove
+### Provider readiness addendum
+
+Primary candidate для внешнего режима — Groq Free Plan, модель `openai/gpt-oss-120b`, с целевой
+стоимостью LLM `$0` на старте. Published Groq Free limits являются только baseline: фактические
+account tier, quota/rate limits, payment state и доступность модели должны быть проверены владельцем
+перед shadow-run. Worker не может автоматически переключиться на Developer/paid Groq tier или
+другой cloud provider. После максимум двух попыток того же candidate при 429/quota, timeout,
+network unavailable или 5xx остаётся manual/no-provider.
+
+`HERMES_PROVIDER_BASE_URL`, `HERMES_PROVIDER_API_KEY` и `HERMES_PROVIDER_MODEL` остаются
+provider-neutral interface. В текущем external build allowlist и model pin ограничены Groq Free
+candidate; добавление `api.openai.com` или любого другого provider host требует отдельного
+owner-approved config/code change. Будущий optional paid fallback — OpenAI `gpt-5.6-luna` — не
+подключён, credentials не создаются и автоматическим fallback не является. Gemini и OpenRouter
+не подключаются.
+
+В external mode наружу уходит source metadata/content packet только в approved Groq endpoint и
+structured draft metadata в approved YFC intake; source URL не fetch'ится, а YFC intake получает
+content hash вместо полного source content. Retention, training/model-improvement policy,
+processing/storage region, privacy terms и фактическая cost/quota policy Groq для конкретного
+account до owner verification не считаются подтверждёнными. Качество реальной модели проверяется
+только в owner-approved shadow-run после Gate A; local fake E2E не является model-quality proof.
+
+Kill switch — `HERMES_INTAKE_ENABLED=false`; keep it off until Gate A. The existing production
+`NEWS_INGESTION_ENABLED` and `NEWS_PUBLICATION_ENABLED` values are not changed by this integration,
+and `NEWS_AUTO_PUBLISH_LOW_RISK=false` remains required. Rollback is to stop/remove
 the separate worker workload, revoke only its approved intake/provider identities, remove its
 egress rules, and return to the existing YFC manual/editorial path. Existing news pipeline flags
 and publisher ownership are not rollback targets. Any later production rollback must use the

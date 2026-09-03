@@ -57,6 +57,26 @@ def test_provenance_and_dependency_inventory_are_exact() -> None:
     assert len(inventory["pythonPackages"]) == 12
 
 
+def test_config_schema_separates_local_and_external_network_modes() -> None:
+    schema = json.loads((WORKER_ROOT / "config.schema.json").read_text(encoding="utf-8"))
+    assert schema["properties"]["HERMES_PROVIDER_MODE"]["enum"] == ["local_mock", "external"]
+    assert schema["properties"]["HERMES_PROVIDER_MAX_ATTEMPTS"]["maximum"] == 2
+    external = next(
+        condition
+        for condition in schema["allOf"]
+        if condition["if"]["properties"]["HERMES_PROVIDER_MODE"]["const"] == "external"
+    )
+    assert (
+        external["then"]["properties"]["HERMES_PROVIDER_BASE_URL"]["const"]
+        == "https://api.groq.com/openai/v1"
+    )
+    assert (
+        external["then"]["properties"]["YFC_INTAKE_URL"]["const"]
+        == "https://app.your-fitness-coach.ru/api/v1/hermes/editorial/intake"
+    )
+    assert external["then"]["not"]["anyOf"]
+
+
 def test_worker_source_has_no_runtime_tool_or_publish_imports() -> None:
     source = (WORKER_ROOT / "editorial_worker.py").read_text(encoding="utf-8").casefold()
     assert "import subprocess" not in source

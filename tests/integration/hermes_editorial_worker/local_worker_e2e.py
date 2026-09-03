@@ -123,6 +123,13 @@ class ProviderHandler(BaseHTTPRequestHandler):
         if mode == "server_error":
             self._send_json(503, {"error": {"type": "temporary_server_error"}})
             return
+        if mode == "redirect":
+            self.send_response(307)
+            self.send_header("Location", "https://unapproved.example.invalid/v1/chat/completions")
+            self.send_header("Content-Length", "0")
+            self.send_header("Connection", "close")
+            self.end_headers()
+            return
         if mode == "malformed_json":
             self._send_json(200, _completion_document("not-json"))
             return
@@ -297,10 +304,13 @@ def worker_command(
     variables: dict[str, str | None] = {
         "HERMES_HOME": "/opt/data",
         "HERMES_SOURCE_ALLOWLIST": SOURCE_ID,
+        "HERMES_PROVIDER_MODE": "local_mock",
         "HERMES_PROVIDER_BASE_URL": f"http://host.docker.internal:{provider_port}/v1",
         "HERMES_PROVIDER_API_KEY": "local-mock-key-not-a-secret",
         "HERMES_PROVIDER_MODEL": "mock-editorial-v1",
         "HERMES_PROVIDER_TIMEOUT_SECONDS": "1",
+        "HERMES_PROVIDER_MAX_ATTEMPTS": "2",
+        "HERMES_PROVIDER_RETRY_BACKOFF_SECONDS": "0",
         "YFC_INTAKE_URL": f"http://host.docker.internal:{yfc_port}/api/v1/hermes/editorial/intake",
         "YFC_HERMES_KEY_ID": INTAKE_KEY_ID,
         "YFC_HERMES_SHARED_SECRET": INTAKE_SECRET,
@@ -531,11 +541,13 @@ def main() -> int:
             ("timeout", "provider_timeout"),
             ("rate_limit", "provider_rate_limited"),
             ("server_error", "provider_server_error"),
+            ("redirect", "provider_redirect_rejected"),
             ("malformed_json", "provider_malformed_json"),
             ("invalid_schema", "provider_schema_invalid"),
             ("oversized", "provider_response_too_large"),
         ):
             job = write_job(f"negative-{mode}")
+            before_provider = provider_state.snapshot()
             result = run_worker(
                 job,
                 provider_server.server_port,
@@ -547,8 +559,29 @@ def main() -> int:
             if mode == "timeout":
                 provider_state.release_timeout.set()
             assert_error(result, error_code)
+            if mode == "rate_limit":
+                after_provider = provider_state.snapshot()
+                new_records = after_provider["request_records"][before_provider["request_count"] :]
+                if len(new_records) != 2 or any(
+                    record["path"] != "/v1/chat/completions"
+                    or record["model"] != "mock-editorial-v1"
+                    for record in new_records
+                ):
+                    raise AssertionError(
+                        {
+                            "rate_limit_retry_policy": {
+                                "before": before_provider,
+                                "after": after_provider,
+                            }
+                        }
+                    )
             cases.append(
-                {"name": mode, "exit_code": result["exit_code"], "result": result["result"]}
+                {
+                    "name": mode,
+                    "exit_code": result["exit_code"],
+                    "result": result["result"],
+                    "fallback": "none" if mode == "rate_limit" else None,
+                }
             )
 
         injection = run_worker(
@@ -730,6 +763,7 @@ def main() -> int:
                 "name": "capability_and_preview_boundary",
                 "preview_records": preview_records,
                 "provider": provider_snapshot,
+                "provider_fallback": "none",
             }
         )
 

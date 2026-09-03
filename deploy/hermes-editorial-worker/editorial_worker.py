@@ -2,15 +2,15 @@
 
 This adapter deliberately speaks only the OpenAI-compatible HTTP protocol and the
 documented YFC Hermes intake contract.  It does not import Hermes tools, Telegram
-adapters, plugins, a shell, or a browser.  All three network destinations are
-required to be local test endpoints; a production provider URL cannot pass the
-worker's allowlist in this bounded build.
+adapters, plugins, a shell, or a browser.  Local/mock mode accepts only local test
+endpoints; external mode accepts only the pinned Groq and YFC HTTPS destinations.
 """
 
 from __future__ import annotations
 
 import hashlib
 import hmac
+import ipaddress
 import json
 import os
 import re
@@ -31,7 +31,21 @@ JOB_SCHEMA_VERSION = "hermes-editorial-job-v1"
 INTAKE_SCHEMA_VERSION = "hermes-editorial-intake-v1"
 PROMPT_VERSION = "task129-editorial-worker-v1"
 SKILL_VERSION = "yfc-hermes-editorial-v1"
-PROVIDER_NAME = "local-mock-openai"
+LOCAL_MOCK_MODE = "local_mock"
+EXTERNAL_MODE = "external"
+PROVIDER_MODES = frozenset({LOCAL_MOCK_MODE, EXTERNAL_MODE})
+LOCAL_PROVIDER_NAME = "local-mock-openai"
+EXTERNAL_PROVIDER_NAME = "groq-free-candidate"
+EXTERNAL_PROVIDER_MODEL = "openai/gpt-oss-120b"
+EXTERNAL_PROVIDER_HOST_ALLOWLIST = frozenset({"api.groq.com"})
+EXTERNAL_PROVIDER_PATH = "/openai/v1"
+EXTERNAL_YFC_HOST_ALLOWLIST = frozenset({"app.your-fitness-coach.ru"})
+YFC_INTAKE_PATH = "/api/v1/hermes/editorial/intake"
+DEFAULT_PROVIDER_MAX_ATTEMPTS = 2
+DEFAULT_PROVIDER_RETRY_BACKOFF_SECONDS = 0.25
+RETRYABLE_PROVIDER_ERRORS = frozenset(
+    {"provider_timeout", "provider_unavailable", "provider_rate_limited", "provider_server_error"}
+)
 MAX_JOB_BYTES = 96 * 1024
 MAX_SOURCE_CONTENT_BYTES = 32 * 1024
 MAX_PROVIDER_RESPONSE_BYTES = 16 * 1024
@@ -139,6 +153,57 @@ def _bounded_timeout(name: str, default: str) -> float:
     return value
 
 
+def _bounded_int(name: str, default: int, *, minimum: int, maximum: int) -> int:
+    try:
+        value = int(os.environ.get(name, str(default)))
+    except ValueError as exc:
+        raise WorkerError(f"{name.lower()}_invalid") from exc
+    if not minimum <= value <= maximum:
+        raise WorkerError(f"{name.lower()}_invalid")
+    return value
+
+
+def _bounded_nonnegative_float(name: str, default: float, *, maximum: float) -> float:
+    try:
+        value = float(os.environ.get(name, str(default)))
+    except ValueError as exc:
+        raise WorkerError(f"{name.lower()}_invalid") from exc
+    if not 0 <= value <= maximum:
+        raise WorkerError(f"{name.lower()}_invalid")
+    return value
+
+
+def _provider_mode() -> str:
+    value = os.environ.get("HERMES_PROVIDER_MODE", LOCAL_MOCK_MODE).strip().casefold()
+    if value not in PROVIDER_MODES:
+        raise WorkerError("hermes_provider_mode_invalid")
+    return value
+
+
+def _provider_model(mode: str | None = None) -> str:
+    selected_mode = mode or _provider_mode()
+    value = _required_env("HERMES_PROVIDER_MODEL")
+    if selected_mode == EXTERNAL_MODE and value != EXTERNAL_PROVIDER_MODEL:
+        raise WorkerError("hermes_provider_model_not_allowlisted")
+    return value
+
+
+def _provider_name(mode: str | None = None) -> str:
+    return (
+        EXTERNAL_PROVIDER_NAME
+        if (mode or _provider_mode()) == EXTERNAL_MODE
+        else LOCAL_PROVIDER_NAME
+    )
+
+
+def _assert_preview_boundary(mode: str) -> None:
+    if mode == EXTERNAL_MODE and any(
+        os.environ.get(name, "").strip()
+        for name in ("TELEGRAM_PREVIEW_URL", "TELEGRAM_PREVIEW_TIMEOUT_SECONDS")
+    ):
+        raise WorkerError("preview_capability_disabled")
+
+
 def _local_url(name: str, *, required_path: str | None = None) -> str:
     value = _required_env(name)
     parsed = urlsplit(value)
@@ -153,6 +218,56 @@ def _local_url(name: str, *, required_path: str | None = None) -> str:
     if required_path is not None and parsed.path.rstrip("/") != required_path.rstrip("/"):
         raise WorkerError(f"{name.lower()}_path_invalid")
     return value.rstrip("/")
+
+
+def _external_url(name: str, *, allowed_hosts: frozenset[str], required_path: str) -> str:
+    value = _required_env(name)
+    parsed = urlsplit(value)
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise WorkerError(f"{name.lower()}_not_external_allowlisted") from exc
+    hostname = parsed.hostname.casefold() if parsed.hostname else None
+    try:
+        address = ipaddress.ip_address(hostname) if hostname else None
+    except ValueError:
+        address = None
+    if (
+        parsed.scheme != "https"
+        or hostname not in allowed_hosts
+        or (address is not None and not address.is_global)
+        or parsed.username
+        or parsed.password
+        or parsed.query
+        or parsed.fragment
+        or port not in {None, 443}
+    ):
+        raise WorkerError(f"{name.lower()}_not_external_allowlisted")
+    if parsed.path != required_path:
+        raise WorkerError(f"{name.lower()}_path_invalid")
+    return value
+
+
+def _provider_base_url(mode: str | None = None) -> str:
+    selected_mode = mode or _provider_mode()
+    if selected_mode == LOCAL_MOCK_MODE:
+        return _local_url("HERMES_PROVIDER_BASE_URL", required_path="/v1")
+    return _external_url(
+        "HERMES_PROVIDER_BASE_URL",
+        allowed_hosts=EXTERNAL_PROVIDER_HOST_ALLOWLIST,
+        required_path=EXTERNAL_PROVIDER_PATH,
+    )
+
+
+def _intake_url(mode: str | None = None) -> str:
+    selected_mode = mode or _provider_mode()
+    if selected_mode == LOCAL_MOCK_MODE:
+        return _local_url("YFC_INTAKE_URL", required_path=YFC_INTAKE_PATH)
+    return _external_url(
+        "YFC_INTAKE_URL",
+        allowed_hosts=EXTERNAL_YFC_HOST_ALLOWLIST,
+        required_path=YFC_INTAKE_PATH,
+    )
 
 
 def _source_allowlist() -> frozenset[str]:
@@ -263,11 +378,14 @@ def _read_bounded_response(response: httpx.Response, limit: int) -> bytes:
     return bytes(body)
 
 
-def _provider_request(source: SourcePacket) -> DraftProposal:
-    base_url = _local_url("HERMES_PROVIDER_BASE_URL", required_path="/v1")
-    api_key = _required_env("HERMES_PROVIDER_API_KEY")
-    model = _required_env("HERMES_PROVIDER_MODEL")
-    timeout_seconds = _bounded_timeout("HERMES_PROVIDER_TIMEOUT_SECONDS", "3")
+def _provider_request_once(
+    source: SourcePacket,
+    *,
+    base_url: str,
+    api_key: str,
+    model: str,
+    timeout_seconds: float,
+) -> DraftProposal:
 
     request_body = {
         "model": model,
@@ -280,7 +398,7 @@ def _provider_request(source: SourcePacket) -> DraftProposal:
     timeout = httpx.Timeout(timeout_seconds, connect=timeout_seconds)
     try:
         with (
-            httpx.Client(timeout=timeout, trust_env=False) as client,
+            httpx.Client(timeout=timeout, trust_env=False, follow_redirects=False) as client,
             client.stream(
                 "POST",
                 endpoint,
@@ -291,6 +409,8 @@ def _provider_request(source: SourcePacket) -> DraftProposal:
                 json=request_body,
             ) as response,
         ):
+            if 300 <= response.status_code < 400:
+                raise WorkerError("provider_redirect_rejected")
             if response.status_code == 429:
                 raise WorkerError("provider_rate_limited")
             if response.status_code >= 500:
@@ -329,6 +449,40 @@ def _provider_request(source: SourcePacket) -> DraftProposal:
         raise WorkerError("provider_schema_invalid") from exc
 
 
+def _provider_request(source: SourcePacket) -> DraftProposal:
+    mode = _provider_mode()
+    base_url = _provider_base_url(mode)
+    api_key = _required_env("HERMES_PROVIDER_API_KEY")
+    model = _provider_model(mode)
+    timeout_seconds = _bounded_timeout("HERMES_PROVIDER_TIMEOUT_SECONDS", "3")
+    max_attempts = _bounded_int(
+        "HERMES_PROVIDER_MAX_ATTEMPTS",
+        DEFAULT_PROVIDER_MAX_ATTEMPTS,
+        minimum=1,
+        maximum=2,
+    )
+    retry_backoff = _bounded_nonnegative_float(
+        "HERMES_PROVIDER_RETRY_BACKOFF_SECONDS",
+        DEFAULT_PROVIDER_RETRY_BACKOFF_SECONDS,
+        maximum=2,
+    )
+    for attempt in range(max_attempts):
+        try:
+            return _provider_request_once(
+                source,
+                base_url=base_url,
+                api_key=api_key,
+                model=model,
+                timeout_seconds=timeout_seconds,
+            )
+        except WorkerError as exc:
+            if exc.code not in RETRYABLE_PROVIDER_ERRORS or attempt + 1 >= max_attempts:
+                raise
+            if retry_backoff:
+                time.sleep(retry_backoff)
+    raise WorkerError("provider_unavailable")
+
+
 def _json_response(response: httpx.Response, *, limit: int, error_code: str) -> dict[str, Any]:
     try:
         raw = _read_bounded_response(response, limit)
@@ -364,8 +518,8 @@ def _build_intake_payload(job: EditorialJob, proposal: DraftProposal) -> bytes:
         },
         "draft": proposal.model_dump(),
         "provenance": {
-            "provider": PROVIDER_NAME,
-            "model": _required_env("HERMES_PROVIDER_MODEL"),
+            "provider": _provider_name(),
+            "model": _provider_model(),
             "prompt_version": PROMPT_VERSION,
             "skill_version": SKILL_VERSION,
         },
@@ -376,7 +530,7 @@ def _build_intake_payload(job: EditorialJob, proposal: DraftProposal) -> bytes:
 
 
 def _post_intake(job: EditorialJob, body: bytes) -> IntakeResponse:
-    url = _local_url("YFC_INTAKE_URL", required_path="/api/v1/hermes/editorial/intake")
+    url = _intake_url()
     key_id = _required_env("YFC_HERMES_KEY_ID")
     secret = _required_env("YFC_HERMES_SHARED_SECRET")
     timestamp = str(int(time.time()))
@@ -386,7 +540,7 @@ def _post_intake(job: EditorialJob, body: bytes) -> IntakeResponse:
     timeout = httpx.Timeout(timeout_seconds, connect=timeout_seconds)
     try:
         with (
-            httpx.Client(timeout=timeout, trust_env=False) as client,
+            httpx.Client(timeout=timeout, trust_env=False, follow_redirects=False) as client,
             client.stream(
                 "POST",
                 url,
@@ -401,6 +555,8 @@ def _post_intake(job: EditorialJob, body: bytes) -> IntakeResponse:
             ) as response,
         ):
             status_code = response.status_code
+            if 300 <= status_code < 400:
+                raise WorkerError("intake_redirect_rejected")
             if status_code in {401, 403}:
                 raise WorkerError("intake_forbidden")
             if status_code >= 500:
@@ -423,6 +579,8 @@ def _post_intake(job: EditorialJob, body: bytes) -> IntakeResponse:
 
 
 def _post_preview(job: EditorialJob, result: IntakeResponse) -> PreviewResponse:
+    if _provider_mode() != LOCAL_MOCK_MODE:
+        raise WorkerError("preview_capability_disabled")
     url = _local_url("TELEGRAM_PREVIEW_URL", required_path="/preview")
     body = {
         "preview_version": "telegram-editorial-preview-v1",
@@ -439,9 +597,11 @@ def _post_preview(job: EditorialJob, result: IntakeResponse) -> PreviewResponse:
     timeout = httpx.Timeout(timeout_seconds, connect=timeout_seconds)
     try:
         with (
-            httpx.Client(timeout=timeout, trust_env=False) as client,
+            httpx.Client(timeout=timeout, trust_env=False, follow_redirects=False) as client,
             client.stream("POST", url, json=body) as response,
         ):
+            if 300 <= response.status_code < 400:
+                raise WorkerError("preview_redirect_rejected")
             if response.status_code >= 400:
                 raise WorkerError("preview_rejected")
             document = _json_response(
@@ -463,6 +623,8 @@ def _post_preview(job: EditorialJob, result: IntakeResponse) -> PreviewResponse:
 
 
 def run_job(job: EditorialJob) -> dict[str, Any]:
+    mode = _provider_mode()
+    _assert_preview_boundary(mode)
     if job.source.source_id not in _source_allowlist():
         raise WorkerError("source_not_allowlisted")
     if _contains_prompt_injection(job.source):
@@ -473,10 +635,11 @@ def run_job(job: EditorialJob) -> dict[str, Any]:
     body = _build_intake_payload(job, proposal)
     intake = _post_intake(job, body)
     preview: PreviewResponse | None = None
-    if intake.status == "accepted":
+    if intake.status == "accepted" and mode == LOCAL_MOCK_MODE:
         preview = _post_preview(job, intake)
     result: dict[str, Any] = {
         "status": intake.status,
+        "provider_mode": mode,
         "job_id": job.job_id,
         "source_id": job.source.source_id,
         "draft_id": intake.draft_id,
@@ -486,7 +649,9 @@ def run_job(job: EditorialJob) -> dict[str, Any]:
         "risk_reasons": intake.risk_reasons,
         "source_hash": expected_hash,
         "preview": {
-            "status": preview.status if preview else "not_sent_for_duplicate",
+            "status": preview.status
+            if preview
+            else ("not_sent_external_mode" if mode == EXTERNAL_MODE else "not_sent_for_duplicate"),
             "published": preview.published if preview else False,
         },
         "upstream": {
@@ -506,13 +671,21 @@ def _self_check() -> dict[str, Any]:
         "upstream_commit": UPSTREAM_COMMIT,
         "worker": "editorial-worker-v1",
         "provider_protocol": "openai-compatible-http",
+        "provider_modes": sorted(PROVIDER_MODES),
+        "external_provider_host_allowlist": sorted(EXTERNAL_PROVIDER_HOST_ALLOWLIST),
+        "external_provider_path": EXTERNAL_PROVIDER_PATH,
+        "external_provider_model": EXTERNAL_PROVIDER_MODEL,
+        "external_yfc_host_allowlist": sorted(EXTERNAL_YFC_HOST_ALLOWLIST),
+        "external_yfc_path": YFC_INTAKE_PATH,
         "intake_adapter": INTAKE_SCHEMA_VERSION,
-        "telegram": "preview-only-local-contract",
+        "telegram": "preview-only-local-contract; absent in external mode",
+        "provider_fallback": "disabled; manual/no-provider only",
+        "provider_cost_policy": "free-only candidate; no automatic paid tier",
         "tools_exposed": 0,
         "terminal_execution": "disabled",
         "browser_automation": "disabled",
         "plugins": "not packaged",
-        "network": "configured endpoints only; no source fetch",
+        "network": "local/mock endpoints or exact external allowlists; no source fetch",
         "publish_capability": "disabled",
     }
 
