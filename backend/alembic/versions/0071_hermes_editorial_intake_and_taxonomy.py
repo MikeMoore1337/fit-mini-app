@@ -79,7 +79,12 @@ def upgrade() -> None:
         sa.Column("source_count", sa.Integer(), nullable=False),
         sa.Column("response_metadata", sa.JSON(), nullable=False, server_default="{}"),
         sa.Column("rejection_reason", sa.String(length=64), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            nullable=False,
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+        ),
         sa.Column("expires_at", sa.DateTime(), nullable=False),
         sa.Column("processed_at", sa.DateTime(), nullable=True),
         sa.CheckConstraint(
