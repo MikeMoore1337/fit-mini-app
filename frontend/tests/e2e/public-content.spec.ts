@@ -264,9 +264,10 @@ test('public article index and detail stay readable and crawlable across desktop
     await page.goto('/articles/strength-basics');
     await expect(page.getByRole('heading', { level: 1, name: publicArticle.title })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Источники' })).toBeVisible();
+    expect(publicArticle.sources).toHaveLength(1);
     await expect(page.getByRole('link', { name: 'Physical activity guidance' })).toHaveAttribute(
       'href',
-      publicArticle.sources[0].url,
+      publicArticle.sources[0]!.url,
     );
     await expect(page.getByRole('link', { name: 'Открыть Your Fitness Coach' })).toHaveAttribute(
       'href',
