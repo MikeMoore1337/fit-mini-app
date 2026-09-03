@@ -15,9 +15,11 @@ from fitminiapp_api.services.web_articles import (
     ArticleCandidateSignals,
     WebArticleError,
     accept_hermes_article_submission,
+    archive_web_article,
     create_article_candidate,
     mark_article_update_required,
     publish_web_article,
+    retract_web_article,
     score_article_candidate,
 )
 
@@ -261,8 +263,72 @@ def test_publish_requires_approval_and_update_preserves_revision(db_session) -> 
     publish_web_article(db_session, article, actor_ref="owner")
     assert article.status == "published"
     assert article.published_at is not None
+    published_at = article.published_at
 
     revision_id = db_session.query(WebArticleRevision.id).scalar()
     mark_article_update_required(db_session, article, reason="Источник обновился")
     assert article.status == "update_required"
     assert db_session.query(WebArticleRevision.id).scalar() == revision_id
+
+    updated_proposal = payload.article.model_copy(
+        update={
+            "title": "Как начать силовые тренировки: обновлённый разбор",
+            "lead": "Обновлённый разбор сохраняет прежний intent и canonical URL, но проходит новый review.",
+        }
+    )
+    update_payload = payload.model_copy(
+        update={
+            "idempotency_key": "article-idempotency-update-001",
+            "request_nonce": "article-request-nonce-update-001",
+            "research_version": "research-v2",
+            "article": updated_proposal,
+        }
+    )
+    update_hash = hashlib.sha256(update_payload.model_dump_json().encode()).hexdigest()
+    update_result = accept_hermes_article_submission(
+        db_session, update_payload, payload_hash=update_hash
+    )
+
+    assert update_result.status == "accepted"
+    assert update_result.article_id == article.id
+    assert update_result.content_version == 2
+    assert article.status == "draft"
+    assert article.slug == payload.article.slug
+    assert article.canonical_url == (
+        f"{settings.frontend_base_url.rstrip('/')}/articles/kak-nachat-silovye-trenirovki"
+    )
+    assert article.published_at == published_at
+    assert db_session.query(WebArticleRevision).count() == 2
+    old_revision = db_session.get(WebArticleRevision, revision_id)
+    assert old_revision is not None
+    assert old_revision.status == "published"
+    assert old_revision.snapshot["title"] == payload.article.title
+
+    article.status = "approved"
+    publish_web_article(db_session, article, actor_ref="owner")
+    assert article.status == "published"
+    assert article.content_version == 2
+    assert article.updated_at is not None
+
+
+def test_archive_and_retract_preserve_article_history(db_session) -> None:
+    candidate_id = _candidate(db_session)
+    payload = _payload(candidate_id)
+    payload_hash = hashlib.sha256(payload.model_dump_json().encode()).hexdigest()
+    result = accept_hermes_article_submission(db_session, payload, payload_hash=payload_hash)
+    article = db_session.get(WebArticle, result.article_id)
+    assert article is not None
+    article.status = "approved"
+    publish_web_article(db_session, article, actor_ref="owner")
+
+    archive_web_article(db_session, article, reason="Intent устарел", actor_ref="editor")
+    assert article.status == "archived"
+    assert article.correction_reason == "Intent устарел"
+    assert db_session.query(WebArticleRevision).count() == 1
+
+    retract_web_article(
+        db_session, article, reason="Обнаружена фактическая ошибка", actor_ref="owner"
+    )
+    assert article.status == "retracted"
+    assert article.correction_reason == "Обнаружена фактическая ошибка"
+    assert db_session.query(WebArticleRevision).count() == 1

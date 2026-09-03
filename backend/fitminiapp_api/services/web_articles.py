@@ -26,7 +26,12 @@ from fitminiapp_api.schemas.articles import (
 from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.news_drafts import style_checklist_warnings
 from fitminiapp_api.services.news_ingestion import utcnow
-from fitminiapp_api.services.news_taxonomy import classify_editorial_text
+from fitminiapp_api.services.news_taxonomy import (
+    EDITORIAL_TOPICS,
+    EVIDENCE_LEVELS,
+    RISK_LEVELS,
+    classify_editorial_text,
+)
 
 ARTICLE_SCHEMA_VERSION = "yfc-web-article-v1"
 HERMES_WEB_ARTICLE_SCHEMA_VERSION = "hermes-web-article-intake-v1"
@@ -163,21 +168,51 @@ def create_article_candidate(
         raise WebArticleError("candidate_source_kind_invalid")
     if article_kind not in ARTICLE_KINDS or search_intent not in SEARCH_INTENTS:
         raise WebArticleError("candidate_contract_invalid")
-    if source_ref is not None and not SAFE_REF_PATTERN.fullmatch(source_ref):
+    normalized_title = working_title.strip()
+    normalized_primary_query = primary_query.strip()
+    normalized_audience = audience.strip()
+    normalized_topics = list(dict.fromkeys(topic.strip() for topic in topics))
+    normalized_secondary_queries = list(dict.fromkeys(query.strip() for query in secondary_queries))
+    if (
+        not normalized_title
+        or len(normalized_title) > 240
+        or not normalized_primary_query
+        or len(normalized_primary_query) > 240
+        or not normalized_audience
+        or len(normalized_audience) > 32
+        or not normalized_topics
+        or len(normalized_topics) > 12
+        or any(not topic or len(topic) > 64 for topic in normalized_topics)
+        or any(not query or len(query) > 240 for query in normalized_secondary_queries)
+        or len(normalized_secondary_queries) > 20
+    ):
+        raise WebArticleError("candidate_contract_invalid")
+    if (
+        primary_topic not in EDITORIAL_TOPICS
+        or any(topic not in EDITORIAL_TOPICS for topic in normalized_topics)
+        or primary_topic not in normalized_topics
+    ):
+        raise WebArticleError("candidate_topic_invalid")
+    if risk_level not in RISK_LEVELS or evidence_level not in EVIDENCE_LEVELS:
+        raise WebArticleError("candidate_contract_invalid")
+    normalized_source_ref = source_ref.strip() if source_ref is not None else None
+    if source_kind != "manual" and not normalized_source_ref:
+        raise WebArticleError("candidate_source_ref_invalid")
+    if normalized_source_ref is not None and not SAFE_REF_PATTERN.fullmatch(normalized_source_ref):
         raise WebArticleError("candidate_source_ref_invalid")
     scored = score_article_candidate(signals)
     candidate = WebArticleCandidate(
         id=candidate_id or secrets.token_hex(16),
         source_kind=source_kind,
-        source_ref=source_ref,
-        working_title=working_title.strip(),
+        source_ref=normalized_source_ref,
+        working_title=normalized_title,
         primary_topic=primary_topic,
-        topics=list(dict.fromkeys(topics)),
+        topics=normalized_topics,
         article_kind=article_kind,
         search_intent=search_intent,
-        primary_query=primary_query.strip(),
-        secondary_queries=list(dict.fromkeys(secondary_queries)),
-        audience=audience,
+        primary_query=normalized_primary_query,
+        secondary_queries=normalized_secondary_queries,
+        audience=normalized_audience,
         risk_level=risk_level,
         evidence_level=evidence_level,
         search_demand_signal=signals.search_demand,
@@ -428,9 +463,16 @@ def accept_hermes_article_submission(
     candidate = db.get(WebArticleCandidate, payload.candidate_id)
     if candidate is None:
         raise WebArticleError("candidate_missing")
-    if candidate.status not in {"candidate", "approved", "researching"}:
+    existing_article = (
+        db.query(WebArticle).filter(WebArticle.slug == payload.article.slug).one_or_none()
+    )
+    is_update = existing_article is not None
+    if candidate.status not in {"candidate", "approved", "researching", "draft", "review"}:
         raise WebArticleError("candidate_not_ready")
-    if db.query(WebArticle).filter(WebArticle.slug == payload.article.slug).first() is not None:
+    if is_update and (
+        existing_article.status != "update_required"
+        or existing_article.candidate_id != candidate.id
+    ):
         raise WebArticleError("slug_conflict")
     warnings = validate_article_proposal(payload.article)
     blockers = _review_blockers(payload.article, warnings)
@@ -442,12 +484,14 @@ def accept_hermes_article_submission(
         blockers = tuple(dict.fromkeys((*blockers, "sensitive_topic_manual_review")))
     if classification.risk_level in {"high", "critical"}:
         blockers = tuple(dict.fromkeys((*blockers, "taxonomy_risk_manual_review")))
-    article_id = secrets.token_hex(16)
-    article = WebArticle(id=article_id, candidate_id=candidate.id)
+    content_version = existing_article.content_version + 1 if is_update else 1
+    article = existing_article or WebArticle(id=secrets.token_hex(16), candidate_id=candidate.id)
+    if not is_update:
+        db.add(article)
     _assign_article_fields(
         article,
         payload.article,
-        content_version=1,
+        content_version=content_version,
         research_version=payload.research_version,
         provider=payload.provenance.provider,
         model=payload.provenance.model,
@@ -456,13 +500,13 @@ def accept_hermes_article_submission(
         status="draft",
         blockers=blockers,
     )
-    db.add(article)
     db.flush()
+    change_reason = "hermes_research_update" if is_update else "hermes_research_submission"
     db.add(
         WebArticleRevision(
             id=secrets.token_hex(16),
             article_id=article.id,
-            content_version=1,
+            content_version=content_version,
             status="draft",
             snapshot=_to_snapshot(
                 payload.article,
@@ -474,8 +518,10 @@ def accept_hermes_article_submission(
                 skill_version=payload.provenance.skill_version,
                 review_blockers=list(blockers),
                 style_warnings=list(warnings),
+                change_reason=change_reason,
+                correction_reason=article.correction_reason,
             ),
-            change_reason="hermes_research_submission",
+            change_reason=change_reason,
         )
     )
     candidate.status = "draft"
@@ -514,6 +560,7 @@ def accept_hermes_article_submission(
             "status": article.status,
             "content_version": article.content_version,
             "review_blocker_count": len(blockers),
+            "change_reason": change_reason,
         },
     )
     db.flush()
@@ -577,14 +624,74 @@ def published_articles(db: Session) -> list[WebArticle]:
 def mark_article_update_required(db: Session, article: WebArticle, *, reason: str) -> None:
     if article.status != "published":
         raise WebArticleError("article_not_published")
+    normalized_reason = reason.strip()
+    if not normalized_reason or len(normalized_reason) > 256:
+        raise WebArticleError("correction_reason_invalid")
     article.status = "update_required"
-    article.correction_reason = reason[:256]
+    article.correction_reason = normalized_reason
     record_audit_event(
         db,
         action="web_article.update_required",
         resource_type="web_article",
         resource_id=article.id,
-        details={"content_version": article.content_version, "reason": reason[:256]},
+        details={"content_version": article.content_version, "reason": normalized_reason},
+    )
+
+
+def _transition_removed_article(
+    db: Session,
+    article: WebArticle,
+    *,
+    target_status: str,
+    reason: str,
+    actor_ref: str,
+    allowed_statuses: set[str],
+) -> None:
+    normalized_reason = reason.strip()
+    if not normalized_reason or len(normalized_reason) > 256:
+        raise WebArticleError("correction_reason_invalid")
+    if article.status == target_status:
+        return
+    if article.status not in allowed_statuses:
+        raise WebArticleError("article_transition_invalid")
+    article.status = target_status
+    article.correction_reason = normalized_reason
+    record_audit_event(
+        db,
+        action=f"web_article.{target_status}",
+        resource_type="web_article",
+        resource_id=article.id,
+        details={
+            "content_version": article.content_version,
+            "reason": normalized_reason,
+            "actor_ref": actor_ref,
+        },
+    )
+
+
+def archive_web_article(db: Session, article: WebArticle, *, reason: str, actor_ref: str) -> None:
+    """Remove an article from the public surface while preserving its revisions and audit trail."""
+
+    _transition_removed_article(
+        db,
+        article,
+        target_status="archived",
+        reason=reason,
+        actor_ref=actor_ref,
+        allowed_statuses={"draft", "review", "approved", "published", "update_required"},
+    )
+
+
+def retract_web_article(db: Session, article: WebArticle, *, reason: str, actor_ref: str) -> None:
+    """Retract a public article explicitly; no content or revision is deleted."""
+
+    _transition_removed_article(
+        db,
+        article,
+        target_status="retracted",
+        reason=reason,
+        actor_ref=actor_ref,
+        allowed_statuses={"published", "update_required", "archived"},
     )
 
 
