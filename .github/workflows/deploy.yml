@@ -100,7 +100,22 @@ jobs:
         id: migration
         run: |
           set -Eeuo pipefail
-          ACTIVE_REVISION="$(ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -p "$PROD_PORT" "$PROD_USER@$PROD_HOST" "cat '$PROD_PATH/.artifacts/operations/deployments/last-successful-revision'")"
+          ACTIVE_REVISION="$(ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -p "$PROD_PORT" "$PROD_USER@$PROD_HOST" "set -Eeuo pipefail
+            marker='$PROD_PATH/.artifacts/operations/deployments/last-successful-revision'
+            if [ -f \"\$marker\" ]; then
+              cat \"\$marker\"
+              exit 0
+            fi
+            backend_container=\$(docker compose -f '$PROD_PATH/docker-compose.yml' -p fit-mini-app ps -q backend)
+            bot_container=\$(docker compose -f '$PROD_PATH/docker-compose.yml' -p fit-mini-app ps -q bot)
+            test -n \"\$backend_container\" -a -n \"\$bot_container\"
+            backend_image=\$(docker inspect --format '{{.Config.Image}}' \"\$backend_container\")
+            bot_image=\$(docker inspect --format '{{.Config.Image}}' \"\$bot_container\")
+            backend_revision=\"\${backend_image##*:}\"
+            bot_revision=\"\${bot_image##*:}\"
+            test \"\$backend_revision\" = \"\$bot_revision\"
+            printf '%s\\n' \"\$backend_revision\"
+          ")"
           if [[ ! "$ACTIVE_REVISION" =~ ^[0-9a-f]{40}$ ]]; then
             echo "Production active revision is missing or not a full lowercase SHA" >&2
             exit 1
