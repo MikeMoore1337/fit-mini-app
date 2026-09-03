@@ -203,3 +203,6 @@ frontend/.npm-cache*/
 /codex-backlog/telegram-core-release-backlog/
 /codex-backlog/MANIFEST.json
 /docs/private/
+
+# Active backlog task workspace is owner-only and must not enter public Git.
+/codex-backlog/tasks

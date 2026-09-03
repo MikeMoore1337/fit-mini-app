@@ -20,7 +20,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 CONTRACT_VERSION = "ci-contract-v2"
-CI_SHARD_COUNT = 3
+CI_SHARD_COUNT = 4
 SHARDABLE_GROUPS = frozenset({"frontend-e2e", "python-tests"})
 SHARD_RE = re.compile(r"(?P<number>[1-9][0-9]*)/(?P<count>[1-9][0-9]*)\Z")
 

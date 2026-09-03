@@ -125,14 +125,14 @@ jobs:
         run: python scripts/ci_contract.py run-group frontend-checks
 
   frontend-smoke:
-    name: Frontend smoke (${{ matrix.shard }}/3)
+    name: Frontend smoke (${{ matrix.shard }}/4)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
 
     steps:
       - uses: actions/checkout@v4
@@ -147,11 +147,16 @@ jobs:
       - name: Build frontend for smoke tests
         working-directory: frontend
         run: npx vite build
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
       - name: Install Playwright Chromium
         working-directory: frontend
         run: npx playwright install --with-deps chromium
       - name: Run shared frontend E2E group
-        run: python scripts/ci_contract.py run-group frontend-e2e --shard "${{ matrix.shard }}/3"
+        run: python scripts/ci_contract.py run-group frontend-e2e --shard "${{ matrix.shard }}/4"
       - name: Upload Playwright traces on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -163,14 +168,14 @@ jobs:
           retention-days: 7
 
   python-tests:
-    name: Python tests (${{ matrix.shard }}/3)
+    name: Python tests (${{ matrix.shard }}/4)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
 
     services:
       postgres:
@@ -209,7 +214,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: test-token
           BOT_INTERNAL_TOKEN: test-bot-internal-token
           SECRET_KEY: test-secret-key-at-least-thirty-two-characters
-        run: python scripts/ci_contract.py run-group python-tests --shard "${{ matrix.shard }}/3"
+        run: python scripts/ci_contract.py run-group python-tests --shard "${{ matrix.shard }}/4"
 
   migrated-stack:
     name: Migrated PostgreSQL stack
@@ -247,6 +252,11 @@ jobs:
           cache-dependency-glob: backend/requirements.txt
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           cache-suffix: migrated-stack
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
       - name: Install stack dependencies
         run: |
           uv pip install -r backend/requirements.txt
