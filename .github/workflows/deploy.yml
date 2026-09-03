@@ -106,6 +106,7 @@ jobs:
               cat \"\$marker\"
               exit 0
             fi
+            # Legacy single-slot deployments may retain evidence without the marker file.
             state_root='$PROD_PATH/.artifacts/operations/deployments'
             if [ -d \"\$state_root\" ]; then
               latest_summary=\"\$(
