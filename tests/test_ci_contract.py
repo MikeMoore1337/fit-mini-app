@@ -55,9 +55,12 @@ def test_shards_parse_and_select_deterministically() -> None:
 
 
 def test_python_node_normalization_preserves_escaped_parameter_ids() -> None:
-    assert ci_contract._normalize_python_test_node(
-        r"backend\tests\test_app.py::test_public_content[\u041e]"
-    ) == r"backend/tests/test_app.py::test_public_content[\u041e]"
+    assert (
+        ci_contract._normalize_python_test_node(
+            r"backend\tests\test_app.py::test_public_content[\u041e]"
+        )
+        == r"backend/tests/test_app.py::test_public_content[\u041e]"
+    )
 
 
 def test_frontend_e2e_shard_is_forwarded_to_playwright(monkeypatch, tmp_path: Path) -> None:
