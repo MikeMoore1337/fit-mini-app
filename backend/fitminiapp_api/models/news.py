@@ -595,6 +595,7 @@ class WebArticle(Base):
         CheckConstraint(
             "editorial_value BETWEEN 0 AND 100", name="ck_web_articles_editorial_value"
         ),
+        Index("ix_web_articles_candidate_id", "candidate_id"),
         Index("ix_web_articles_public_queue", "status", "updated_at"),
     )
 
