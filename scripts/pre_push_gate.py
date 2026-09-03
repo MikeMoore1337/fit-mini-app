@@ -324,7 +324,7 @@ def run_gate(context: RepositoryContext, *, execute: bool = True) -> dict[str, A
         "started_at": now,
         "finished_at": None,
         "gates": [],
-        "terminal_result": "PLAN_ONLY" if not execute else "PRE_PUSH_CI_FAILED",
+        "terminal_result": "PLAN_ONLY" if not execute else "PRE_PUSH_CI_RUNNING",
         "task_evidence_reference": str(evidence_path(context)),
     }
     for group in scope["groups"]:
@@ -350,7 +350,7 @@ def run_gate(context: RepositoryContext, *, execute: bool = True) -> dict[str, A
             payload["terminal_result"] = "PRE_PUSH_CI_FAILED"
             break
         gate_record["status"] = "SUCCESS"
-    if execute and payload["terminal_result"] not in {"PRE_PUSH_CI_BLOCKED", "PRE_PUSH_CI_FAILED"}:
+    if execute and payload["terminal_result"] == "PRE_PUSH_CI_RUNNING":
         if _status(context.root):
             payload["terminal_result"] = "PRE_PUSH_CI_FAILED"
             payload["clean_worktree"] = False

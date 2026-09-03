@@ -26,6 +26,31 @@ def test_scope_classification_is_conservative_for_unknown_files() -> None:
     assert pre_push_gate.classify_scope(["unknown/build-input.bin"])["profile"] == "cross-stack"
 
 
+def test_run_gate_reaches_terminal_pass_when_all_groups_succeed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    context = pre_push_gate.RepositoryContext(
+        root=tmp_path,
+        common_dir=tmp_path / ".git",
+        branch="task/135-gate-test",
+        head_sha="a" * 40,
+        task_id="135",
+        base_sha="b" * 40,
+        lease={},
+    )
+    monkeypatch.setattr(pre_push_gate, "_status", lambda root: [])
+    monkeypatch.setattr(
+        pre_push_gate, "_changed_paths", lambda root, base, head: ["scripts/gate.py"]
+    )
+    monkeypatch.setattr(pre_push_gate, "missing_prerequisites", lambda group, root, env: [])
+    monkeypatch.setattr(pre_push_gate, "run_group", lambda group, root: None)
+
+    payload = pre_push_gate.run_gate(context)
+
+    assert payload["terminal_result"] == "PRE_PUSH_CI_PASS"
+    assert all(gate["status"] == "SUCCESS" for gate in payload["gates"])
+
+
 def test_current_pass_rejects_head_base_and_contract_drift(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
