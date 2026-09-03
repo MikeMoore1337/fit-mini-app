@@ -43,6 +43,78 @@ const representativePages = [
   },
 ];
 
+const publicArticleCard = {
+  slug: 'strength-basics',
+  title: 'Основы силовых тренировок',
+  description: 'План, записи и ограничения для понятного старта.',
+  lead: 'Начните с посильного плана и записывайте факты.',
+  topics: ['training', 'strength_hypertrophy'],
+  article_kind: 'evergreen_explainer',
+  published_at: '2026-09-01T10:00:00Z',
+  updated_at: '2026-09-02T10:00:00Z',
+  canonical_url: 'http://127.0.0.1:4173/articles/strength-basics',
+};
+
+const publicArticle = {
+  ...publicArticleCard,
+  body_sections: [
+    {
+      heading: 'С чего начать',
+      paragraphs: ['Выберите посильные движения и заранее определите дни занятий.'],
+      points: ['Записывайте фактические подходы'],
+    },
+    {
+      heading: 'Как читать записи',
+      paragraphs: ['Сверяйте план и факт по нескольким занятиям.'],
+      points: [],
+    },
+  ],
+  search_intent: 'informational',
+  primary_query: 'как начать силовые тренировки',
+  secondary_queries: ['план силовых тренировок'],
+  risk_level: 'low',
+  evidence_level: 'moderate',
+  claims: [
+    {
+      claim_id: 'plan-context',
+      claim_text: 'Повторяемый план помогает сравнивать записи.',
+      normalized_claim: 'repeatable plan supports comparison',
+    },
+  ],
+  sources: [
+    {
+      source_id: 'source-guideline',
+      title: 'Physical activity guidance',
+      publisher: 'World Health Organization',
+      url: 'https://www.who.int/news-room/fact-sheets/detail/physical-activity',
+      source_type: 'official_organization',
+      published_at: null,
+      limitations: 'Общие рекомендации.',
+    },
+  ],
+  claim_source_matrix: [
+    {
+      claim_id: 'plan-context',
+      source_ids: ['source-guideline'],
+      support_level: 'supports',
+      limitations: 'Источник не задаёт индивидуальную программу.',
+      review_status: 'verified',
+    },
+  ],
+  author: { name: 'Your Fitness Coach', type: 'Organization' },
+  editor: { name: 'YFC Editorial Desk', type: 'Organization' },
+  domain_reviewer: null,
+  related_slugs: [],
+  cta: {
+    destination: 'web',
+    label: 'Открыть Your Fitness Coach',
+    description: 'Сохраняйте план и фактические результаты.',
+  },
+  content_version: 1,
+  generated_with_ai: true,
+  research_assistance: true,
+};
+
 test('legacy app knowledge URLs hand off to the equivalent Public Web article', async ({
   page,
 }) => {
@@ -155,6 +227,61 @@ test('публичные страницы сохраняют hierarchy и не �
         expect(heroGutters.right).toBeGreaterThanOrEqual(40);
       }
     }
+  }
+});
+
+test('public article index and detail stay readable and crawlable across desktop and mobile', async ({
+  page,
+}) => {
+  await page.route('**/api/v1/public/articles/strength-basics', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify(publicArticle),
+    });
+  });
+  await page.route('**/api/v1/public/articles', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify([publicArticleCard]),
+    });
+  });
+
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/articles');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Статьи, которые помогают разобраться.' }),
+    ).toBeVisible();
+    await expect(page.getByRole('link', { name: /Основы силовых тренировок/ })).toHaveAttribute(
+      'href',
+      '/articles/strength-basics',
+    );
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow');
+
+    await page.goto('/articles/strength-basics');
+    await expect(page.getByRole('heading', { level: 1, name: publicArticle.title })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Источники' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Physical activity guidance' })).toHaveAttribute(
+      'href',
+      publicArticle.sources[0].url,
+    );
+    await expect(page.getByRole('link', { name: 'Открыть Your Fitness Coach' })).toHaveAttribute(
+      'href',
+      '/app',
+    );
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      publicArticle.canonical_url,
+    );
+    expect(
+      await page.evaluate(() => ({
+        content: document.documentElement.scrollWidth,
+        viewport: window.innerWidth,
+      })),
+    ).toEqual({ content: viewport.width, viewport: viewport.width });
   }
 });
 
