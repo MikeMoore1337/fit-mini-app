@@ -1,6 +1,6 @@
 # [Task 136] Восстановление browser OAuth после stale session cookie и изоляция transaction state
 
-- **Статус:** owner-selected, not started
+- **Статус:** completed / production `c634101` / 2026-09-03
 - **Приоритет:** P0 / authentication reliability and security
 - **Тип:** implementation / backend + frontend + regression hardening
 - **Основная роль:** `implementer`
