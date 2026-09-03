@@ -106,10 +106,38 @@ jobs:
               cat \"\$marker\"
               exit 0
             fi
-            backend_image=\$(docker inspect --format '{{.Config.Image}}' fit-mini-app-backend-1)
-            bot_image=\$(docker inspect --format '{{.Config.Image}}' fit-mini-app-bot-1)
-            backend_revision=\"\${backend_image##*:}\"
-            bot_revision=\"\${bot_image##*:}\"
+            state_root='$PROD_PATH/.artifacts/operations/deployments'
+            if [ -d \"\$state_root\" ]; then
+              latest_summary=\"\$(
+                find \"\$state_root\" -mindepth 2 -maxdepth 2 -type f -name summary.json -printf '%T@ %p\\n' |
+                  sort -nr |
+                  cut -d' ' -f2- |
+                  while IFS= read -r summary; do
+                    revision=\"\$(python3 -c 'import json,sys; value=json.load(open(sys.argv[1], encoding=\"utf-8\")); print(value.get(\"target_revision\", \"\") if value.get(\"verdict\") == \"active\" else \"\")' \"\$summary\")\"
+                    if [[ \"\$revision\" =~ ^[0-9a-f]{40}$ ]]; then
+                      printf '%s\\n' \"\$revision\"
+                      break
+                    fi
+                  done
+              )\"
+              if [ -n \"\$latest_summary\" ]; then
+                printf '%s\\n' \"\$latest_summary\"
+                exit 0
+              fi
+            fi
+            container_for_service() {
+              local service=\"\$1\"
+              local containers
+              containers=\$(docker ps --filter \"label=com.docker.compose.service=\$service\" --format '{{.ID}}')
+              test \"\$(printf '%s\\n' \"\$containers\" | sed '/^$/d' | wc -l)\" -eq 1
+              printf '%s\\n' \"\$containers\"
+            }
+            backend_container=\$(container_for_service backend)
+            bot_container=\$(container_for_service bot)
+            backend_image=\$(docker inspect --format '{{.Config.Image}}' \"\$backend_container\")
+            bot_image=\$(docker inspect --format '{{.Config.Image}}' \"\$bot_container\")
+            backend_revision=\$(docker image inspect --format '{{index .Config.Labels \"org.opencontainers.image.revision\"}}' \"\$backend_image\")
+            bot_revision=\$(docker image inspect --format '{{index .Config.Labels \"org.opencontainers.image.revision\"}}' \"\$bot_image\")
             test \"\$backend_revision\" = \"\$bot_revision\"
             printf '%s\\n' \"\$backend_revision\"
           ")"
@@ -158,11 +186,13 @@ jobs:
           BUNDLE_NAME: ${{ steps.bundle.outputs.name }}
           BACKEND_IMAGE: ${{ steps.images.outputs.backend_image_ref }}
           BOT_IMAGE: ${{ steps.images.outputs.bot_image_ref }}
+          ACTIVE_REVISION: ${{ steps.migration.outputs.active_revision }}
         run: |
           set -Eeuo pipefail
           test -n "$GHCR_TOKEN"
           # The refs came from the authoritative deployment contract step above.
           test -n "$BACKEND_IMAGE" -a -n "$BOT_IMAGE"
+          test -n "$ACTIVE_REVISION"
           printf '%s\n' "$GHCR_TOKEN" | ssh \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
@@ -193,6 +223,13 @@ jobs:
              export DEPLOY_ARTIFACT_ROOT='$PROD_PATH/.artifacts'
              export DEPLOY_MIGRATION_MANIFEST=deployment-migration-manifest.json
              export DEPLOY_SINGLE_SLOT_CONFIRMED_SHA='$DEPLOY_SHA'
+             active_marker='$PROD_PATH/.artifacts/operations/deployments/last-successful-revision'
+             if [ -f "\$active_marker" ]; then
+               test "\$(tr -d '\\r\\n' < "\$active_marker")" = '$ACTIVE_REVISION'
+             else
+               install -d -m 700 "\$(dirname "\$active_marker")"
+               printf '%s\\n' '$ACTIVE_REVISION' > "\$active_marker"
+             fi
              registry_login_succeeded=false
              DOCKER_CONFIG_DIR=\$(mktemp -d)
              trap 'rm -rf \"\$DOCKER_CONFIG_DIR\"' EXIT
