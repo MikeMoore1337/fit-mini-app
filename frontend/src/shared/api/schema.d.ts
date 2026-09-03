@@ -55,6 +55,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/articles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Public Articles */
+        get: operations["get_public_articles_api_v1_public_articles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/articles/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Public Article */
+        get: operations["get_public_article_api_v1_public_articles__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/demo/sessions": {
         parameters: {
             query?: never;
@@ -2927,6 +2961,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hermes/articles/intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Receive Hermes Web Article Intake */
+        post: operations["receive_hermes_web_article_intake_api_v1_hermes_articles_intake_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -3022,6 +3073,40 @@ export interface paths {
         };
         /** Landing Page */
         get: operations["landing_page__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/articles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Articles Index Page */
+        get: operations["articles_index_page_articles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/articles/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Article Page */
+        get: operations["article_page_articles__slug__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3423,6 +3508,80 @@ export interface components {
             reason: "security_incident" | "abuse" | "account_recovery" | "support_request" | "relationship_safety";
             /** Is Active */
             is_active: boolean;
+        };
+        /** ArticleBodySection */
+        ArticleBodySection: {
+            /** Heading */
+            heading: string;
+            /** Paragraphs */
+            paragraphs: string[];
+            /** Points */
+            points?: string[];
+        };
+        /** ArticleClaim */
+        ArticleClaim: {
+            /** Claim Id */
+            claim_id: string;
+            /** Claim Text */
+            claim_text: string;
+            /** Normalized Claim */
+            normalized_claim: string;
+        };
+        /** ArticleClaimSourceMatrixItem */
+        ArticleClaimSourceMatrixItem: {
+            /** Claim Id */
+            claim_id: string;
+            /** Source Ids */
+            source_ids: string[];
+            /**
+             * Support Level
+             * @enum {string}
+             */
+            support_level: "supports" | "partially_supports" | "does_not_support" | "unclear";
+            /**
+             * Limitations
+             * @default
+             */
+            limitations: string;
+            /**
+             * Review Status
+             * @default pending
+             * @enum {string}
+             */
+            review_status: "pending" | "verified" | "blocked";
+        };
+        /** ArticlePerson */
+        ArticlePerson: {
+            /** Name */
+            name: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "Organization" | "Person";
+        };
+        /** ArticleSource */
+        ArticleSource: {
+            /** Source Id */
+            source_id: string;
+            /** Title */
+            title: string;
+            /** Publisher */
+            publisher: string;
+            /**
+             * Url
+             * Format: uri
+             */
+            url: string;
+            /** Source Type */
+            source_type: string;
+            /** Published At */
+            published_at?: string | null;
+            /**
+             * Limitations
+             * @default
+             */
+            limitations: string;
         };
         /** AssignTemplateSelfRequest */
         AssignTemplateSelfRequest: {
@@ -5577,6 +5736,27 @@ export interface components {
             risk_reasons: string[];
             /** Preview Text */
             preview_text: string;
+        };
+        /** HermesWebArticleIntakeResponse */
+        HermesWebArticleIntakeResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "accepted" | "duplicate";
+            /** Submission Id */
+            submission_id: string;
+            /** Article Id */
+            article_id: string;
+            /**
+             * Article Status
+             * @enum {string}
+             */
+            article_status: "candidate" | "researching" | "draft" | "review" | "approved" | "published" | "update_required" | "archived" | "retracted";
+            /** Content Version */
+            content_version: number;
+            /** Review Blockers */
+            review_blockers: string[];
         };
         /**
          * HydrationBeverageType
@@ -7780,6 +7960,108 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** WebArticleCard */
+        WebArticleCard: {
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Lead */
+            lead: string;
+            /** Topics */
+            topics: string[];
+            /**
+             * Article Kind
+             * @enum {string}
+             */
+            article_kind: "evergreen_explainer" | "practical_guide" | "evidence_review" | "myth_busting" | "research_update" | "comparison" | "product_education";
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Canonical Url */
+            canonical_url: string;
+        };
+        /** WebArticleResponse */
+        WebArticleResponse: {
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Lead */
+            lead: string;
+            /** Topics */
+            topics: string[];
+            /**
+             * Article Kind
+             * @enum {string}
+             */
+            article_kind: "evergreen_explainer" | "practical_guide" | "evidence_review" | "myth_busting" | "research_update" | "comparison" | "product_education";
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Canonical Url */
+            canonical_url: string;
+            /** Body Sections */
+            body_sections: components["schemas"]["ArticleBodySection"][];
+            /**
+             * Search Intent
+             * @enum {string}
+             */
+            search_intent: "informational" | "how_to" | "comparison" | "definition" | "evidence" | "mixed";
+            /** Primary Query */
+            primary_query: string;
+            /** Secondary Queries */
+            secondary_queries: string[];
+            /**
+             * Risk Level
+             * @enum {string}
+             */
+            risk_level: "low" | "moderate" | "high" | "critical" | "unknown";
+            /**
+             * Evidence Level
+             * @enum {string}
+             */
+            evidence_level: "high" | "moderate" | "limited" | "preliminary" | "conflicting" | "unknown";
+            /** Claims */
+            claims: components["schemas"]["ArticleClaim"][];
+            /** Sources */
+            sources: components["schemas"]["ArticleSource"][];
+            /** Claim Source Matrix */
+            claim_source_matrix: components["schemas"]["ArticleClaimSourceMatrixItem"][];
+            author: components["schemas"]["ArticlePerson"];
+            editor: components["schemas"]["ArticlePerson"];
+            domain_reviewer: components["schemas"]["ArticlePerson"] | null;
+            /** Related Slugs */
+            related_slugs: string[];
+            /** Cta */
+            cta: {
+                [key: string]: string;
+            };
+            /** Content Version */
+            content_version: number;
+            /** Generated With Ai */
+            generated_with_ai: boolean;
+            /** Research Assistance */
+            research_assistance: boolean;
+        };
         /** WeeklyCheckInAdaptiveSummary */
         WeeklyCheckInAdaptiveSummary: {
             /**
@@ -8694,6 +8976,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicExerciseDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_public_articles_api_v1_public_articles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebArticleCard"][];
+                };
+            };
+        };
+    };
+    get_public_article_api_v1_public_articles__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebArticleResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14810,6 +15143,40 @@ export interface operations {
             };
         };
     };
+    receive_hermes_web_article_intake_api_v1_hermes_articles_intake_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Hermes-Key-Id"?: string | null;
+                "X-Hermes-Timestamp"?: string | null;
+                "X-Hermes-Nonce"?: string | null;
+                "X-Hermes-Signature"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HermesWebArticleIntakeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     health_health_get: {
         parameters: {
             query?: never;
@@ -14952,6 +15319,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    articles_index_page_articles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    article_page_articles__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
