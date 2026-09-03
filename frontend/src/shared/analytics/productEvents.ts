@@ -14,6 +14,8 @@ export type ProductCoreAction =
   | 'measurement_logged'
   | 'weekly_review_completed';
 export type LandingTelegramPlacement = 'hero' | 'continuity' | 'footer';
+export type EditorialCtaDestination = 'tma' | 'web' | 'landing' | 'article';
+export type EditorialCtaCampaign = 'telegram_editorial_v1';
 
 type ContextFreeProductEventName =
   | 'landing_viewed'
@@ -96,6 +98,12 @@ export type ProductEvent =
       name: 'tma_core_action_completed';
       surface: 'tma';
       action: ProductCoreAction;
+    }
+  | {
+      name: 'telegram_news_cta_clicked';
+      surface: ProductSurface;
+      destination: EditorialCtaDestination;
+      campaign: EditorialCtaCampaign;
     };
 
 export type ProductEventName = ProductEvent['name'];
@@ -235,6 +243,7 @@ function eventPropertyKeys(name: string): readonly string[] {
   if (name === 'today_week_navigated') return ['direction'];
   if (name === 'food_log_started' || name === 'food_logged') return ['entry_method'];
   if (name === 'tma_core_action_completed') return ['action'];
+  if (name === 'telegram_news_cta_clicked') return ['destination', 'campaign'];
   return [];
 }
 
@@ -257,6 +266,12 @@ function hasValidEventProperties(value: Record<string, unknown>): boolean {
   }
   if (value.name === 'tma_core_action_completed') {
     return value.surface === 'tma' && PRODUCT_CORE_ACTIONS.has(value.action as ProductCoreAction);
+  }
+  if (value.name === 'telegram_news_cta_clicked') {
+    return (
+      ['tma', 'web', 'landing', 'article'].includes(value.destination as string) &&
+      value.campaign === 'telegram_editorial_v1'
+    );
   }
   return false;
 }

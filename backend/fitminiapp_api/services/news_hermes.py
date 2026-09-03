@@ -33,6 +33,7 @@ from fitminiapp_api.services.news_drafts import (
     quality_warnings,
     render_draft,
 )
+from fitminiapp_api.services.news_growth import article_candidate_handoff
 from fitminiapp_api.services.news_ingestion import (
     ParsedNewsItem,
     _item_reference_url,
@@ -52,6 +53,7 @@ from fitminiapp_api.services.news_taxonomy import (
 
 HERMES_INTAKE_SCHEMA_VERSION = "hermes-editorial-intake-v1"
 HERMES_INTAKE_ENDPOINT = "/api/v1/hermes/editorial/intake"
+SUPPORTED_HERMES_SKILL_VERSIONS = frozenset({"yfc-hermes-editorial-v1"})
 HERMES_SIGNATURE_PREFIX = "sha256="
 HEX64_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
@@ -226,6 +228,8 @@ def accept_hermes_submission(
         return _submission_response(db, existing, status="duplicate")
     if payload.schema_version != HERMES_INTAKE_SCHEMA_VERSION:
         raise HermesIntakeError("schema_version_unsupported")
+    if payload.provenance.skill_version not in SUPPORTED_HERMES_SKILL_VERSIONS:
+        raise HermesIntakeError("skill_version_unsupported")
     recent_count = (
         db.query(HermesEditorialSubmission)
         .filter(HermesEditorialSubmission.created_at >= current - timedelta(minutes=1))
@@ -356,6 +360,12 @@ def accept_hermes_submission(
             "hermes_skill_version": payload.provenance.skill_version,
             "hermes_schema_version": payload.schema_version,
             "hermes_submission_id": submission_id,
+            "article_candidate": article_candidate_handoff(
+                cluster_id=cluster.id,
+                draft_revision=revision,
+                primary_topic=classification.primary_topic,
+                content_type=classification.content_type,
+            ),
         },
         draft_text=draft_text,
         warnings=list(warnings),

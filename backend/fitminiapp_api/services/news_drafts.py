@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.models.news import NewsCluster, NewsDraftRevision, NewsItem, NewsSource
+from fitminiapp_api.services.news_growth import article_candidate_handoff
 from fitminiapp_api.services.news_ingestion import latest_items_by_source
 from fitminiapp_api.services.news_publication import TELEGRAM_PHOTO_CAPTION_LIMIT
 from fitminiapp_api.services.news_state import transition_news_cluster
@@ -554,6 +555,12 @@ async def create_draft_revision(
             "risk_policy_version": policy.risk_policy_version,
             "editorial_profile": settings.news_draft_profile,
             "voice_profile_version": VOICE_PROFILE_VERSION,
+            "article_candidate": article_candidate_handoff(
+                cluster_id=cluster.id,
+                draft_revision=revision,
+                primary_topic=classification.primary_topic,
+                content_type=classification.content_type,
+            ),
         },
         draft_text=draft_text,
         warnings=list(generated.warnings),
