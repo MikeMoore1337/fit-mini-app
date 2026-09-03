@@ -97,26 +97,26 @@ class NewsCluster(Base):
     score_reasons: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     risk_flags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     conflict_notes: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
-    primary_topic: Mapped[str] = mapped_column(String(64), nullable=False, default="unknown")
-    topics: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
-    content_type: Mapped[str] = mapped_column(String(32), nullable=False, default="explainer")
-    product_class: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
-    evidence_level: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
-    risk_level: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
-    audience: Mapped[str] = mapped_column(String(32), nullable=False, default="general")
-    geography: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
-    classification_version: Mapped[str] = mapped_column(
-        String(64), nullable=False, default="news-taxonomy-v1"
+    primary_topic: Mapped[str | None] = mapped_column(String(64), nullable=True, default="unknown")
+    topics: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    content_type: Mapped[str | None] = mapped_column(String(32), nullable=True, default="explainer")
+    product_class: Mapped[str | None] = mapped_column(String(32), nullable=True, default="unknown")
+    evidence_level: Mapped[str | None] = mapped_column(String(32), nullable=True, default="unknown")
+    risk_level: Mapped[str | None] = mapped_column(String(32), nullable=True, default="unknown")
+    audience: Mapped[str | None] = mapped_column(String(32), nullable=True, default="general")
+    geography: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    classification_version: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, default="news-taxonomy-v1"
     )
-    classification_reasons: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
-    discovery_eligible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    discovery_reasons: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
-    publication_policy: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="manual_required"
+    classification_reasons: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    discovery_eligible: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=False)
+    discovery_reasons: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    publication_policy: Mapped[str | None] = mapped_column(
+        String(32), nullable=True, default="manual_required"
     )
-    risk_reasons: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
-    risk_policy_version: Mapped[str] = mapped_column(
-        String(64), nullable=False, default="news-risk-v1"
+    risk_reasons: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    risk_policy_version: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, default="news-risk-v1"
     )
     merge_reason: Mapped[str] = mapped_column(String(160), nullable=False, default="new_event")
     latest_draft_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
