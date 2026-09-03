@@ -87,6 +87,9 @@ test('Landing and login keep public/auth initial work bounded in mobile lab', as
     const page = await context.newPage();
     const consoleFailures = captureConsoleFailures(page);
     await observeLabCls(page);
+    if (route === '/') {
+      await page.route('**/api/v1/public/articles*', (request) => request.fulfill({ json: [] }));
+    }
     if (route === '/login') await installLoginApi(page);
 
     await page.goto(route);

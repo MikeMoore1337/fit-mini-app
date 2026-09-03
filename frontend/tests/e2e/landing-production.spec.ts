@@ -89,6 +89,7 @@ async function settleForScreenshot(page: Page) {
 test('landing keeps a minimal premium product story across themes and viewports', async ({
   page,
 }) => {
+  await page.route('**/api/v1/public/articles*', (route) => route.fulfill({ json: [] }));
   const browserErrors: string[] = [];
   page.on('console', (message) => {
     if (message.type() === 'error') browserErrors.push(message.text());
