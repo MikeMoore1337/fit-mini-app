@@ -76,6 +76,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: |
+            backend/requirements.txt
+            bot/requirements.txt
+          cache-local-path: ${{ env.UV_CACHE_DIR }}
+          cache-suffix: policy
+      - name: Install Python dependencies
+        run: uv pip install -r backend/requirements.txt -r bot/requirements.txt
       - name: Run shared delivery policy group
         run: python scripts/ci_contract.py run-group policy
 
@@ -128,6 +139,9 @@ jobs:
       - name: Install Playwright Chromium
         working-directory: frontend
         run: npx playwright install --with-deps chromium
+      - name: Build frontend preview
+        working-directory: frontend
+        run: npm run build
       - name: Run shared frontend E2E group
         run: python scripts/ci_contract.py run-group frontend-e2e
       - name: Upload Playwright traces on failure
@@ -225,6 +239,9 @@ jobs:
         run: |
           uv pip install -r backend/requirements.txt
           npm --prefix frontend ci
+      - name: Build frontend preview
+        working-directory: frontend
+        run: npm run build
       - name: Run shared migrated-stack group
         env:
           RUN_MIGRATED_STACK_TEST: "1"
