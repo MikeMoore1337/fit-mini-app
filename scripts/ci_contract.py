@@ -290,6 +290,8 @@ def _resolve_argv(argv: Sequence[str]) -> list[str]:
     resolved = list(argv)
     if resolved and resolved[0] == "python":
         resolved[0] = sys.executable
+    elif os.name == "nt" and resolved and resolved[0] in {"npm", "npx"}:
+        resolved[0] = f"{resolved[0]}.cmd"
     return resolved
 
 

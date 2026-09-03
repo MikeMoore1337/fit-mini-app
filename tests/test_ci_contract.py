@@ -35,6 +35,12 @@ def test_contract_digest_changes_when_contract_changes(monkeypatch) -> None:
     assert ci_contract.contract_digest() != original_digest
 
 
+def test_windows_node_commands_use_cmd_wrappers(monkeypatch) -> None:
+    monkeypatch.setattr(ci_contract.os, "name", "nt")
+    assert ci_contract._resolve_argv(("npm", "run", "test"))[0] == "npm.cmd"
+    assert ci_contract._resolve_argv(("npx", "vite", "build"))[0] == "npx.cmd"
+
+
 def test_workflow_calls_group_entrypoint_instead_of_inline_command_copy() -> None:
     root = Path(__file__).parents[1]
     workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
