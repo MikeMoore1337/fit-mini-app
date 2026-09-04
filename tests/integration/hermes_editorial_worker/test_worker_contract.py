@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import sys
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Thread
+from typing import ClassVar
 
 import pytest
 from pydantic import ValidationError
@@ -12,6 +15,47 @@ WORKER_ROOT = WORKSPACE / "deploy" / "hermes-editorial-worker"
 sys.path.insert(0, str(WORKER_ROOT))
 
 import editorial_worker  # noqa: E402
+
+
+class _CaptureProviderHandler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    captured: ClassVar[dict[str, object]] = {}
+
+    def log_message(self, *_args: object) -> None:
+        return
+
+    def do_POST(self) -> None:
+        length = int(self.headers.get("Content-Length", "0"))
+        raw = self.rfile.read(length)
+        document = json.loads(raw.decode("utf-8"))
+        if not isinstance(document, dict):
+            raise AssertionError("provider request must be a JSON object")
+        self.__class__.captured = document
+        body = json.dumps(
+            {
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "headline": "Заголовок",
+                                    "summary": "Проверяемый текст",
+                                    "why_it_matters": "Ограниченный смысл",
+                                },
+                                ensure_ascii=False,
+                            )
+                        }
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        ).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.wfile.write(body)
 
 
 def valid_job() -> editorial_worker.EditorialJob:
@@ -119,6 +163,54 @@ def test_external_mode_accepts_only_exact_approved_https_destinations(
         == "https://app.your-fitness-coach.ru/api/v1/hermes/editorial/intake"
     )
     assert editorial_worker._provider_model() == "openai/gpt-oss-120b"
+
+
+def test_external_gpt_oss_request_uses_hidden_reasoning_and_strict_schema() -> None:
+    _CaptureProviderHandler.captured = {}
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _CaptureProviderHandler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        proposal = editorial_worker._provider_request_once(
+            valid_job().source,
+            base_url=f"http://127.0.0.1:{server.server_port}/v1",
+            api_key="test-only-key",
+            model=editorial_worker.EXTERNAL_PROVIDER_MODEL,
+            timeout_seconds=3,
+            provider_mode=editorial_worker.EXTERNAL_MODE,
+        )
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
+
+    assert proposal.headline == "Заголовок"
+    request = _CaptureProviderHandler.captured
+    assert request["model"] == editorial_worker.EXTERNAL_PROVIDER_MODEL
+    assert request["reasoning_format"] == "hidden"
+    response_format = request["response_format"]
+    assert isinstance(response_format, dict)
+    assert response_format["type"] == "json_schema"
+    json_schema = response_format["json_schema"]
+    assert isinstance(json_schema, dict)
+    assert json_schema["strict"] is True
+    schema = json_schema["schema"]
+    assert isinstance(schema, dict)
+    assert schema["type"] == "object"
+    assert set(schema["properties"]) == {"headline", "summary", "why_it_matters"}
+    assert all(
+        property_schema == {"type": "string"} for property_schema in schema["properties"].values()
+    )
+    assert schema["required"] == ["headline", "summary", "why_it_matters"]
+    assert schema["additionalProperties"] is False
+    assert "tools" not in request
+
+
+def test_external_mode_rejects_arbitrary_provider_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HERMES_PROVIDER_MODE", "external")
+    monkeypatch.setenv("HERMES_PROVIDER_MODEL", "openai/gpt-4o")
+    with pytest.raises(editorial_worker.WorkerError, match="not_allowlisted"):
+        editorial_worker._provider_model()
 
 
 @pytest.mark.parametrize(
