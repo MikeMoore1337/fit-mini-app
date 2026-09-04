@@ -32,6 +32,19 @@ integration: task-pr-to-master
 workpapers. Оно не разрешает реализацию task, установку SkillSpector или изменения delivery surface
 на текущем проходе.
 
+## Tracked publication closeout contract
+
+Поскольку этот task-файл является tracked publication exception, его нельзя переносить после merge
+в ignored `codex-backlog/tasks/done/` обычной локальной archive-операцией: это оставит deletion
+tracked source в canonical worktree и нарушит последующие `doctor`/delivery checks. До terminal
+production success implementation PR этой task обязан выполнить exact tracked `git mv` файла в
+`codex-backlog/tasks/done/138-agent-skills-security-gate-skillspector.md`; узкое исключение для
+этого единственного archive path закреплено в `.gitignore`. До merge нужно воспроизвести текущий
+controller finish/closeout contract из canonical worktree и доказать clean status, tracked archive
+destination и успешный backlog check. Если текущий helper не принимает pre-archived tracked task,
+его существующий archive/closeout path следует минимально адаптировать и покрыть тестом; broad
+unignore, отдельная archive-инфраструктура и silent deletion не допускаются.
+
 ## Цель
 
 Внедрить NVIDIA SkillSpector как внешний статический/семантический security scanner для агентной
@@ -458,6 +471,10 @@ Task считается выполненной только когда одно�
       meta-agent и orchestrator не создавались.
 - [ ] CI/delivery не стал заметно сложнее без обоснованной security/supply-chain причины; scope,
       trigger и verdict policy имеют один понятный источник истины.
+- [ ] Для этого tracked publication exception final implementation PR выполняет exact tracked
+      rename в `codex-backlog/tasks/done/138-agent-skills-security-gate-skillspector.md` либо
+      минимально поддержанный существующим helper эквивалент, а controller finish/archive оставляет
+      canonical worktree clean; ignored post-merge deletion не используется.
 - [ ] Целевые tests, `git diff --check`, backlog/policy checks и применимый lifecycle review/QA
       завершены с evidence; production deploy не выполнялся как часть самой task без отдельного
       release contract.

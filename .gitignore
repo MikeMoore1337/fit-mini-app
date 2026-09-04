@@ -206,3 +206,12 @@ frontend/.npm-cache*/
 
 # Active backlog task workspace is owner-only and must not enter public Git.
 /codex-backlog/tasks
+
+# Explicit owner-authorized publication exception for Task 138 only. Keep its
+# eventual tracked archive path visible without publishing other backlog files.
+!/codex-backlog/tasks/
+/codex-backlog/tasks/*
+!/codex-backlog/tasks/138-agent-skills-security-gate-skillspector.md
+!/codex-backlog/tasks/done/
+/codex-backlog/tasks/done/*
+!/codex-backlog/tasks/done/138-agent-skills-security-gate-skillspector.md
