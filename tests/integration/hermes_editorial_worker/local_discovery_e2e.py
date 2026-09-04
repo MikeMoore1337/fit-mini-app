@@ -70,7 +70,7 @@ class SourceHandler(BaseHTTPRequestHandler):
             self.end_headers()
             if body:
                 self.wfile.write(body)
-        except BrokenPipeError, ConnectionResetError:
+        except (BrokenPipeError, ConnectionResetError):  # fmt: skip
             return
 
     def do_GET(self) -> None:

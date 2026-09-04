@@ -86,7 +86,7 @@ class ProviderHandler(BaseHTTPRequestHandler):
             self.send_header("Connection", "close")
             self.end_headers()
             self.wfile.write(body)
-        except BrokenPipeError, ConnectionResetError:
+        except (BrokenPipeError, ConnectionResetError):  # fmt: skip
             return
 
     def do_POST(self) -> None:
@@ -94,7 +94,7 @@ class ProviderHandler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length)
         try:
             request = json.loads(raw.decode("utf-8"))
-        except UnicodeDecodeError, json.JSONDecodeError:
+        except (UnicodeDecodeError, json.JSONDecodeError):  # fmt: skip
             self._send_json(400, {"error": "bad_request"})
             return
         with self.state.lock:
@@ -217,7 +217,7 @@ class PreviewHandler(BaseHTTPRequestHandler):
             return
         try:
             document = json.loads(raw.decode("utf-8"))
-        except UnicodeDecodeError, json.JSONDecodeError:
+        except (UnicodeDecodeError, json.JSONDecodeError):  # fmt: skip
             self._send_json(400, {"error": "invalid_preview"})
             return
         with self.state.lock:
