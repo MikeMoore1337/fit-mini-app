@@ -341,6 +341,9 @@ def accept_hermes_submission(
         evidence_metadata={
             "source_packet_hash": payload.source.content_hash,
             "trusted_source_url": packet.primary_url or packet.canonical_url,
+            "source_published_at": (
+                payload.source.published_at.isoformat() if payload.source.published_at else None
+            ),
             "primary_topic": classification.primary_topic,
             "topics": list(classification.topics),
             "content_type": classification.content_type,

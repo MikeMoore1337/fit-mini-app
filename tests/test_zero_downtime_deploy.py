@@ -58,6 +58,19 @@ def test_production_migration_command_uses_immutable_manifest(monkeypatch) -> No
     assert command[-2:] == ["--manifest", "deployment-migration-manifest.json"]
 
 
+def test_image_digest_resolves_repo_digest_from_immutable_image_id(monkeypatch) -> None:
+    repo_digest = "registry/backend@sha256:" + "d" * 64
+    monkeypatch.setattr(
+        deploy,
+        "_run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            args, 0, stdout=f"[{json.dumps(repo_digest)}]|{OLD_SHA}\n"
+        ),
+    )
+
+    assert deploy._image_digest("sha256:" + "c" * 64, OLD_SHA) == repo_digest
+
+
 def test_config_can_keep_rollout_state_outside_immutable_release(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -691,6 +704,55 @@ def test_single_slot_docker_reclaim_never_removes_container_data_or_volumes(
         (["docker", "builder", "prune", "--all", "--force"], {}),
     ]
     assert all("volume" not in args and "container" not in args for args, _ in calls)
+
+
+def test_legacy_running_image_uses_immutable_container_image_id(monkeypatch) -> None:
+    image_id = "sha256:" + "c" * 64
+    monkeypatch.setattr(
+        deploy,
+        "_compose",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args, 0, stdout="container-id\n"),
+    )
+    commands = []
+
+    def run(args, **kwargs):
+        del kwargs
+        commands.append(args)
+        return subprocess.CompletedProcess(args, 0, stdout=image_id + "\n")
+
+    monkeypatch.setattr(deploy, "_run", run)
+    monkeypatch.setattr(deploy, "_service_is_running", lambda _service: True)
+
+    assert deploy._legacy_running_image("backend") == image_id
+    assert commands == [["docker", "inspect", "--format", "{{.Image}}", "container-id"]]
+
+
+def test_single_slot_snapshots_legacy_provenance_before_reclaim(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _patch_single_slot_runtime(tmp_path, monkeypatch)
+    events: list[str] = []
+
+    def running_image(service: str) -> str:
+        events.append(f"running:{service}")
+        return f"sha256:{'a' * 64}"
+
+    def image_digest(image: str, revision: str) -> str:
+        events.append(f"digest:{image}")
+        return f"registry/backend@sha256:{revision[0] * 64}"
+
+    monkeypatch.setattr(deploy, "_legacy_running_image", running_image)
+    monkeypatch.setattr(deploy, "_image_digest", image_digest)
+    monkeypatch.setattr(
+        deploy,
+        "_reclaim_single_slot_docker_space",
+        lambda: events.append("reclaim"),
+    )
+
+    deploy.single_slot_deploy(_config(tmp_path))
+
+    assert events.index("digest:sha256:" + "a" * 64) < events.index("reclaim")
+    assert events.index("running:edge") < events.index("reclaim")
 
 
 def test_single_slot_reclaims_docker_space_before_capacity_gate(

@@ -24,7 +24,7 @@ from fitminiapp_api.models.news import (
     NewsReviewDelivery,
     NewsSource,
 )
-from fitminiapp_api.services import news_images, news_publication
+from fitminiapp_api.services import news_images, news_publication, news_worker
 from fitminiapp_api.services.news_content import EditorialContent, parse_editorial_content
 from fitminiapp_api.services.news_drafts import create_draft_revision
 from fitminiapp_api.services.news_editorial import (
@@ -1317,6 +1317,56 @@ def test_successful_pipeline_fetches_scores_drafts_and_delivers_for_approval(
         event = db.query(AuditEvent).filter_by(action="news.preview_created").one()
         assert event.details["preview_message_id"] == 301
         assert event.details["control_message_id"] == 302
+
+
+def test_legacy_source_fetch_flag_preserves_downstream_pipeline(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "news_ingestion_enabled", True)
+    monkeypatch.setattr(settings, "news_legacy_source_fetch_enabled", False)
+    calls: list[str] = []
+
+    async def unexpected_fetch(_client):
+        raise AssertionError("legacy source fetching must be disabled")
+
+    async def unexpected_candidate_generation(*_args, **_kwargs):
+        raise AssertionError("legacy candidate draft generation must be disabled")
+
+    async def publish(_client, _send_publication, _send_message):
+        calls.append("publish")
+        return 1
+
+    async def generate_images(_client):
+        calls.append("images")
+        return 0
+
+    def enqueue(_db, _admin_telegram_user_ids):
+        calls.append("enqueue")
+        return 0
+
+    async def deliver(*_args, **_kwargs):
+        calls.append("deliver")
+        return 0
+
+    monkeypatch.setattr(news_worker, "fetch_due_sources", unexpected_fetch)
+    monkeypatch.setattr(news_worker, "generate_candidate_drafts", unexpected_candidate_generation)
+    monkeypatch.setattr(news_worker, "publish_due_snapshots", publish)
+    monkeypatch.setattr(news_worker, "generate_pending_images", generate_images)
+    monkeypatch.setattr(news_worker, "enqueue_review_deliveries", enqueue)
+    monkeypatch.setattr(news_worker, "deliver_review_queue", deliver)
+
+    async def unused(*_args, **_kwargs):
+        return None
+
+    asyncio.run(
+        run_news_pipeline_once(
+            send_message=unused,
+            send_preview=unused,
+            send_publication=unused,
+            publication_ready=True,
+            fetch_sources=True,
+        )
+    )
+
+    assert calls == ["publish", "images", "enqueue", "deliver"]
 
 
 def test_over_limit_photo_control_card_shows_measurement_and_recovery_actions(

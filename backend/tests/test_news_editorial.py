@@ -260,6 +260,7 @@ def test_news_activation_requires_owner_ids_and_confirmed_channel() -> None:
         news_channel_id=-1001234567890,
     )
     assert configured.news_ingestion_enabled is True
+    assert configured.news_legacy_source_fetch_enabled is True
 
 
 def test_canonical_url_removes_tracking_but_preserves_semantic_query() -> None:

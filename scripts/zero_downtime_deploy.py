@@ -254,10 +254,13 @@ def _image_digest(image: str, expected_revision: str) -> str:
     digests = json.loads(digests_json)
     if not isinstance(digests, list) or not digests:
         raise DeploymentError(f"image {image} has no immutable repository digest")
-    repository = image.split("@", 1)[0].rsplit(":", 1)[0]
-    matching = [
-        value for value in digests if isinstance(value, str) and value.startswith(repository)
-    ]
+    if image.startswith("sha256:"):
+        matching = [value for value in digests if isinstance(value, str)]
+    else:
+        repository = image.split("@", 1)[0].rsplit(":", 1)[0]
+        matching = [
+            value for value in digests if isinstance(value, str) and value.startswith(repository)
+        ]
     digest = matching[0] if matching else digests[0]
     if not isinstance(digest, str) or "@sha256:" not in digest:
         raise DeploymentError(f"image {image} returned an invalid repository digest")
@@ -1144,8 +1147,11 @@ def _legacy_running_image(service: str) -> str:
     container_id = _compose("ps", "-q", service, capture=True).stdout.strip()
     if not container_id or not _service_is_running(service):
         raise DeploymentError(f"single-slot rollout requires running legacy service {service}")
+    # A single-slot reclaim may remove a mutable tag from an image that the running
+    # container still references.  Snapshot the immutable image ID so provenance and
+    # rollback do not depend on that tag surviving reclaim.
     image = _run(
-        ["docker", "inspect", "--format", "{{.Config.Image}}", container_id],
+        ["docker", "inspect", "--format", "{{.Image}}", container_id],
         capture=True,
     ).stdout.strip()
     if not image:
@@ -1306,14 +1312,7 @@ def single_slot_deploy(config: DeployConfig) -> Evidence:
     services_stopped = False
 
     try:
-        with _stage(evidence, "single_slot_docker_reclaim"):
-            _reclaim_single_slot_docker_space()
-
-        with _stage(evidence, "single_slot_preflight"):
-            evidence.capacity = _single_slot_capacity()
-            _compose("config", "--quiet")
-            _switch_gateway("legacy", "legacy")
-            _public_smoke(config)
+        with _stage(evidence, "single_slot_legacy_provenance"):
             old_backend = _image_digest(_legacy_running_image("backend"), active_revision)
             old_bot = _image_digest(_legacy_running_image("bot"), active_revision)
             old_worker = _image_digest(_legacy_running_image("worker"), active_revision)
@@ -1322,6 +1321,15 @@ def single_slot_deploy(config: DeployConfig) -> Evidence:
                     "legacy backend and worker do not use the same verified image digest"
                 )
             _legacy_running_image("edge")
+
+        with _stage(evidence, "single_slot_docker_reclaim"):
+            _reclaim_single_slot_docker_space()
+
+        with _stage(evidence, "single_slot_preflight"):
+            evidence.capacity = _single_slot_capacity()
+            _compose("config", "--quiet")
+            _switch_gateway("legacy", "legacy")
+            _public_smoke(config)
 
         with _stage(evidence, "pull_and_verify"):
             preliminary_env = _legacy_environment(
