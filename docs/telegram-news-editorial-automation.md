@@ -16,12 +16,12 @@ NEWS_LEGACY_SOURCE_FETCH_ENABLED=true
 NEWS_PUBLICATION_ENABLED=false
 ```
 
-`NEWS_LEGACY_SOURCE_FETCH_ENABLED=true` is the backward-compatible local/default value. In the
-production Hermes configuration it is normalized to `false`, while `NEWS_INGESTION_ENABLED=true`
-remains enabled for downstream YFC worker stages. The flag disables only legacy YFC source
-acquisition and candidate-draft generation; Hermes intake, image processing, review queue, manual
-editing/confirmation, scheduling and publication management continue to run. It must not be
-implemented by changing `NEWS_INGESTION_ENABLED`.
+`NEWS_LEGACY_SOURCE_FETCH_ENABLED=true` — обратно совместимое локальное значение по умолчанию. В
+production-конфигурации Hermes оно нормализуется в `false`, а `NEWS_INGESTION_ENABLED=true`
+остаётся включённым для downstream-этапов YFC. Этот флаг отключает только legacy-получение
+источников YFC и генерацию candidate-draft; intake Hermes, обработка изображений, очередь review,
+ручное редактирование/подтверждение, планирование и управление публикацией продолжают работать.
+Его нельзя реализовывать изменением `NEWS_INGESTION_ENABLED`.
 
 После production release целевые значения для разделения контуров такие:
 
@@ -31,7 +31,7 @@ NEWS_LEGACY_SOURCE_FETCH_ENABLED=false
 NEWS_AUTO_PUBLISH_LOW_RISK=false
 ```
 
-`NEWS_INGESTION_ENABLED` поддерживает downstream processing; `NEWS_PUBLICATION_ENABLED` и
+`NEWS_INGESTION_ENABLED` поддерживает downstream-обработку; `NEWS_PUBLICATION_ENABLED` и
 остальные существующие `NEWS_*` flags не меняются этим follow-up.
 
 Telegram Bot API polling continues to have one owner.  No second polling process, bot token,
@@ -329,10 +329,10 @@ account до owner verification не считаются подтверждённ
 
 Kill switch — `HERMES_INTAKE_ENABLED=false`; keep it off until Gate A. The existing production
 `NEWS_INGESTION_ENABLED` and `NEWS_PUBLICATION_ENABLED` values are not changed by this integration,
-and `NEWS_AUTO_PUBLISH_LOW_RISK=false` remains required. Production sets
-`NEWS_LEGACY_SOURCE_FETCH_ENABLED=false` through the normal deployment normalizer; rollback of this
-bounded flag change restores the previous environment value only through an owner-approved release.
-Rollback is to stop/remove
+and `NEWS_AUTO_PUBLISH_LOW_RISK=false` remains required. Production задаёт
+`NEWS_LEGACY_SOURCE_FETCH_ENABLED=false` через штатный deployment normalizer; rollback этого
+ограниченного изменения флага восстанавливает прежнее значение окружения только через
+owner-approved release. Rollback — это остановка/удаление
 the separate worker workload, revoke only its approved intake/provider identities, remove its
 egress rules, and return to the existing YFC manual/editorial path. Existing news pipeline flags
 and publisher ownership are not rollback targets. Any later production rollback must use the

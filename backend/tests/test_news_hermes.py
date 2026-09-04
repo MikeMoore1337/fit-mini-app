@@ -116,6 +116,56 @@ def test_signed_hermes_intake_creates_preview_and_is_idempotent(client, monkeypa
         assert db.query(HermesEditorialSubmission).count() == 1
 
 
+def test_signed_hermes_intake_preserves_missing_source_publication_date(
+    client, monkeypatch
+) -> None:
+    monkeypatch.setattr(settings, "hermes_intake_enabled", True)
+    monkeypatch.setattr(settings, "hermes_intake_key_id", "hermes-test")
+    monkeypatch.setattr(
+        settings,
+        "hermes_intake_shared_secret",
+        SecretStr("test-hermes-shared-secret-that-is-long-enough"),
+    )
+    with get_session_context() as db:
+        db.add(
+            NewsSource(
+                id="journal-one",
+                name="Journal One",
+                source_type="primary_research",
+                fetch_kind="rss",
+                feed_url="https://example.com/feed",
+                language="en",
+                enabled=True,
+            )
+        )
+
+    payload = _payload()
+    payload["idempotency_key"] = "hermes-test-missing-published-at"
+    payload["request_nonce"] = "hermes-test-nonce-1"
+    payload["source"]["published_at"] = None
+    payload["source"]["content_hash"] = _canonical_source_hash(
+        title=payload["source"]["title"],
+        summary=payload["source"]["summary"],
+        canonical_url=payload["source"]["canonical_url"],
+        published_at=None,
+    )
+    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode()
+
+    response = client.post(
+        "/api/v1/hermes/editorial/intake",
+        content=body,
+        headers=_signed_headers(body),
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "accepted"
+    with get_session_context() as db:
+        submission = db.query(HermesEditorialSubmission).one()
+        draft = db.get(NewsDraftRevision, submission.draft_id)
+        assert draft is not None
+        assert draft.evidence_metadata["source_published_at"] is None
+
+
 def test_hermes_intake_rejects_bad_signature_without_source_processing(client, monkeypatch) -> None:
     monkeypatch.setattr(settings, "hermes_intake_enabled", True)
     monkeypatch.setattr(settings, "hermes_intake_key_id", "hermes-test")
