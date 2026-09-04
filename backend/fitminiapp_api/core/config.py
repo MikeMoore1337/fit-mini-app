@@ -88,6 +88,7 @@ class Settings(BaseSettings):
     notification_delivery_concurrency: int = Field(default=8, ge=1, le=30)
     audit_event_retention_days: int = Field(default=365, ge=90, le=3650)
     news_ingestion_enabled: bool = False
+    news_legacy_source_fetch_enabled: bool = True
     news_channel_id: int | None = None
     news_channel_username: str = ""
     news_ingestion_cycle_seconds: int = Field(default=900, ge=60, le=86400)

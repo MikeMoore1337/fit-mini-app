@@ -1,14 +1,24 @@
+import asyncio
 import hashlib
 import json
 import time
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 from pydantic import SecretStr
 
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.db.session import get_session_context
-from fitminiapp_api.models.news import HermesEditorialSubmission, NewsSource
+from fitminiapp_api.models.news import (
+    HermesEditorialSubmission,
+    NewsCluster,
+    NewsDraftRevision,
+    NewsReviewDelivery,
+    NewsSource,
+)
+from fitminiapp_api.services import news_worker
 from fitminiapp_api.services.news_hermes import _canonical_source_hash, hermes_signature
+from fitminiapp_api.services.news_worker import run_news_pipeline_once
 
 
 def _payload() -> dict:
@@ -121,3 +131,89 @@ def test_hermes_intake_rejects_bad_signature_without_source_processing(client, m
     response = client.post("/api/v1/hermes/editorial/intake", content=body, headers=headers)
 
     assert response.status_code == 403
+
+
+def test_hermes_image_pending_downstream_survives_disabled_legacy_fetch(
+    client, monkeypatch
+) -> None:
+    monkeypatch.setattr(settings, "hermes_intake_enabled", True)
+    monkeypatch.setattr(settings, "hermes_intake_key_id", "hermes-test")
+    monkeypatch.setattr(
+        settings,
+        "hermes_intake_shared_secret",
+        SecretStr("test-hermes-shared-secret-that-is-long-enough"),
+    )
+    monkeypatch.setattr(settings, "news_ingestion_enabled", True)
+    monkeypatch.setattr(settings, "news_legacy_source_fetch_enabled", False)
+    monkeypatch.setattr(settings, "news_image_provider", "disabled")
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "7001")
+
+    with get_session_context() as db:
+        db.add(
+            NewsSource(
+                id="journal-one",
+                name="Journal One",
+                source_type="primary_research",
+                fetch_kind="rss",
+                feed_url="https://example.com/feed",
+                language="en",
+                enabled=True,
+            )
+        )
+
+    body = json.dumps(_payload(), ensure_ascii=False, separators=(",", ":")).encode()
+    intake = client.post(
+        "/api/v1/hermes/editorial/intake",
+        content=body,
+        headers=_signed_headers(body),
+    )
+    assert intake.status_code == 200, intake.text
+    assert intake.json()["status"] == "accepted"
+
+    async def unexpected_fetch(_client):
+        raise AssertionError("legacy source fetching must be disabled")
+
+    async def unexpected_candidate_generation(*_args, **_kwargs):
+        raise AssertionError("legacy candidate draft generation must be disabled")
+
+    monkeypatch.setattr(news_worker, "fetch_due_sources", unexpected_fetch)
+    monkeypatch.setattr(news_worker, "generate_candidate_drafts", unexpected_candidate_generation)
+    preview_calls: list[int] = []
+    control_calls: list[int] = []
+
+    async def send_preview(_client, chat_id, *_args, **_kwargs):
+        preview_calls.append(chat_id)
+        return SimpleNamespace(message_id=501, message_date=datetime.now(UTC))
+
+    async def send_control(_client, chat_id, *_args, **_kwargs):
+        control_calls.append(chat_id)
+        return 502
+
+    async def send_publication(*_args, **_kwargs):
+        raise AssertionError("publication is not part of this manual-required flow")
+
+    asyncio.run(
+        run_news_pipeline_once(
+            send_message=send_control,
+            send_preview=send_preview,
+            send_publication=send_publication,
+            publication_ready=True,
+            fetch_sources=True,
+        )
+    )
+
+    with get_session_context() as db:
+        submission = db.query(HermesEditorialSubmission).one()
+        draft = db.get(NewsDraftRevision, submission.draft_id)
+        assert draft is not None
+        assert draft.evidence_metadata["source_published_at"]
+    assert preview_calls == [7001]
+    assert control_calls == [7001]
+    with get_session_context() as db:
+        submission = db.query(HermesEditorialSubmission).one()
+        cluster = db.get(NewsCluster, submission.cluster_id)
+        assert cluster is not None
+        assert cluster.status == "awaiting_review"
+        assert cluster.current_image_revision == 1
+        delivery = db.query(NewsReviewDelivery).one()
+        assert delivery.status == "sent"

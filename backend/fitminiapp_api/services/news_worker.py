@@ -641,6 +641,7 @@ async def run_news_pipeline_once(
 ) -> NewsCycleStats:
     started = monotonic()
     cycle_stats = NewsCycleStats()
+    legacy_source_fetch_enabled = settings.news_legacy_source_fetch_enabled
     with get_session_context() as db:
         prune_news_editorial(db, retention_days=settings.news_retention_days)
     timeout = httpx.Timeout(settings.news_source_timeout_seconds)
@@ -650,7 +651,9 @@ async def run_news_pipeline_once(
             if publication_ready
             else 0
         )
-        counts = await fetch_due_sources(client) if fetch_sources else {}
+        counts = (
+            await fetch_due_sources(client) if legacy_source_fetch_enabled and fetch_sources else {}
+        )
         cycle_stats.sources_total = counts.get("sources_total", 0)
         cycle_stats.sources_checked = counts.get("sources_checked", 0)
         cycle_stats.sources_success = counts.get("sources_success", 0)
@@ -661,7 +664,8 @@ async def run_news_pipeline_once(
         cycle_stats.candidates_stale = counts.get("stale", 0)
         cycle_stats.candidates_below_threshold = counts.get("below_threshold", 0)
         cycle_stats.candidates_eligible = counts.get("eligible", 0)
-        await generate_candidate_drafts(client, cycle_stats=cycle_stats)
+        if legacy_source_fetch_enabled:
+            await generate_candidate_drafts(client, cycle_stats=cycle_stats)
         await generate_pending_images(client)
         with get_session_context() as db:
             enqueue_review_deliveries(db, settings.admin_telegram_id_set)
@@ -672,7 +676,7 @@ async def run_news_pipeline_once(
             publication_ready,
             cycle_stats=cycle_stats,
         )
-    if fetch_sources or any(
+    if (legacy_source_fetch_enabled and fetch_sources) or any(
         (
             cycle_stats.drafts_created,
             delivered,
