@@ -7,10 +7,10 @@
 - **Дополнительные роли lifecycle:** `independent-reviewer`, `qa-verifier`
 - **Рекомендуемые skills:** `$security-engineer`, `$platform-engineer`, `$python-engineer`, `$qa-engineer`, `$technical-writer`
 - **Условные skills:** `$llm-engineer` только если реализация изменяет provider/routing/prompt semantics за пределами documented SkillSpector CLI contract; `$privacy-engineer` только если фактический diff вводит новую передачу содержимого skills/telemetry или иной privacy/data-egress boundary
-- **Зависимости:** Task 135 завершена; других hard dependencies нет
+- **Зависимости:** hard dependencies нет; реализация начинается от текущего delivery/pre-push
+  contract в `master`
 
 <!-- task-session
-dependencies: 135
 executable: true
 concurrency: exclusive-write
 owner_gate: explicit-launch
@@ -23,6 +23,14 @@ integration: task-pr-to-master
 установка SkillSpector, изменения CI, pre-push, `.agents`, application-кода, ролей и skills,
 а также запуск implementation lifecycle новой task. Реализация начинается только после отдельной
 явной команды owner.
+
+## Исключение публикации
+
+По отдельному явному разрешению владельца от 2026-09-04 этот task-файл публикуется в `master`,
+несмотря на обычную owner-only границу `codex-backlog/tasks/**`. Исключение относится только к
+этому файлу и не распространяется на другие backlog tasks, findings, manifests или operational
+workpapers. Оно не разрешает реализацию task, установку SkillSpector или изменения delivery surface
+на текущем проходе.
 
 ## Цель
 
@@ -151,6 +159,9 @@ Deterministic gate должен:
 
 Semantic audit запускается только при одном из явно зафиксированных событий:
 
+- добавляется новый skill, включая новый внутренний YFC skill; для русскоязычного или
+  mixed-language skill semantic/manual review обязателен, даже если deterministic scan завершён
+  с `SAFE`;
 - добавляется новый внешний/third-party skill;
 - существенно меняется существующий skill: инструкции, tool/MCP behavior, install/dependency
   guidance, remote links/downloads, permission requests, credential handling, safety/review
@@ -222,10 +233,11 @@ GitHub CI должен использовать существующий workflo
 
 ## Интеграция с текущим delivery/pre-push contract
 
-Task 135 — hard dependency, потому что именно она закрепляет текущий CI-equivalent local gate,
-scope-aware pre-push flow, exact-HEAD/evidence contract и authoritative `scripts/ci_contract.py` /
-`scripts/pre_push_gate.py` boundaries. Новая реализация должна расширить эти существующие
-contracts минимально, если inspection подтвердит нужный extension point.
+Текущий `master` уже содержит CI-equivalent local gate, scope-aware pre-push flow, exact-HEAD/evidence
+contract и authoritative `scripts/ci_contract.py` / `scripts/pre_push_gate.py`, ранее введённые в
+рамках Task 135. Task 135 является историческим контекстом, а не hard dependency: реализация должна
+начинаться с inspection текущего `master` и минимально расширять существующие contracts только если
+это подтвердит нужный extension point.
 
 Обязательные свойства интеграции:
 
@@ -367,7 +379,8 @@ LLM provider в CI. Покрыть:
   scan;
 - path classifier: application-only PR не вызывает SkillSpector; `.agents/skills/**` вызывает;
   `.agents/references/**` и другие `.agents/**` следуют documented allowlist;
-- semantic trigger: new external skill, security-relevant substantial change и periodic full audit;
+- semantic trigger: any new skill (including internal), new external skill, security-relevant
+  substantial change и periodic full audit;
   formatting-only/application-only change не запускает LLM mode;
 - malicious fixture, который гарантированно детектируется pinned SkillSpector как минимум по
   выбранному critical/high security scenario; тест не должен быть пустым grep-only substitute;
@@ -416,8 +429,9 @@ Task считается выполненной только когда одно�
 - [ ] CI запускает проверку только при relevant `.agents` changes по documented allowlist.
 - [ ] Обычные application-only PR не получают дополнительного SkillSpector job и не запускают
       scanner.
-- [ ] Есть opt-in semantic audit для нового внешнего skill, существенного изменения existing
-      skill и периодического полного `.agents` аудита.
+- [ ] Есть opt-in semantic audit для любого нового skill (включая внутренний YFC skill; для
+      русского/mixed-language текста semantic/manual review обязателен), нового внешнего skill,
+      существенного изменения existing skill и периодического полного `.agents` аудита.
 - [ ] Проверена актуальная поддержка `codex_cli`; уже авторизованный Codex CLI предпочтён, а новый
       платный API не стал обязательным.
 - [ ] Malicious fixture гарантированно детектируется pinned scanner/policy.
