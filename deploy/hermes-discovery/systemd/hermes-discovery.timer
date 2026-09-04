@@ -2,7 +2,7 @@
 Description=Task 129 bounded Hermes discovery schedule
 
 [Timer]
-Unit=hermes-discovery.target
+Unit=hermes-worker-drain.service
 OnBootSec=5min
 OnUnitActiveSec=6h
 RandomizedDelaySec=5min

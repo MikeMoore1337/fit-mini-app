@@ -52,6 +52,27 @@ def test_install_instructions_start_enabled_timer_after_gate_a() -> None:
     assert "systemctl enable hermes-discovery.timer\n" not in readme
 
 
+def test_discovery_timer_runs_worker_drain_and_preserves_scheduler_guardrails() -> None:
+    timer = _systemd_unit("hermes-discovery.timer")
+
+    assert timer == (
+        "[Unit]\n"
+        "Description=Task 129 bounded Hermes discovery schedule\n"
+        "\n"
+        "[Timer]\n"
+        "Unit=hermes-worker-drain.service\n"
+        "OnBootSec=5min\n"
+        "OnUnitActiveSec=6h\n"
+        "RandomizedDelaySec=5min\n"
+        "AccuracySec=1min\n"
+        "Persistent=false\n"
+        "\n"
+        "[Install]\n"
+        "WantedBy=timers.target\n"
+    )
+    assert "Unit=hermes-discovery.target" not in timer
+
+
 def test_shared_host_systemd_launchers_are_root_only_and_container_hardening_is_explicit() -> None:
     discovery_unit = _systemd_unit("hermes-discovery.service.template")
     drain_unit = _systemd_unit("hermes-worker-drain.service.template")
