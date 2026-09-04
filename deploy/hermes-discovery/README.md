@@ -41,6 +41,11 @@ artifact, его нельзя редактировать вручную. Пер�
 использования нужно проверить primary source, study design, limitations и applicability;
 YFC intake сохраняет taxonomy/risk/manual_required boundary.
 
+При deployment setup YFC additive bootstrap добавляет отсутствующие enabled canonical source rows
+даже в непустую базу, но не перезаписывает существующие operator-managed source settings. Явное
+изменение уже существующей строки выполняется только отдельной owner-approved source-allowlist
+операцией.
+
 ## Discovery bounds and safety
 
 - maximum 50 definitions, production unit ограничивает run 20 sources, 4 concurrent fetches;

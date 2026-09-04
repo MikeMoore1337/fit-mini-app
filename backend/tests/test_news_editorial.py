@@ -191,7 +191,7 @@ def test_source_allowlist_is_explicit_validated_and_operator_managed() -> None:
         parse_source_allowlist([_definition(), _definition()])
 
 
-def test_default_source_allowlist_bootstraps_once_without_overwriting_operator_state(
+def test_default_source_allowlist_adds_missing_sources_without_overwriting_operator_state(
     monkeypatch,
 ) -> None:
     definitions = load_source_allowlist()
@@ -209,16 +209,26 @@ def test_default_source_allowlist_bootstraps_once_without_overwriting_operator_s
     with get_session_context() as db:
         seed_demo_data(db)
         assert db.query(NewsSource).count() == 3
+        db.delete(db.get(NewsSource, "pubmed-fitness-health"))
         source = db.get(NewsSource, "frontiers-nutrition")
         assert source is not None
         source.enabled = False
+        source.fetch_interval_minutes = 720
+        source.trust_notes = "Operator-managed trust note"
+        source.fetch_options = {"operator": "preserve"}
 
     with get_session_context() as db:
         seed_demo_data(db)
         assert db.query(NewsSource).count() == 3
+        pubmed = db.get(NewsSource, "pubmed-fitness-health")
+        assert pubmed is not None
+        assert pubmed.enabled is True
         source = db.get(NewsSource, "frontiers-nutrition")
         assert source is not None
         assert source.enabled is False
+        assert source.fetch_interval_minutes == 720
+        assert source.trust_notes == "Operator-managed trust note"
+        assert source.fetch_options == {"operator": "preserve"}
 
 
 def test_news_activation_requires_owner_ids_and_confirmed_channel() -> None:
