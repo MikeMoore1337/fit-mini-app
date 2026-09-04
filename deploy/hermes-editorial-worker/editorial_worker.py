@@ -370,6 +370,16 @@ def _provider_messages(source: SourcePacket) -> list[dict[str, str]]:
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
+def _external_gpt_oss_messages(source: SourcePacket) -> list[dict[str, str]]:
+    system_message, user_message = _provider_messages(source)
+    return [
+        {
+            "role": "user",
+            "content": f"{system_message['content']}\n\n{user_message['content']}",
+        }
+    ]
+
+
 def _draft_response_format() -> dict[str, Any]:
     return {
         "type": "json_schema",
@@ -396,16 +406,25 @@ def _provider_request_body(
     provider_mode: str,
     model: str,
 ) -> dict[str, Any]:
-    request_body: dict[str, Any] = {
+    if provider_mode == EXTERNAL_MODE:
+        if model != EXTERNAL_PROVIDER_MODEL:
+            raise WorkerError("hermes_provider_model_not_allowlisted")
+        return {
+            "model": model,
+            "messages": _external_gpt_oss_messages(source),
+            "max_completion_tokens": 2048,
+            "reasoning_effort": "low",
+            "reasoning_format": "hidden",
+            "temperature": 0.6,
+            "response_format": _draft_response_format(),
+        }
+    return {
         "model": model,
         "messages": _provider_messages(source),
         "temperature": 0,
         "max_tokens": 512,
         "response_format": _draft_response_format(),
     }
-    if provider_mode == EXTERNAL_MODE and model == EXTERNAL_PROVIDER_MODEL:
-        request_body["reasoning_format"] = "hidden"
-    return request_body
 
 
 def _read_bounded_response(response: httpx.Response, limit: int) -> bytes:
