@@ -7,6 +7,7 @@ import os
 import sys
 from pathlib import Path
 from subprocess import CompletedProcess
+from urllib.parse import parse_qs, unquote
 
 import pytest
 
@@ -146,6 +147,28 @@ def test_canonical_registry_renders_versioned_allowlist() -> None:
     assert document["definitions_version"].endswith(document["source_registry_sha256"])
     assert len(document["sources"]) == 10
     assert len({source["id"] for source in document["sources"]}) == 10
+    pubmed = next(
+        source for source in document["sources"] if source["id"] == "pubmed-fitness-health"
+    )
+    query = unquote(parse_qs(pubmed["url"].split("?", 1)[1])["term"][0])
+    assert pubmed["enabled"] is True
+    assert pubmed["authoritative"] is True
+    assert pubmed["fetch_kind"] == "rss"
+    assert pubmed["allowed_item_hosts"] == ["pubmed.ncbi.nlm.nih.gov"]
+    assert '"Physical Fitness"[majr]' in query
+    assert '"Exercise"[majr]' in query
+    assert '"Exercise Therapy"[majr]' in query
+    assert '"Sports Medicine"[majr]' in query
+    assert '"Sports Nutritional Sciences"[majr]' in query
+    assert '"Sports Nutritional Physiological Phenomena"[majr]' in query
+    assert '"Physical Conditioning, Human"[majr]' in query
+    assert "fitness+OR+exercise+OR+nutrition" not in pubmed["url"]
+    assert pubmed["trust_notes"].startswith("Discovery/index feed only")
+    assert "primary source" in pubmed["trust_notes"]
+    assert "study design" in pubmed["trust_notes"]
+    assert "limitations" in pubmed["trust_notes"]
+    assert "abstract alone" in pubmed["health_claim_limitations"]
+    assert "health claim" in pubmed["health_claim_limitations"]
     assert {
         "sports_nutrition",
         "dietary_supplements",
@@ -194,6 +217,15 @@ def test_generated_definitions_load_without_live_fetch(monkeypatch: pytest.Monke
     assert loaded_document["definitions_version"] == document["definitions_version"]
     assert len(sources) == 10
     assert sources[0].source_id == "frontiers-nutrition"
+    loaded_pubmed = next(
+        source for source in loaded_document["sources"] if source["id"] == "pubmed-fitness-health"
+    )
+    rendered_pubmed = next(
+        source for source in document["sources"] if source["id"] == "pubmed-fitness-health"
+    )
+    assert loaded_pubmed == rendered_pubmed
+    assert loaded_pubmed["enabled"] is True
+    assert "abstract alone" in loaded_pubmed["health_claim_limitations"]
 
 
 def test_external_definitions_digest_mismatch_fails_closed(

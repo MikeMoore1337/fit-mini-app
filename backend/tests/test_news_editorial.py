@@ -198,20 +198,24 @@ def test_default_source_allowlist_bootstraps_once_without_overwriting_operator_s
     assert {item.id for item in definitions} == {
         "frontiers-nutrition",
         "frontiers-sports-active-living",
+        "pubmed-fitness-health",
     }
     assert all(item.enabled and item.fetch_kind == "rss" for item in definitions)
+    pubmed = next(item for item in definitions if item.id == "pubmed-fitness-health")
+    assert pubmed.authoritative is True
+    assert pubmed.health_claim_limitations.startswith("Index metadata or abstract alone")
 
     monkeypatch.setattr(settings, "news_ingestion_enabled", True)
     with get_session_context() as db:
         seed_demo_data(db)
-        assert db.query(NewsSource).count() == 2
+        assert db.query(NewsSource).count() == 3
         source = db.get(NewsSource, "frontiers-nutrition")
         assert source is not None
         source.enabled = False
 
     with get_session_context() as db:
         seed_demo_data(db)
-        assert db.query(NewsSource).count() == 2
+        assert db.query(NewsSource).count() == 3
         source = db.get(NewsSource, "frontiers-nutrition")
         assert source is not None
         assert source.enabled is False

@@ -34,6 +34,13 @@ artifact, его нельзя редактировать вручную. Пер�
 существует исключительно в local E2E. Production/external mode принимает только HTTPS,
 точные hosts из этого versioned файла, без IP literal, wildcard и arbitrary URL.
 
+`pubmed-fitness-health` — включённый authoritative discovery/index source. Его RSS-запрос
+ограничен MeSH major-topic терминами для физической формы, exercise therapy, спортивной
+медицины и спортивного питания. Запись PubMed и abstract остаются только входными данными
+для поиска: они не являются автоматически подтверждённым health claim. До редакционного
+использования нужно проверить primary source, study design, limitations и applicability;
+YFC intake сохраняет taxonomy/risk/manual_required boundary.
+
 ## Discovery bounds and safety
 
 - maximum 50 definitions, production unit ограничивает run 20 sources, 4 concurrent fetches;

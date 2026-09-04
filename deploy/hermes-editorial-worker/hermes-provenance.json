@@ -18,7 +18,7 @@
     "version": "editorial-worker-v1",
     "jobSchema": "hermes-editorial-job-v1",
     "intakeSchema": "hermes-editorial-intake-v1",
-    "promptVersion": "task129-editorial-worker-v1",
+    "promptVersion": "task129-editorial-worker-v2",
     "skillVersion": "yfc-hermes-editorial-v1",
     "sourceBehaviorPatches": 0,
     "provider": "OpenAI-compatible HTTP, local-only before Gate A",

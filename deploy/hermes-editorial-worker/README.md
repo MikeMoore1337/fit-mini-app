@@ -15,6 +15,10 @@ shadow-run. В этом режиме worker принимает исключит�
 не fetch'ит. `TELEGRAM_PREVIEW_URL` в external mode не требуется и запрещён schema-контрактом:
 после accepted intake дальнейший editorial/review flow принадлежит YFC.
 
+Для research/index записей, включая PubMed, metadata или abstract не считаются доказательством
+или health claim. Worker требует сохранить неопределённость и редакторскую проверку primary
+source, study design, limitations и applicability до любого health claim.
+
 Provider retry ограничен максимум двумя попытками того же Groq candidate. 429, quota,
 timeout, network unavailable и 5xx не запускают paid tier или cloud fallback: после
 bounded retry результатом остаётся manual/no-provider. `HERMES_PROVIDER_MODEL` остаётся
