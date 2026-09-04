@@ -29,7 +29,7 @@ UPSTREAM_TAG = "v2026.8.31"
 UPSTREAM_COMMIT = "29112bef099274229cadff79cdff7bf7b99c4b77"
 JOB_SCHEMA_VERSION = "hermes-editorial-job-v1"
 INTAKE_SCHEMA_VERSION = "hermes-editorial-intake-v1"
-PROMPT_VERSION = "task129-editorial-worker-v2"
+PROMPT_VERSION = "task129-editorial-worker-v3"
 SKILL_VERSION = "yfc-hermes-editorial-v1"
 LOCAL_MOCK_MODE = "local_mock"
 EXTERNAL_MODE = "external"
@@ -51,6 +51,19 @@ MAX_SOURCE_CONTENT_BYTES = 32 * 1024
 MAX_PROVIDER_RESPONSE_BYTES = 16 * 1024
 MAX_INTAKE_RESPONSE_BYTES = 64 * 1024
 MAX_PREVIEW_RESPONSE_BYTES = 16 * 1024
+HEADLINE_MAX_LENGTH = 180
+SUMMARY_MAX_LENGTH = 1200
+WHY_IT_MATTERS_MAX_LENGTH = 320
+DRAFT_FIELD_LIMITS = {
+    "headline": HEADLINE_MAX_LENGTH,
+    "summary": SUMMARY_MAX_LENGTH,
+    "why_it_matters": WHY_IT_MATTERS_MAX_LENGTH,
+}
+EXTERNAL_GPT_OSS_SOFT_BUDGETS = (
+    "Soft editorial budgets (not JSON Schema constraints): headline <= 140 characters; "
+    "summary <= 900 characters; why_it_matters <= 240 characters. Keep the draft concise; "
+    "the worker enforces separate hard limits locally."
+)
 LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "host.docker.internal"})
 FALSE_VALUES = frozenset({"0", "false", "no", "off"})
 
@@ -105,9 +118,9 @@ class EditorialJob(BaseModel):
 class DraftProposal(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    headline: str = Field(min_length=1, max_length=180)
-    summary: str = Field(min_length=1, max_length=1200)
-    why_it_matters: str = Field(default="", max_length=320)
+    headline: str = Field(min_length=1, max_length=HEADLINE_MAX_LENGTH)
+    summary: str = Field(min_length=1, max_length=SUMMARY_MAX_LENGTH)
+    why_it_matters: str = Field(default="", max_length=WHY_IT_MATTERS_MAX_LENGTH)
 
     @field_validator("headline", "summary", "why_it_matters")
     @classmethod
@@ -375,7 +388,11 @@ def _external_gpt_oss_messages(source: SourcePacket) -> list[dict[str, str]]:
     return [
         {
             "role": "user",
-            "content": f"{system_message['content']}\n\n{user_message['content']}",
+            "content": (
+                f"{system_message['content']}\n\n"
+                f"{EXTERNAL_GPT_OSS_SOFT_BUDGETS}\n\n"
+                f"{user_message['content']}"
+            ),
         }
     ]
 
@@ -398,6 +415,34 @@ def _draft_response_format() -> dict[str, Any]:
             },
         },
     }
+
+
+def _truncate_draft_text(value: str, limit: int) -> str:
+    normalized = value.strip()
+    if len(normalized) <= limit:
+        return normalized
+
+    suffix = "…"
+    prefix = normalized[: limit - len(suffix)].rstrip()
+    last_whitespace = max(
+        (index for index, character in enumerate(prefix) if character.isspace()),
+        default=-1,
+    )
+    if last_whitespace > 0:
+        prefix = prefix[:last_whitespace].rstrip()
+    return f"{prefix}{suffix}"
+
+
+def _normalize_draft_document(document: object) -> object:
+    if not isinstance(document, dict):
+        return document
+
+    normalized = dict(document)
+    for field_name, limit in DRAFT_FIELD_LIMITS.items():
+        value = normalized.get(field_name)
+        if isinstance(value, str):
+            normalized[field_name] = _truncate_draft_text(value, limit)
+    return normalized
 
 
 def _provider_request_body(
@@ -503,6 +548,7 @@ def _provider_request_once(
         proposal_document = json.loads(content)
     except (json.JSONDecodeError, TypeError) as exc:
         raise WorkerError("provider_malformed_json") from exc
+    proposal_document = _normalize_draft_document(proposal_document)
     try:
         return DraftProposal.model_validate(proposal_document)
     except ValidationError as exc:
