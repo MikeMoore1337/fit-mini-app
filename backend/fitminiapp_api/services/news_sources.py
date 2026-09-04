@@ -252,11 +252,11 @@ def apply_source_allowlist(
 
 
 def bootstrap_default_news_sources(db: Session) -> int:
-    """Create the versioned baseline only when an environment has no source records yet."""
-    if db.query(NewsSource.id).first() is not None:
-        return 0
+    """Add missing enabled canonical sources without changing operator-managed rows."""
     definitions = load_source_allowlist()
     if not any(item.enabled for item in definitions):
         raise ValueError("default source allowlist must contain an enabled source")
-    created, _ = apply_source_allowlist(db, definitions)
+    existing_ids = {row.id for row in db.query(NewsSource).all()}
+    missing = [definition for definition in definitions if definition.id not in existing_ids]
+    created, _ = apply_source_allowlist(db, missing)
     return created

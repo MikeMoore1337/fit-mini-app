@@ -60,6 +60,17 @@ def test_untrusted_source_and_capability_fields_fail_closed() -> None:
         )
 
 
+def test_research_index_prompt_preserves_primary_source_review_boundary() -> None:
+    messages = editorial_worker._provider_messages(valid_job().source)
+    system = messages[0]["content"]
+
+    assert "metadata or an abstract alone is not proof or a health claim" in system
+    assert "primary source" in system
+    assert "study design" in system
+    assert "limitations" in system
+    assert "clinical applicability" in system
+
+
 def test_source_packet_preserves_safe_query_but_rejects_fragment() -> None:
     with_query = valid_job().source.model_copy(
         update={"canonical_url": "https://example.com/unit?article=1"}
