@@ -1,5 +1,8 @@
 * text=auto
 
+# Canonical news source provenance hashes raw bytes; keep the registry LF-only on every checkout.
+/backend/fitminiapp_api/resources/news_sources.json text eol=lf
+
 # Container entrypoints must remain executable POSIX shell text on Windows clones.
 *.sh text eol=lf
 
