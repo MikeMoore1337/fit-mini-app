@@ -891,7 +891,34 @@ def _load_state(path: Path) -> dict[str, Any]:
     return document
 
 
+def _file_owner(path: Path) -> tuple[int, int] | None:
+    try:
+        metadata = path.stat()
+    except FileNotFoundError:
+        return None
+    uid = getattr(metadata, "st_uid", None)
+    gid = getattr(metadata, "st_gid", None)
+    if isinstance(uid, int) and isinstance(gid, int):
+        return uid, gid
+    return None
+
+
+def _restore_file_owner(path: Path, owner: tuple[int, int] | None) -> None:
+    if owner is None or _file_owner(path) == owner:
+        return
+    chown = getattr(os, "chown", None)
+    if chown is None:
+        raise DiscoveryError("state_owner_preservation_unsupported")
+    try:
+        chown(path, *owner)
+    except OSError as exc:
+        raise DiscoveryError("state_owner_preservation_failed") from exc
+    if _file_owner(path) != owner:
+        raise DiscoveryError("state_owner_preservation_failed")
+
+
 def _atomic_write_json(path: Path, document: Mapping[str, Any]) -> None:
+    owner = _file_owner(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary: Path | None = None
     try:
@@ -908,6 +935,7 @@ def _atomic_write_json(path: Path, document: Mapping[str, Any]) -> None:
             handle.flush()
             os.fsync(handle.fileno())
         os.chmod(temporary, 0o600)
+        _restore_file_owner(temporary, owner)
         os.replace(temporary, path)
     finally:
         if temporary is not None and temporary.exists():

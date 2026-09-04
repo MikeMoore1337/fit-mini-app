@@ -100,7 +100,6 @@ install -o root -g root -m 0644 hermes-discovery.target /etc/systemd/system/herm
 install -o root -g root -m 0644 hermes-discovery.timer /etc/systemd/system/hermes-discovery.timer
 systemd-analyze verify /etc/systemd/system/hermes-discovery.service /etc/systemd/system/hermes-worker-drain.service /etc/systemd/system/hermes-discovery.target /etc/systemd/system/hermes-discovery.timer
 systemctl daemon-reload
-systemctl enable hermes-discovery.timer
 ```
 
 До включения timer проверить exact boundary без запуска job:
@@ -113,8 +112,14 @@ systemctl cat hermes-discovery.service hermes-worker-drain.service
 systemctl status hermes-discovery.timer --no-pager
 ```
 
-`systemctl start hermes-discovery.target` выполняется только после отдельного owner approval на
-внешний Gate A и подготовленных credentials; до этого timer можно только установить и проверить.
+После отдельного owner approval на внешний Gate A и подготовки credentials активировать schedule
+нужно одной командой: `systemctl enable --now hermes-discovery.timer`. Она одновременно включает
+timer на boot и запускает его в текущем boot; затем для немедленного bounded smoke можно выполнить
+`systemctl start hermes-discovery.target`. До этого timer можно только установить и проверить.
+
+Если `/var/lib/hermes/state.json` был создан предыдущей дефектной версией от `root:root`, перед
+первым запуском после обновления восстановить владельца state для контейнерного UID/GID:
+`chown -R 10000:10000 /var/lib/hermes`.
 
 `hermes_worker_drain.py` — host-side launcher; secrets передаются только worker container.
 Discovery service не получает ни provider key, ни YFC HMAC secret. Рабочий runtime запускается

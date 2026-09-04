@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 from subprocess import CompletedProcess
@@ -28,6 +29,26 @@ GENERATOR_SPEC.loader.exec_module(GENERATOR_MODULE)
 
 def _systemd_unit(name: str) -> str:
     return (SYSTEMD_ROOT / name).read_text(encoding="utf-8")
+
+
+def test_state_rewrite_preserves_existing_owner(tmp_path: Path) -> None:
+    state_path = tmp_path / "state.json"
+    state_path.write_text('{"before": true}\n', encoding="utf-8")
+    before = os.stat(state_path)
+
+    discovery_runner._atomic_write_json(state_path, {"after": True})
+
+    after = os.stat(state_path)
+    if hasattr(before, "st_uid") and hasattr(before, "st_gid"):
+        assert (after.st_uid, after.st_gid) == (before.st_uid, before.st_gid)
+    assert json.loads(state_path.read_text(encoding="utf-8")) == {"after": True}
+
+
+def test_install_instructions_start_enabled_timer_after_gate_a() -> None:
+    readme = (DISCOVERY_ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "systemctl enable --now hermes-discovery.timer" in readme
+    assert "systemctl enable hermes-discovery.timer\n" not in readme
 
 
 def test_shared_host_systemd_launchers_are_root_only_and_container_hardening_is_explicit() -> None:
