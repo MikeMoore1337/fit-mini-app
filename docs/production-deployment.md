@@ -14,17 +14,21 @@ push, force-push и удаление ветки и не разрешать bypas
 Task получает normal automatic release только при `AUTO_RELEASE_ELIGIBLE`: есть tracked logical
 commit, lifecycle/review/QA/final verification завершены, незакрытых `BLOCKER/HIGH/MEDIUM` нет,
 findings синхронизированы и отсутствует обязательный owner/human/manual visual gate. Тогда task
-branch сначала проходит shared local `PRE_PUSH_CI_PASS` для exact HEAD и current `origin/master`,
-затем exact-head checked task PR в `master`. PR-triggered CI выполняет полный regression profile;
+branch после получения delivery ownership и refresh относительно current `origin/master` проходит
+shared local `PRE_PUSH_CI_PASS` для refreshed exact HEAD, затем exact-head checked task PR в
+`master`. PR-triggered CI выполняет полный regression profile;
 после merge push-CI выполняет только merge provenance и immutable image publication, потому что
 тот же tree уже прошёл полный PR suite. Затем `.github/workflows/deploy.yml` передаёт на host
 immutable commit bundle, image refs и migration manifest; host не использует Git checkout.
 Failure/rollback/manual intervention required блокирует следующую backlog task.
 
-Task PR идут только из `task/<ID>-<slug>`, а `scripts/task_session.py` выдаёт readiness только при
-свежем exact `PRE_PUSH_CI_PASS`, approved review/QA и clean task worktree. Repository
-`delete_branch_on_merge` не заменяет owner-safe cleanup worktree/branch. Если `master` изменился до
-push или merge, candidate обязан повторить current-base gate.
+Task PR идут только из `task/<ID>-<slug>`. Совместимые `independent-write` task могут параллельно
+дойти до approved review/QA, logical commit и `READY_FOR_DELIVERY`; занятая delivery lane или
+active production deploy блокируют только delivery acquisition. Перед PR delivery owner fetch-ит
+latest `origin/master`, безопасно rebase-ит task branch, инвалидирует старое evidence и запускает
+новый exact `PRE_PUSH_CI_PASS` на refreshed HEAD. Repository `delete_branch_on_merge` не заменяет
+owner-safe cleanup worktree/branch. Если `master` изменился до push или merge, candidate обязан
+повторить refresh и current-base gate.
 
 Изменение Ruleset, variables или secrets остаётся exceptional owner-authorized action.
 Подробный ADR/runbook: `docs/task-branch-integration.md`.

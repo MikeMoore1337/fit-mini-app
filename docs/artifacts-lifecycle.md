@@ -92,7 +92,9 @@ python scripts/artifact_manager.py --root .artifacts --repo-root . cleanup-task 
 `task_session.py finish` выполняет эту операцию внутри terminal closeout и сохраняет компактный
 результат в controller history. `run_task_delivery.py` сначала дожидается закрытия worker log и
 успешного `_verify_closeout`, переносит необходимый `final.md` в task evidence, затем удаляет
-только свою `temporary/delivery` subtree. Ошибка cleanup останавливает closeout, а не маскируется.
+только свою `temporary/delivery` subtree. Waiting/ready worktrees, delivery owner другой task и
+shared coordination state не входят в cleanup scope. Ошибка cleanup останавливает closeout, а не
+маскируется.
 
 Shared runtime можно чистить только bounded policy и с отдельным exact SHA:
 

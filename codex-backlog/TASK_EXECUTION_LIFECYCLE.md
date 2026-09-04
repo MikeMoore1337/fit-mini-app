@@ -10,6 +10,26 @@ authorization на весь normal path этой task. Launcher/controller ав�
 ожидание CI/deploy и безопасную cleanup в новые вопросы владельцу. Отдельный ответ нужен только для
 явно объявленного human/legal/external/destructive/task-specific gate или terminal blocker.
 
+## 0. Coordination lanes
+
+Lifecycle разделён на две coordination boundary:
+
+- `implementation lane`: отдельные task leases и worktrees. Совместимые
+  `independent-write` task могут одновременно находиться в `implementation`, `review`, `qa`,
+  `ready-for-delivery` и `waiting-for-delivery`; `exclusive-write` блокирует новую task при любой
+  несовместимой активной nonterminal lease, включая queued/delivery/recovery states.
+- `delivery lane`: один минимальный shared owner/queue в Git common directory. Только её owner
+  может выполнить `refresh/rebase` относительно latest `origin/master`, final exact-HEAD gate,
+  PR/CI, merge, production deploy, smoke и terminal closeout. Owner сохраняется до завершения
+  `finish`, после чего lane передаётся следующему FIFO candidate. Busy delivery/CI/production не
+  блокирует запуск совместимой implementation task.
+
+`READY_FOR_DELIVERY` фиксирует task ID, branch, HEAD, исходный/current base, review/QA, clean
+worktree, provenance и состояние локального evidence. Это очередь, а не разрешение merge: перед
+PR владелец delivery должен получить актуальный `origin/master`, обновить branch безопасным
+`rebase`, инвалидировать старое exact-HEAD evidence и пройти новый final gate. Конфликт rebase,
+dirty/interrupted worktree или missing/ambiguous lease сохраняются fail-closed для recovery.
+
 ## 0A. Structured task artifacts
 
 Every new task artifact uses one canonical `.artifacts/` layout:
@@ -289,9 +309,12 @@ Review/QA не могут сами по себе быть основанием �
 8. Создать один логический commit в lease-bound `task/<ID>-<slug>` branch/worktree при tracked
    changes, если task не задаёт другой stage strategy.
    Новый registry entry считается tracked change даже для read-only audit/review task.
-9. Проверить `[Task <ID>]` provenance, получить текущий `origin/master`, выполнить local
-   `PRE_PUSH_CI_PASS` для exact HEAD и открыть только task PR в `master`. Дождаться exact-head
-   `checks` на current base; direct push в `master` запрещён.
+9. Получить delivery ownership, проверить `[Task <ID>]` provenance, fetch-нуть текущий
+   `origin/master`, безопасно обновить task branch, инвалидировать старое evidence и выполнить
+   local `PRE_PUSH_CI_PASS` для нового exact HEAD. Только после этого открыть task PR в `master` и
+   дождаться exact-head `checks` на current base; direct push в `master` запрещён. До ownership
+   task может закончить review/QA/commit и ждать в `READY_FOR_DELIVERY` или
+   `WAITING_FOR_DELIVERY`.
 10. Классифицировать уже интегрированную task как `AUTO_RELEASE_ELIGIBLE` либо
     `AUTO_RELEASE_BLOCKED` по разделу 9A.
 11. Выполнить разрешённый canonical release final либо остановиться на точном owner/blocker gate.
@@ -327,9 +350,11 @@ Task является `AUTO_RELEASE_ELIGIBLE`, только если однов�
 
 Для `AUTO_RELEASE_ELIGIBLE` task агент без дополнительного owner prompt обязан:
 
-1. `git fetch --prune origin`, проверить, что `origin/master` совпадает с live protected `master`,
-   и получить task branch от exact current base. До первого push выполнить shared command profile,
-   записать `PRE_PUSH_CI_PASS` с HEAD/base/profile/contract digest и только затем открыть task PR;
+1. Получить delivery lane только для текущего candidate, выполнить `git fetch --prune origin`,
+   проверить, что `origin/master` совпадает с live protected `master`, безопасно обновить task
+   branch от exact current base и инвалидировать старое evidence. Затем выполнить shared command
+   profile, записать новый `PRE_PUSH_CI_PASS` с HEAD/base/profile/contract digest и только затем
+   открыть task PR;
 2. проверить expected PR head SHA и required check `checks`. PR-triggered CI выполняет полный
    regression profile, а post-merge `master` CI выполняет только provenance, immutable image
    publication и deployment-source checks для того же exact tree;
@@ -353,7 +378,10 @@ Task является `AUTO_RELEASE_ELIGIBLE`, только если однов�
 Canonical sequencing для нового release candidate:
 
 ```text
-task branch -> current origin/master -> local PRE_PUSH_CI_PASS
+implementation/review/QA -> logical commit -> READY_FOR_DELIVERY
+  -> acquire single delivery lane
+  -> fetch/rebase current origin/master -> invalidate old evidence
+  -> local PRE_PUSH_CI_PASS on refreshed exact HEAD
   -> PR master -> exact-head required checks
   -> merge exact PR head
   -> WAIT post-merge master provenance/image publication: success
@@ -365,8 +393,9 @@ task branch -> current origin/master -> local PRE_PUSH_CI_PASS
 ```
 
 Legacy `dev` refs не являются частью normal delivery и не используются как base, release queue или
-post-deploy synchronization step. Если current `master` изменился до push/merge, candidate заново
-проходит current-base gate и exact-head checks.
+post-deploy synchronization step. Если current `master` изменился до delivery refresh/push/merge,
+candidate заново проходит current-base gate и exact-head checks. Waiting delivery task не блокирует
+новый совместимый implementation lease.
 
 Автоматизация никогда не делает direct push в `master`, не обходит ruleset/required checks,
 PR provenance/exact-SHA guard и не запускает manual production command. Task с явно объявленным

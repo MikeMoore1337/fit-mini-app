@@ -4,17 +4,15 @@
 
 ## Контракт
 
-Нормальный delivery-flow намеренно короткий:
+Нормальный flow разделён на независимую implementation lane и одну serial delivery lane:
 
 ```text
-1 executable task
-  = 1 task ID
-  = 1 branch task/<ID>-<slug>
-  = 1 отдельный worktree
-  = 1 writer lease
-  = 1 task PR в master
+Task A/B/C: implementation -> targeted checks -> review -> QA -> commit
+            -> READY_FOR_DELIVERY -> WAITING_FOR_DELIVERY (если slot занят)
 
-task branch -> current origin/master -> local PRE_PUSH_CI_PASS
+одна delivery lane:
+  acquire -> fetch latest origin/master -> refresh/rebase task branch
+  -> invalidate old evidence -> final exact-HEAD PRE_PUSH_CI_PASS
   -> PR master -> exact-head checks -> merge master
   -> post-merge provenance/image publication
   -> immutable bundle deploy -> smoke/observation
@@ -25,6 +23,12 @@ task branch -> current origin/master -> local PRE_PUSH_CI_PASS
 только от exact `origin/master`; stacked branches по умолчанию запрещены. Canonical controller
 worktree используется для координации и closeout, но не для feature implementation. Legacy `dev`
 refs могут оставаться в repository для recovery/inventory, но не являются частью normal delivery.
+
+Несколько task с `independent-write` могут одновременно иметь отдельные writer leases и worktrees.
+`exclusive-write` блокирует новую task при любой несовместимой активной nonterminal lease, включая
+очередь, delivery и owner-safe recovery. Обычная `independent-write` task в
+`READY_FOR_DELIVERY`, ожидание delivery slot, GitHub CI или active production deploy не блокируют
+начало совместимой implementation. Merge в `master` и production deployment всегда serial.
 
 GitHub Ruleset для `master` обязан быть active и требовать pull request, deletion protection,
 non-fast-forward protection, strict current-base required checks и aggregate check `checks`.
@@ -45,10 +49,16 @@ target base, scope/profile, группы, timestamps, contract version/digest, c
 самопроверяемый evidence digest. `PRE_PUSH_CI_PASS` действителен только для exact HEAD и exact
 base; изменение кода, CI contract, base или рабочей директории инвалидирует его.
 
-`scripts/task_session.py mark-ready` не принимает произвольное утверждение о gate: он заново
-проверяет clean task worktree, current `origin/master`, commit provenance, exact evidence digest,
-все applicable successful groups и approved review/QA. Поэтому readiness невозможен без текущего
-`PRE_PUSH_CI_PASS`, а failed candidate требует нового exact HEAD.
+`scripts/task_session.py mark-ready` фиксирует durable `READY_FOR_DELIVERY`: clean task worktree,
+commit provenance, approved review/QA, исходный base SHA, текущий task HEAD и локальное evidence
+состояние. Полный `PRE_PUSH_CI_PASS` не требуется на старом base. Перед PR команда
+`refresh-delivery` fetch/rebase-ит branch относительно latest `origin/master`, обновляет lease base
+и инвалидирует старое evidence; `validate-delivery` принимает только новый exact HEAD и новый
+`PRE_PUSH_CI_PASS`. Любой amend/rebase/commit или tracked modification после gate требует нового
+evidence. Если HEAD изменился после `READY_FOR_DELIVERY`, `refresh-delivery` останавливается до
+повторных review/QA; для owner-safe возврата в эту стадию используется
+`reopen-for-review --reason <...>`, который освобождает delivery lane и удаляет старый readiness
+snapshot.
 
 ## Leases и безопасный closeout
 
@@ -58,6 +68,7 @@ Controller хранит machine-local coordination state в shared Git common di
 <git-common-dir>/codex-task-sessions-v1/
 ├── contract.json
 ├── state.lock
+├── delivery.json
 ├── leases/task-<ID>.json
 └── history/task-<ID>.json
 ```
@@ -66,12 +77,19 @@ State не коммитится. Create использует `O_EXCL`, update �
 `state.lock`. Corrupted JSON, оставшийся lock, duplicate branch/worktree, dirty/interrupted state
 и неизвестная lease являются blocker; controller не удаляет их автоматически.
 
-Task lease содержит task ID/path, branch, абсолютный worktree, exact `base_origin_master_sha`,
-target base, mode, timestamps, lifecycle state и session label без secrets. `finish` запускается
+Task lease содержит task ID/path, branch, абсолютный worktree, original/current
+`base_origin_master_sha`, target base, mode, timestamps, lifecycle state, queue sequence и session
+label без secrets. `delivery.json` содержит только минимальный owner delivery lane и FIFO sequence;
+это не старый release-freeze lease. Production success удерживает delivery owner до завершения
+`finish`; только terminal closeout освобождает lane и передаёт её следующему FIFO candidate. `finish` запускается
 из canonical controller worktree только после exact merged master SHA и terminal production success.
 Он удаляет только matching clean task worktree и локальную task branch без `--force`; unique
 commits, divergence refs, changed head и artifact cleanup error останавливают closeout с
 сохранением данных.
+
+Состояния `implementation`, `review`, `qa`, `ready-for-delivery`, `waiting-for-delivery`,
+`delivering`, `delivery-gate`, `production-success` и `recovery-required` различаются явно.
+`recover` не удаляет stale lease, dirty/interrupted worktree или unique commits автоматически.
 
 `recover` — read-only диагностика. Он сохраняет dirty files, unique commits и interrupted Git
 operations для owner-safe решения. Ни `recover`, ни `finish` не выполняют `reset --hard`, force
@@ -84,10 +102,12 @@ delete или несанкционированное восстановлени�
 ```
 
 Явный выбор task владельцем или эта команда являются standing authorization для normal delivery
-этой task: отдельный worktree, implementation/review/QA, commit, task PR в `master`, CI, immutable
-bundle deploy и safe closeout. Launcher останавливается только на точном terminal blocker либо
-явно объявленном human/legal/external/destructive/task-specific gate. Следующая product task
-автоматически не запускается.
+этой task: отдельный worktree, implementation/review/QA, commit, очередь delivery, refresh, task PR
+в `master`, CI, immutable bundle deploy и safe closeout. Launcher не ждёт свободную delivery lane
+до запуска worker: waiting после `READY_FOR_DELIVERY` — нормальное состояние, а не terminal blocker.
+Останавливает только точный implementation/recovery blocker либо явно объявленный
+human/legal/external/destructive/task-specific gate. Следующая product task автоматически не
+запускается.
 
 Низкоуровневые команды:
 
@@ -99,6 +119,10 @@ python scripts/task_session.py adopt-current 135 --owner-launch --session-label 
 python scripts/task_session.py status
 python scripts/task_session.py recover 135
 python scripts/task_session.py mark-ready 135 --head-sha <sha> --review-verdict APPROVED --qa-verdict PASS
+python scripts/task_session.py acquire-delivery 135
+python scripts/task_session.py refresh-delivery 135
+python scripts/task_session.py validate-delivery 135
+python scripts/task_session.py reopen-for-review 135 --reason "address review findings"
 python scripts/task_session.py complete-production 135 --pr <number> --merge-sha <sha> --deployed-sha <sha>
 python scripts/task_session.py finish 135
 ```
