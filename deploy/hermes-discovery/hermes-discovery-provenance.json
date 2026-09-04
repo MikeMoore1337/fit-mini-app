@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "task129-hermes-discovery-provenance-v1",
+  "component": "bounded-source-discovery-runner",
+  "base": {
+    "image": "python:3.13-alpine",
+    "digest": "sha256:46ee549c88617e9bc8acb843a326f1a5c0fa5608d7f9703509efe6d53b55f318",
+    "platform": "linux/amd64",
+    "alpine": "3.24.1"
+  },
+  "upstreamContract": {
+    "name": "hermes-agent",
+    "version": "0.21.0",
+    "tag": "v2026.8.31",
+    "commit": "29112bef099274229cadff79cdff7bf7b99c4b77",
+    "role": "deployment compatibility contract only; discovery does not package or execute the monolith"
+  },
+  "dependencies": {
+    "pythonRuntime": "pinned by base image",
+    "thirdPartyPython": [],
+    "floatingVersions": false
+  },
+  "capabilities": {
+    "providerCredentials": false,
+    "yfcDatabaseAccess": false,
+    "yfcIntakeCredentials": false,
+    "telegram": false,
+    "publication": false,
+    "terminal": false,
+    "browser": false,
+    "mcp": false,
+    "plugins": false,
+    "shell": false,
+    "sourceFetch": "explicit versioned source definitions only"
+  },
+  "sourceBehaviorPatches": 0,
+  "license": "PSF-2.0 Python runtime plus Alpine package licenses recorded during build"
+}

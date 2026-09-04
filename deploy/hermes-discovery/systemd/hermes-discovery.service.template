@@ -1,0 +1,26 @@
+[Unit]
+Description=Task 129 bounded Hermes source discovery container
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=hermes
+Group=hermes
+UMask=0077
+ExecStart=/usr/bin/docker run --rm --name hermes-discovery-once --network bridge --read-only --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m,uid=10000,gid=10000,mode=700 --mount type=bind,source=/etc/hermes/source-definitions.json,target=/opt/hermes/config/source-definitions.json,readonly --mount type=bind,source=/var/lib/hermes,target=/opt/data --cap-drop ALL --security-opt no-new-privileges:true --pids-limit 64 --memory 512m --cpus 0.50 --user 10000:10000 --env HERMES_DISCOVERY_MODE=external --env HERMES_DISCOVERY_MAX_SOURCES=20 --env HERMES_DISCOVERY_MAX_CONCURRENCY=4 --env HERMES_DISCOVERY_TIMEOUT_SECONDS=10 --env HERMES_DISCOVERY_MAX_RESPONSE_BYTES=524288 --env HERMES_DISCOVERY_MAX_ITEMS_PER_SOURCE=20 --env HERMES_DISCOVERY_DEFINITIONS=/opt/hermes/config/source-definitions.json --env HERMES_DISCOVERY_DEFINITIONS_SHA256=@SOURCE_DEFINITIONS_SHA256@ @DISCOVERY_IMAGE@
+TimeoutStartSec=180s
+RuntimeMaxSec=180s
+KillMode=mixed
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/hermes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictSUIDSGID=true
+LockPersonality=true
+TasksMax=64
+MemoryMax=768M
+CPUQuota=75%

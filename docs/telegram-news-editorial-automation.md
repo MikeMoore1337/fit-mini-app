@@ -163,3 +163,214 @@ indexing state, Landing block or Web publish state is created here.
 
 Production source coverage, live Hermes/provider behavior, real Telegram/channel sends and device
 smoke are deliberately unclaimed until the owner authorizes the corresponding external gates.
+
+## Hardened editorial worker: repository integration
+
+The tracked worker is a narrow, provider-compatible editorial adapter. It is not the official
+monolithic Hermes image and does not expose the general Hermes agent loop. Its upstream provenance
+is recorded in `deploy/hermes-editorial-worker/hermes-provenance.json`:
+
+```text
+Hermes version: 0.21.0
+tag: v2026.8.31
+commit: 29112bef099274229cadff79cdff7bf7b99c4b77
+source behavior patches: 0
+```
+
+The exact upstream license is kept in `deploy/hermes-editorial-worker/LICENSES/HERMES-LICENSE`.
+`license_bundle.py` builds a deterministic `/opt/licenses` bundle from the pinned Python lock,
+installed distribution metadata and the Alpine APK database during the image build. The image
+also contains the generated Python/Alpine inventory and the upstream license; no credential or
+source content is included. The build fails if the lock and declared inventory diverge.
+
+### Reproducible local verification
+
+Run from a clean checkout with Docker available:
+
+```powershell
+python scripts/hermes_worker.py provenance --source-dir <exact-hermes-checkout>
+python scripts/hermes_worker.py verify
+```
+
+`verify` checks the exact base digest and lock, builds with `--pull=false`, runs the hardening
+boundary, executes the local HTTP E2E harness, generates CycloneDX and SPDX SBOM files, and runs
+the pinned Trivy CRITICAL/HIGH gate. The source checkout is used only for offline provenance
+verification; it is not copied into the runtime image. Build context is the tracked
+`deploy/hermes-editorial-worker` directory and its `.dockerignore`; `.artifacts/` contains only
+evidence and is never a build input or commit target.
+
+The lock contains only the worker closure and has no floating versions or provider SDK:
+`httpx`, Pydantic and their exact transitive dependencies. The base is
+`python:3.13-alpine@sha256:46ee549c88617e9bc8acb843a326f1a5c0fa5608d7f9703509efe6d53b55f318`.
+The final image runs as UID/GID `10000:10000`, drops all capabilities, sets
+`no-new-privileges`, removes the package shell/tooling surfaces, declares `/opt/data` as the only
+state volume, and is tested with a read-only root filesystem. The verification budget is 0.50
+CPU, 512 MiB RAM and 64 PIDs per container; these are safety bounds, not a production capacity
+benchmark.
+
+Worker принимает одну bounded job, отправляет source packet только в OpenAI-compatible provider,
+проверяет structured response и подписывает YFC intake payload. `HERMES_PROVIDER_MODE=local_mock`
+сохраняет текущий local-only contract: только HTTP localhost/`host.docker.internal`, provider
+base path `/v1`, YFC intake path `/api/v1/hermes/editorial/intake` и local Telegram preview mock.
+`external` — отдельный подготовленный режим: только HTTPS, exact provider host `api.groq.com` с
+base path `/openai/v1`, exact YFC host `app.your-fitness-coach.ru` и exact intake path
+`/api/v1/hermes/editorial/intake`. Внешние URL с arbitrary host, HTTP, private/link-local/metadata
+target, userinfo, query/fragment, нестандартным портом или redirect отвергаются. HTTP client не
+следует redirect. Source URLs worker не fetch'ит.
+
+Worker не имеет terminal, browser, MCP, plugin, Telegram Bot API, dashboard, database, publish или
+Docker-socket capability. Запрос unsupported capability, malformed endpoint, oversized
+input/output, prompt-injection marker, failed provider response, invalid schema, invalid HMAC,
+duplicate replay или source outside allowlist fails closed. В external mode `TELEGRAM_PREVIEW_URL`
+не требуется и запрещён конфигурационным контрактом: после accepted YFC intake downstream
+editorial/review flow принадлежит YFC.
+
+The local E2E path is:
+
+```text
+tracked source fixture
+  -> hardened Docker worker
+  -> local OpenAI-compatible fake HTTP provider
+  -> structured draft response
+  -> HMAC-signed YFC intake contract
+  -> local YFC FastAPI intake
+  -> taxonomy/risk classification
+  -> immutable draft revision, manual_required
+  -> local editorial preview mock (published=false)
+```
+
+The fake provider is an HTTP server, so this verifies the actual transport/protocol path; it does
+not claim real-model quality. Local tests set `HERMES_INTAKE_ENABLED=true` only inside the
+test-process YFC server. They set the local news flags to false and cannot change production.
+
+### Deployment boundary and operations
+
+The selected production topology remains a separate Linux `x86_64` VM; it has not been created.
+The current YFC host is not a placement target: the earlier read-only baseline was 1 vCPU, about
+958 MiB RAM with about 163 MiB available and swap pressure, and about 4.37 GiB free disk. The
+planning minimum for a dedicated VM is 2 vCPU, 4 GiB RAM and 30 GiB SSD (20 GiB is only a short,
+stateless-shadow floor), with cgroup v2, default-deny host ingress/egress firewall, no public
+inbound ports, no host mounts, no Docker socket and no YFC DB/Redis/SSH access. Expected external
+LLM editor workload is an unbenchmarked 0.25-1.0 vCPU and 0.5-1.5 GiB RAM; confirm the budget in
+an owner-approved shadow run.
+
+Before Gate A approval the network is local-only: the test harness uses loopback and Docker's
+`host.docker.internal` mapping solely for local services. No production allowlist is changed.
+After a separate approval, the VM allowlist must explicitly name the approved provider API host,
+the YFC intake host/path and approved source hosts; it must deny Telegram Bot API, YFC
+PostgreSQL/Redis/internal services, Docker API/socket, SSH, cloud metadata, arbitrary redirects,
+registries and wildcard internet egress. There are no inbound Hermes ports.
+
+Актуальные имена переменных worker:
+
+```text
+HERMES_INTAKE_ENABLED
+HERMES_SOURCE_ALLOWLIST
+HERMES_PROVIDER_MODE
+HERMES_PROVIDER_BASE_URL
+HERMES_PROVIDER_API_KEY
+HERMES_PROVIDER_MODEL
+HERMES_PROVIDER_TIMEOUT_SECONDS
+HERMES_PROVIDER_MAX_ATTEMPTS
+HERMES_PROVIDER_RETRY_BACKOFF_SECONDS
+YFC_INTAKE_URL
+YFC_HERMES_KEY_ID
+YFC_HERMES_SHARED_SECRET
+YFC_INTAKE_TIMEOUT_SECONDS
+TELEGRAM_PREVIEW_URL              # local_mock/E2E only
+TELEGRAM_PREVIEW_TIMEOUT_SECONDS  # local_mock/E2E only
+```
+
+Секретные значения — только `HERMES_PROVIDER_API_KEY` и `YFC_HERMES_SHARED_SECRET`. Telegram
+token, database credential, user health data и host credential worker не нужны. Pre-Gate local
+build использует локальные test values, не создаёт accounts, keys или service identities.
+
+### Provider readiness addendum
+
+Primary candidate для внешнего режима — Groq Free Plan, модель `openai/gpt-oss-120b`, с целевой
+стоимостью LLM `$0` на старте. Published Groq Free limits являются только baseline: фактические
+account tier, quota/rate limits, payment state и доступность модели должны быть проверены владельцем
+перед shadow-run. Worker не может автоматически переключиться на Developer/paid Groq tier или
+другой cloud provider. После максимум двух попыток того же candidate при 429/quota, timeout,
+network unavailable или 5xx остаётся manual/no-provider.
+
+`HERMES_PROVIDER_BASE_URL`, `HERMES_PROVIDER_API_KEY` и `HERMES_PROVIDER_MODEL` остаются
+provider-neutral interface. В текущем external build allowlist и model pin ограничены Groq Free
+candidate; добавление `api.openai.com` или любого другого provider host требует отдельного
+owner-approved config/code change. Будущий optional paid fallback — OpenAI `gpt-5.6-luna` — не
+подключён, credentials не создаются и автоматическим fallback не является. Gemini и OpenRouter
+не подключаются.
+
+В external mode наружу уходит source metadata/content packet только в approved Groq endpoint и
+structured draft metadata в approved YFC intake; source URL не fetch'ится, а YFC intake получает
+content hash вместо полного source content. Retention, training/model-improvement policy,
+processing/storage region, privacy terms и фактическая cost/quota policy Groq для конкретного
+account до owner verification не считаются подтверждёнными. Качество реальной модели проверяется
+только в owner-approved shadow-run после Gate A; local fake E2E не является model-quality proof.
+
+Kill switch — `HERMES_INTAKE_ENABLED=false`; keep it off until Gate A. The existing production
+`NEWS_INGESTION_ENABLED` and `NEWS_PUBLICATION_ENABLED` values are not changed by this integration,
+and `NEWS_AUTO_PUBLISH_LOW_RISK=false` remains required. Rollback is to stop/remove
+the separate worker workload, revoke only its approved intake/provider identities, remove its
+egress rules, and return to the existing YFC manual/editorial path. Existing news pipeline flags
+and publisher ownership are not rollback targets. Any later production rollback must use the
+previously verified immutable application/image SHA and the normal release procedure; no blind
+migration downgrade is permitted.
+
+The evidence boundary is explicit: local/mock proves deterministic contracts, hardening,
+idempotency, HMAC, taxonomy/risk and manual-required behavior; a shadow run requires owner approval
+and a real provider; production and Telegram/channel proof require later external gates. This
+repository integration grants neither Gate A nor any deployment authorization.
+
+### Scheduled source discovery и monitoring
+
+Source fetching не добавляется в hardened editorial worker. Отдельный stdlib-only
+`deploy/hermes-discovery/discovery_runner.py` получает только versioned definitions, рендеренные
+из canonical `backend/fitminiapp_api/resources/news_sources.json`, и пишет bounded jobs в
+локальный outbox. Команда рендера:
+
+```powershell
+python scripts/generate_hermes_source_definitions.py --output <versioned-output.json>
+```
+
+Output содержит SHA-256 canonical registry и `definitions_version`; ручной второй список источников
+не допускается. Реестр уже поддерживает RSS, JSON Feed и HTML metadata и фиксирует diversity
+vocabulary для `sports_nutrition`, `dietary_supplements`, medicine/health, fitness/training,
+bodybuilding, peptides, nutrition/food, fitness technology, research/guideline/regulation/product/
+safety. Фактический набор enabled/disabled источников остаётся каноническим YFC registry; runner
+не подменяет отсутствующее покрытие filler-источниками и не создаёт publication quota.
+Перед внешней установкой дополнительно фиксируется SHA-256 самого versioned deployment-файла в
+`HERMES_DISCOVERY_DEFINITIONS_SHA256`; external runner fail-closed отклоняет изменённый или
+неподготовленный definitions-файл.
+Discovery не делает обязательных publication quotas и не отбрасывает материал из-за неизвестного
+topic; taxonomy/risk/publication eligibility остаются серверной ответственностью YFC.
+
+На будущей отдельной Hermes VM systemd timer активирует `hermes-discovery.target`, который
+последовательно запускает `hermes-discovery.service` и `hermes-worker-drain.service`. Первый
+контейнер не получает provider/YFC secrets. Только второй host-side drain передаёт bounded job в
+hardened worker с provider key и YFC HMAC secret. Входящих Hermes ports нет; source discovery
+имеет exact host allowlist из definitions, HTTPS-only external mode, DNS resolution с запретом
+non-global адресов, revalidation каждого redirect, MIME/size/time/concurrency bounds и no
+JavaScript/browser. Host firewall должен быть default-deny и отдельно разрешать только approved
+source hosts, Groq и YFC intake.
+До установки нужен host preflight: account `hermes` и bind-mounted `/var/lib/hermes` должны
+согласовать UID/GID `10000:10000` контейнеров, а доступ к Docker должен быть явно ограничен
+rootless/systemd policy; этот PR не устанавливает Docker или VM.
+
+State — только bounded hashes, fetch metadata, reason codes и candidate metadata. Stable dedupe key
+использует `source_id + canonical URL + content hash + event date`; restart/uncertain state не
+создаёт новый idempotency key. Lock на Linux использует kernel `flock`, поэтому SIGKILL не оставляет
+вечный overlap blocker; пропущенный timer run не восполняет publication quota. Accepted/duplicate
+job удаляется из outbox после сохранения статуса, а pending/error job остаётся для той же retry.
+
+Полная локальная проверка:
+
+```powershell
+python scripts/hermes_worker.py verify
+```
+
+Она включает provenance canonical registry, отдельные image build/hardening/SBOM/Trivy для worker
+и discovery и E2E `fake RSS -> discovery container -> outbox -> hardened worker -> fake
+OpenAI-compatible HTTP -> real local YFC intake -> manual_required draft`. Проверяются malformed,
+timeout, oversized, invalid MIME, redirect SSRF, private IP, partial outage, prompt injection,
+duplicate, overlap и crash/restart. Это не live Internet/provider/Telegram и не production proof.

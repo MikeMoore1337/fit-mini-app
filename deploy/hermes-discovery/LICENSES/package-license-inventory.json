@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "task129-discovery-license-inventory-v1",
+  "purpose": "Expected licenses for the bounded stdlib-only Hermes discovery runtime",
+  "base": {
+    "image": "python:3.13-alpine",
+    "digest": "sha256:46ee549c88617e9bc8acb843a326f1a5c0fa5608d7f9703509efe6d53b55f318",
+    "platform": "linux/amd64",
+    "alpine": "3.24.1",
+    "licenseSource": "alpine-installed-packages.txt"
+  },
+  "pythonRuntime": [
+    {
+      "name": "Python",
+      "version": "3.13",
+      "licenses": ["PSF-2.0"],
+      "licenseSource": "/usr/local/lib/python3.13/LICENSE.txt"
+    }
+  ],
+  "pythonPackages": [],
+  "alpinePackages": {
+    "source": "/lib/apk/db/installed",
+    "licenseField": "L",
+    "versionField": "V",
+    "architectureField": "A"
+  }
+}
