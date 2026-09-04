@@ -74,6 +74,9 @@ DEFAULT_RETENTION = {
     "logs": "limited-retention; delete-after-closeout-when-not-needed",
 }
 TERMINAL_STATES = {"dev-ci-success", "finished", "terminal-success", "success"}
+# A production-success lease is still owned by the controller until ``finish`` records the
+# final history state.  It is nevertheless safe for task-scoped temporary-artifact cleanup.
+CONTROLLER_TERMINAL_LEASE_STATES = TERMINAL_STATES | {"production-success"}
 CONTROLLER_STATE_NAME = "codex-task-sessions-v1"
 FILE_ATTRIBUTE_REPARSE_POINT = 0x400
 
@@ -667,7 +670,8 @@ class ArtifactManager:
                     active_task_ids.append(lease_task)
                 elif (
                     lease_task == task_id
-                    and str(payload.get("lifecycle_state", "")) not in TERMINAL_STATES
+                    and str(payload.get("lifecycle_state", ""))
+                    not in CONTROLLER_TERMINAL_LEASE_STATES
                 ):
                     issues.append(f"target task lease is not terminal: {path.name}")
         if task_id is None and active_task_ids:
