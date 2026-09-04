@@ -50,6 +50,16 @@ class RegistryError(ValueError):
     """Raised when the canonical registry cannot produce a safe deployment file."""
 
 
+def _read_lf_only_registry(source_registry_path: Path) -> bytes:
+    """Read registry bytes only when their provenance line endings are unambiguous."""
+    raw_bytes = source_registry_path.read_bytes()
+    if b"\r\n" in raw_bytes:
+        raise RegistryError("source_registry_crlf_not_allowed")
+    if b"\r" in raw_bytes:
+        raise RegistryError("source_registry_bare_cr_not_allowed")
+    return raw_bytes
+
+
 def _normalise_host(value: object) -> str:
     if not isinstance(value, str):
         raise RegistryError("source_host_must_be_string")
@@ -162,7 +172,7 @@ def _validate_source(raw: object) -> dict[str, Any]:
 
 
 def render_registry(source_registry_path: Path) -> dict[str, Any]:
-    raw_bytes = source_registry_path.read_bytes()
+    raw_bytes = _read_lf_only_registry(source_registry_path)
     try:
         document = json.loads(raw_bytes.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:

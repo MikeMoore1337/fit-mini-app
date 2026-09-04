@@ -138,6 +138,54 @@ def test_worker_drain_rejects_non_immutable_or_floating_images(
         hermes_worker_drain._worker_image()
 
 
+def test_canonical_registry_is_lf_only() -> None:
+    registry = WORKSPACE / "backend" / "fitminiapp_api" / "resources" / "news_sources.json"
+
+    assert b"\r" not in registry.read_bytes()
+
+
+def test_gitattributes_pins_canonical_registry_to_lf() -> None:
+    attributes = (WORKSPACE / ".gitattributes").read_text(encoding="utf-8")
+
+    assert (
+        "/backend/fitminiapp_api/resources/news_sources.json text eol=lf" in attributes.splitlines()
+    )
+
+
+@pytest.mark.parametrize(
+    ("line_ending", "error"),
+    [
+        (b"\r\n", "source_registry_crlf_not_allowed"),
+        (b"\r", "source_registry_bare_cr_not_allowed"),
+    ],
+)
+def test_registry_non_lf_line_endings_fail_closed(
+    tmp_path: Path, line_ending: bytes, error: str
+) -> None:
+    registry = WORKSPACE / "backend" / "fitminiapp_api" / "resources" / "news_sources.json"
+    raw = registry.read_bytes()
+    synthetic = raw.replace(b"\n", line_ending)
+    path = tmp_path / "news_sources.json"
+    path.write_bytes(synthetic)
+
+    with pytest.raises(GENERATOR_MODULE.RegistryError, match=error):
+        GENERATOR_MODULE.render_registry(path)
+
+
+def test_exact_lf_registry_is_deterministic_and_hashes_raw_bytes(tmp_path: Path) -> None:
+    registry = WORKSPACE / "backend" / "fitminiapp_api" / "resources" / "news_sources.json"
+    raw = registry.read_bytes()
+    path = tmp_path / "news_sources.json"
+    path.write_bytes(raw)
+
+    first = GENERATOR_MODULE.render_registry(path)
+    second = GENERATOR_MODULE.render_registry(path)
+    expected_hash = hashlib.sha256(raw).hexdigest()
+
+    assert first == second
+    assert first["source_registry_sha256"] == expected_hash
+
+
 def test_canonical_registry_renders_versioned_allowlist() -> None:
     registry = WORKSPACE / "backend" / "fitminiapp_api" / "resources" / "news_sources.json"
     document = GENERATOR_MODULE.render_registry(registry)
