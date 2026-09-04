@@ -27,9 +27,12 @@ from discovery_runner import (
 )
 
 IMAGE_DIGEST_PATTERN = re.compile(r"^[^\s@]+@sha256:[0-9a-f]{64}$")
+DOCKER_NETWORK_NAME_PATTERN = re.compile(r"^hermes-[a-z0-9][a-z0-9_.-]{0,56}$")
 JOB_NAME_PATTERN = re.compile(r"^[0-9a-f]{64}\.json$")
 DEFAULT_MAX_JOBS = 1
 MAX_JOBS = 20
+DEFAULT_DOCKER_NETWORK = "hermes-net"
+RESERVED_DOCKER_NETWORK_NAMES = frozenset({"bridge", "default", "host", "none"})
 WORKER_ENV_NAMES = (
     "HERMES_PROVIDER_BASE_URL",
     "HERMES_PROVIDER_API_KEY",
@@ -91,14 +94,31 @@ def _worker_image() -> str:
     return value
 
 
-def _worker_command(job: Path, *, image: str, source_allowlist: str) -> list[str]:
+def _validate_docker_network(value: str) -> str:
+    network = value.strip()
+    if (
+        network.casefold() in RESERVED_DOCKER_NETWORK_NAMES
+        or DOCKER_NETWORK_NAME_PATTERN.fullmatch(network) is None
+    ):
+        raise DrainError("hermes_docker_network_invalid")
+    return network
+
+
+def _docker_network() -> str:
+    return _validate_docker_network(os.environ.get("HERMES_DOCKER_NETWORK", DEFAULT_DOCKER_NETWORK))
+
+
+def _worker_command(
+    job: Path, *, image: str, source_allowlist: str, network: str | None = None
+) -> list[str]:
     job_dir = job.parent
+    docker_network = _validate_docker_network(network) if network is not None else _docker_network()
     command = [
         "docker",
         "run",
         "--rm",
         "--network",
-        "bridge",
+        docker_network,
         "--read-only",
         "--tmpfs",
         "/tmp:rw,noexec,nosuid,nodev,size=64m,uid=10000,gid=10000,mode=700",
@@ -109,7 +129,7 @@ def _worker_command(job: Path, *, image: str, source_allowlist: str) -> list[str
         "--security-opt",
         "no-new-privileges:true",
         "--pids-limit",
-        "64",
+        "32",
         "--memory",
         "512m",
         "--cpus",
@@ -155,6 +175,7 @@ def drain_once() -> dict[str, Any]:
     state_dir = _state_dir()
     outbox_dir = _outbox_dir()
     image = _worker_image()
+    network = _docker_network()
     max_jobs = _bounded_int("HERMES_WORKER_MAX_JOBS", DEFAULT_MAX_JOBS, 1, MAX_JOBS)
     timeout_seconds = _bounded_int("HERMES_WORKER_TIMEOUT_SECONDS", 120, 10, 300)
     stale_seconds = _bounded_int("HERMES_DISCOVERY_LOCK_STALE_SECONDS", 900, 30, 86_400)
@@ -182,7 +203,12 @@ def drain_once() -> dict[str, Any]:
         for job in jobs:
             try:
                 completed = subprocess.run(
-                    _worker_command(job, image=image, source_allowlist=source_allowlist),
+                    _worker_command(
+                        job,
+                        image=image,
+                        source_allowlist=source_allowlist,
+                        network=network,
+                    ),
                     capture_output=True,
                     text=True,
                     check=False,
