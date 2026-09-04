@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -60,18 +61,63 @@ def test_worker_prompt_carries_one_launch_delivery_contract() -> None:
     )
     assert "BLOCKER/HIGH/MEDIUM" in prompt
     assert "Не запрашивай generic approval" in prompt
+    assert "READY_FOR_DELIVERY" in prompt
+    assert "WAITING_FOR_DELIVERY" in prompt
+    assert "refresh-delivery" in prompt
+    assert "final applicable gate" in prompt
     assert "Не запускай следующую product task" in prompt
 
 
 def test_only_live_lane_contention_is_retried() -> None:
-    assert delivery._is_transient_start_error(
-        "task session error: An incompatible write/integration/release lane is occupied"
+    assert delivery._is_transient_start_error("task session error: Coordination state is locked")
+    assert not delivery._is_transient_start_error(
+        "task session error: delivery lane is occupied by Task 140"
     )
-    assert delivery._is_transient_start_error(
-        "doctor blockers: active production deployment blocks controller mutation"
+    assert not delivery._is_transient_start_error(
+        "task session error: active production deployment occupies the delivery lane"
     )
     assert not delivery._is_transient_start_error("main dev worktree is dirty")
     assert not delivery._is_transient_start_error("missing task document")
+
+
+def test_launcher_starts_without_waiting_for_busy_delivery_lane(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(
+        args: list[str], *, cwd: Path = delivery.REPOSITORY_ROOT, check: bool = True
+    ) -> subprocess.CompletedProcess[str]:
+        del cwd, check
+        calls.append(args)
+        return subprocess.CompletedProcess(
+            args,
+            0,
+            stdout=json.dumps(
+                {
+                    "lease": {
+                        "canonical_task_path": "D:/repo/codex-backlog/tasks/240-task.md",
+                        "branch": "task/240-task",
+                        "worktree": "D:/repo/.artifacts/worktrees/240-task",
+                    }
+                }
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(delivery, "_run", fake_run)
+
+    started = delivery._start(
+        "240",
+        session_label="parallel-start",
+        poll_seconds=10,
+        max_wait_minutes=1,
+        offline=True,
+    )
+
+    assert started["lease"]["branch"] == "task/240-task"
+    assert len(calls) == 1
+    assert "--offline" in calls[0]
 
 
 def test_task_id_normalization_is_strict() -> None:

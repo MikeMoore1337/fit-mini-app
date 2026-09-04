@@ -82,6 +82,9 @@ def test_delivery_contract_is_master_only_and_approval_gated() -> None:
     assert "base_origin_master_sha" in controller
     assert "PRE_PUSH_CI_PASS" in controller
     assert "production-success" in controller
+    assert '"ready-for-delivery"' in controller
+    assert "delivery.json" in controller
+    assert "refresh_for_delivery" in controller
     assert "enqueue_integration" not in controller
     assert "release_freeze" not in controller
     assert "verify_dev_provenance" not in controller
@@ -104,6 +107,9 @@ def test_policy_docs_remove_dev_from_normal_delivery_and_keep_human_gates() -> N
     assert "Direct push в `master` запрещён" in global_rules
     assert "required check `checks`" in lifecycle
     assert "PR master" in lifecycle
+    assert "implementation lane" in lifecycle
+    assert "delivery lane" in lifecycle
+    assert "Busy delivery/CI/production" in lifecycle
     assert "fast-forward/sync `dev`" not in lifecycle
     assert "serial merge в `dev`" not in global_rules
     assert "явно обязательный owner checkpoint/approve, human/device evidence" in lifecycle

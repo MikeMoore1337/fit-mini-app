@@ -30,11 +30,7 @@ REPOSITORY_ROOT = SCRIPT_PATH.parents[1]
 CONTROLLER_PATH = REPOSITORY_ROOT / "scripts" / "task_session.py"
 ARCHIVE_HELPER_PATH = REPOSITORY_ROOT / "scripts" / "archive_backlog_task.py"
 TASK_ID_RE = re.compile(r"^[0-9]+[A-Z]?$", re.IGNORECASE)
-TRANSIENT_START_MARKERS = (
-    "lane is occupied",
-    "blocks mutation",
-    "active production deployment blocks controller mutation",
-)
+TRANSIENT_START_MARKERS = ("coordination state is locked",)
 
 
 class DeliveryError(RuntimeError):
@@ -161,8 +157,8 @@ def _start(
         if not _is_transient_start_error(detail):
             raise DeliveryError(detail)
         if time.monotonic() >= deadline:
-            raise DeliveryError(f"Timed out waiting for delivery lane: {detail}")
-        _event("WAITING_FOR_LANE", task_id=task_id, retry_in_seconds=poll_seconds)
+            raise DeliveryError(f"Timed out waiting for coordination state lock: {detail}")
+        _event("WAITING_FOR_IMPLEMENTATION_STATE", task_id=task_id, retry_in_seconds=poll_seconds)
         time.sleep(poll_seconds)
 
 
@@ -177,6 +173,16 @@ def _worker_prompt(task_id: str, started: dict[str, Any]) -> str:
         "Все BLOCKER/HIGH/MEDIUM должны быть исправлены и пройти required targeted recheck до "
         "release. LOW не расширяет scope. Реальный HUMAN_EVIDENCE, LEGAL, EXTERNAL, DESTRUCTIVE "
         "или task-specific owner gate не подменяй; остановись только на таком точном gate.\n"
+        "Implementation независимых compatible independent-write tasks может идти параллельно в "
+        "отдельных worktree. После review/QA и commit переведи текущую task в READY_FOR_DELIVERY; "
+        "если delivery lane занята, используй acquire-delivery и WAITING_FOR_DELIVERY. Это ожидание "
+        "не terminal blocker и не должно останавливать implementation или commit.\n"
+        "Только один worker владеет delivery lane одновременно. После acquisition выполни "
+        "refresh-delivery: fetch latest origin/master, безопасно обнови branch, считай старое "
+        "PRE_PUSH_CI_PASS недействительным и выполни validate-delivery с final applicable gate на "
+        "новом exact HEAD перед PR/CI/merge. После rebase/conflict resolution выполни только "
+        "targeted recheck изменённой поверхности; полный independent review повторяй только при "
+        "существенном изменении поведения. Merge master и production deploy строго serial.\n"
         "Не запускай следующую product task.\n\n"
         f"Controller context:\n{started.get('prompt', '')}"
     )

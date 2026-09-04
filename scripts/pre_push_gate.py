@@ -327,6 +327,9 @@ def run_gate(context: RepositoryContext, *, execute: bool = True) -> dict[str, A
         "terminal_result": "PLAN_ONLY" if not execute else "PRE_PUSH_CI_RUNNING",
         "task_evidence_reference": str(evidence_path(context)),
     }
+    delivery_generation = context.lease.get("delivery_generation")
+    if delivery_generation is not None:
+        payload["delivery_generation"] = delivery_generation
     for group in scope["groups"]:
         missing = missing_prerequisites(group, root=context.root, env=os.environ)
         gate_record: dict[str, Any] = {
