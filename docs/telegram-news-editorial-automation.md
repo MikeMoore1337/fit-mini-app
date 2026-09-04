@@ -345,8 +345,8 @@ safety. Фактический набор enabled/disabled источников 
 Discovery не делает обязательных publication quotas и не отбрасывает материал из-за неизвестного
 topic; taxonomy/risk/publication eligibility остаются серверной ответственностью YFC.
 
-На будущей отдельной Hermes VM systemd timer активирует `hermes-discovery.target`, который
-последовательно запускает `hermes-discovery.service` и `hermes-worker-drain.service`. Первый
+На будущей отдельной Hermes VM systemd timer напрямую активирует `hermes-worker-drain.service`;
+его `Requires`/`After` сначала запускают `hermes-discovery.service`. Первый
 контейнер не получает provider/YFC secrets. Только второй host-side drain передаёт bounded job в
 hardened worker с provider key и YFC HMAC secret. Входящих Hermes ports нет; source discovery
 имеет exact host allowlist из definitions, HTTPS-only external mode, DNS resolution с запретом
