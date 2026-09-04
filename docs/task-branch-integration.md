@@ -38,7 +38,8 @@ approval между merge и normal deploy не создаётся.
 ## Shared gate
 
 `scripts/ci_contract.py` — единственный registry команд CI. Он содержит детерминированные профили:
-`frontend`, `backend`, `cross-stack`, `workflow-platform`, `documentation`. GitHub workflow и
+`frontend`, `backend`, `migration`, `cross-stack`, `workflow-platform`, `documentation`.
+GitHub workflow и
 локальный `scripts/pre_push_gate.py` вызывают одни и те же group IDs; profile выбирается по
 изменённым путям консервативно, а отсутствующий prerequisite даёт `PRE_PUSH_CI_BLOCKED`.
 
@@ -48,6 +49,36 @@ approval между merge и normal deploy не создаётся.
 target base, scope/profile, группы, timestamps, contract version/digest, clean-worktree marker и
 самопроверяемый evidence digest. `PRE_PUSH_CI_PASS` действителен только для exact HEAD и exact
 base; изменение кода, CI contract, base или рабочей директории инвалидирует его.
+
+## Scope-aware remote CI
+
+GitHub PR CI сначала запускает дешёвый `scope-router`. Он получает exact diff между
+`pull_request.base.sha` и `pull_request.head.sha`, вызывает `scripts/ci_contract.py route` и передаёт
+один decision в остальные jobs. `scripts/ci_contract.py` остаётся единственным registry команд и
+одновременно используется локальным `pre-push` gate, поэтому path classification не дублируется в
+workflow `if:`.
+
+Router выбирает консервативный профиль: documentation-only оставляет quality,
+workflow-contract и aggregate `checks` (policy добавляется для policy-файлов); frontend/backend/migration/API и dependency changes
+получают соответствующий минимальный safe set; unknown или shared CI contract автоматически
+поднимаются до `cross-stack`. Для каждого запуска в логе видны `CI_SCOPE`, `CI_CHANGED_PATHS`,
+`CI_REQUIRED_GROUPS`, `CI_REQUIRED_JOBS` и причины `CI_SKIPPED_GROUPS`. Aggregate job передаёт этот
+expected result set в `scripts/ci_contract.py verify-results`; required job со статусом `skipped`,
+`cancelled` или отсутствующий job не может дать зелёный `checks`.
+
+Обычные PR runs используют `cancel-in-progress` только для одного PR: новый SHA отменяет устаревший
+незавершённый run того же PR. Production/release workflow сохраняет `group: production` и
+`cancel-in-progress: false`. `schedule` и `workflow_dispatch` запускают полный cross-stack profile
+на текущем `master`, но не вызывают production deployment. Push в `master` остаётся минимальным
+post-merge набором exact provenance и immutable container delivery.
+
+Frontend jobs используют стандартный download cache `actions/setup-node` с ключом от
+`frontend/package-lock.json`; `node_modules` не является artifact или cache. Dependency audit не
+делает `npm ci`: для frontend выполняется `npm audit --omit=dev --audit-level=high`, а Python audit
+выбирается отдельно. Только подтверждённые transient `429/5xx` и network errors получают максимум
+три попытки с bounded backoff; найденная vulnerability, malformed lockfile или другая
+воспроизводимая ошибка остаётся blocking без retry. Timing выводится как `CI_TIMING` для каждой
+команды, cache signal — как `CI_CACHE`.
 
 `scripts/task_session.py mark-ready` фиксирует durable `READY_FOR_DELIVERY`: clean task worktree,
 commit provenance, approved review/QA, исходный base SHA, текущий task HEAD и локальное evidence

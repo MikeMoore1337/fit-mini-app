@@ -5,6 +5,9 @@ on:
     types: [opened, reopened, ready_for_review, synchronize]
   push:
     branches: [master]
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,10 +15,9 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  NPM_CONFIG_CACHE: ${{ github.workspace }}/.artifacts/runtime/cache/npm
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   PYTHONDONTWRITEBYTECODE: "1"
   PYTHONUNBUFFERED: "1"
@@ -23,9 +25,68 @@ env:
   UV_SYSTEM_PYTHON: "1"
 
 jobs:
+  scope-router:
+    name: CI scope router
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      profile: ${{ steps.route.outputs.profile }}
+      required_groups: ${{ steps.route.outputs.required_groups }}
+      required_jobs: ${{ steps.route.outputs.required_jobs }}
+      skipped_groups: ${{ steps.route.outputs.skipped_groups }}
+      changed_paths: ${{ steps.route.outputs.changed_paths }}
+      run_quality: ${{ steps.route.outputs.run_quality }}
+      run_policy: ${{ steps.route.outputs.run_policy }}
+      run_frontend: ${{ steps.route.outputs.run_frontend }}
+      run_frontend_smoke: ${{ steps.route.outputs.run_frontend_smoke }}
+      run_python: ${{ steps.route.outputs.run_python }}
+      run_migrated_stack: ${{ steps.route.outputs.run_migrated_stack }}
+      run_dependency_audit: ${{ steps.route.outputs.run_dependency_audit }}
+      run_full_dependency_audit: ${{ steps.route.outputs.run_full_dependency_audit }}
+      run_frontend_dependency_audit: ${{ steps.route.outputs.run_frontend_dependency_audit }}
+      run_python_dependency_audit: ${{ steps.route.outputs.run_python_dependency_audit }}
+      run_containers: ${{ steps.route.outputs.run_containers }}
+      run_critical_smoke: ${{ steps.route.outputs.run_critical_smoke }}
+      run_workflow_contracts: ${{ steps.route.outputs.run_workflow_contracts }}
+      run_workflow_config: ${{ steps.route.outputs.run_workflow_config }}
+      run_image_contract: ${{ steps.route.outputs.run_image_contract }}
+      run_deployment_contract: ${{ steps.route.outputs.run_deployment_contract }}
+      run_merge_provenance: ${{ steps.route.outputs.run_merge_provenance }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Route exact repository scope
+        id: route
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TARGET_REF: ${{ github.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -Eeuo pipefail
+          if [ "$EVENT_NAME" = schedule ] || [ "$EVENT_NAME" = workflow_dispatch ]; then
+            test "$TARGET_REF" = refs/heads/master
+          fi
+          if [ "$EVENT_NAME" = pull_request ]; then
+            python scripts/ci_contract.py route \
+              --event "$EVENT_NAME" \
+              --base-sha "$BASE_SHA" \
+              --head-sha "$HEAD_SHA" \
+              --github-output "$GITHUB_OUTPUT"
+          else
+            python scripts/ci_contract.py route \
+              --event "$EVENT_NAME" \
+              --github-output "$GITHUB_OUTPUT"
+          fi
+
   task-provenance:
     name: Task provenance
-    if: github.event_name == 'pull_request'
+    needs: scope-router
+    if: github.event_name == 'pull_request' && needs.scope-router.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -39,7 +100,8 @@ jobs:
 
   merge-provenance:
     name: Merged master provenance
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: scope-router
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.scope-router.result == 'success' && needs.scope-router.outputs.run_merge_provenance == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -53,7 +115,8 @@ jobs:
 
   quality:
     name: Python quality
-    if: github.event_name == 'pull_request'
+    needs: scope-router
+    if: needs.scope-router.result == 'success' && needs.scope-router.outputs.run_quality == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -70,7 +133,8 @@ jobs:
 
   policy:
     name: Delivery policy
-    if: github.event_name == 'pull_request'
+    needs: scope-router
+    if: needs.scope-router.result == 'success' && needs.scope-router.outputs.run_policy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -96,16 +160,22 @@ jobs:
 
   frontend:
     name: Frontend
-    if: github.event_name == 'pull_request'
+    needs: scope-router
+    if: needs.scope-router.result == 'success' && needs.scope-router.outputs.run_frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
+        id: npm-setup
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - name: Report npm cache
+        run: |
+          echo "CI_CACHE package=npm hit=${{ steps.npm-setup.outputs.cache-hit }}"
+          echo "CI_CACHE package=npm path=$(npm config get cache)"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
@@ -126,7 +196,8 @@ jobs:
 
   frontend-smoke:
     name: Frontend smoke (${{ matrix.shard }}/4)
-    if: github.event_name == 'pull_request'
+    needs: scope-router
+    if: needs.scope-router.result == 'success' && needs.scope-router.outputs.run_frontend_smoke == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -137,10 +208,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
+        id: npm-setup
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - name: Report npm cache
+        run: |
+          echo "CI_CACHE package=npm hit=${{ steps.npm-setup.outputs.cache-hit }}"
+          echo "CI_CACHE package=npm path=$(npm config get cache)"
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
@@ -169,7 +245,8 @@ jobs:
 
   python-tests:
     name: Python tests (${{ matrix.shard }}/4)
-    if: github.event_name == 'pull_request'
+    needs: scope-router
+    if: needs.scope-router.result == 'success' && needs.scope-router.outputs.run_python == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -218,7 +295,8 @@ jobs:
 
   migrated-stack:
     name: Migrated PostgreSQL stack
-    if: github.event_name == 'pull_request'
+    needs: scope-router
+    if: needs.scope-router.result == 'success' && needs.scope-router.outputs.run_migrated_stack == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -238,10 +316,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
+        id: npm-setup
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - name: Report npm cache
+        run: |
+          echo "CI_CACHE package=npm hit=${{ steps.npm-setup.outputs.cache-hit }}"
+          echo "CI_CACHE package=npm path=$(npm config get cache)"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
@@ -284,16 +367,24 @@ jobs:
 
   dependency-audit:
     name: Dependency audit
-    if: github.event_name == 'pull_request'
+    needs: scope-router
+    if: needs.scope-router.result == 'success' && needs.scope-router.outputs.run_dependency_audit == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
+        id: npm-setup
+        if: needs.scope-router.outputs.run_frontend_dependency_audit == 'true' || needs.scope-router.outputs.run_full_dependency_audit == 'true'
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - name: Report npm cache
+        if: needs.scope-router.outputs.run_frontend_dependency_audit == 'true' || needs.scope-router.outputs.run_full_dependency_audit == 'true'
+        run: |
+          echo "CI_CACHE package=npm hit=${{ steps.npm-setup.outputs.cache-hit }}"
+          echo "CI_CACHE package=npm path=$(npm config get cache)"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
@@ -306,15 +397,66 @@ jobs:
             bot/requirements.txt
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           cache-suffix: dependency-audit
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci
-      - name: Run shared dependency audit group
+      - name: Run shared full dependency audit group
+        if: needs.scope-router.outputs.run_full_dependency_audit == 'true'
         run: python scripts/ci_contract.py run-group dependency-audit
+      - name: Run shared frontend dependency audit group
+        if: needs.scope-router.outputs.run_frontend_dependency_audit == 'true' && needs.scope-router.outputs.run_full_dependency_audit != 'true'
+        run: python scripts/ci_contract.py run-group frontend-dependency-audit
+      - name: Run shared Python dependency audit group
+        if: needs.scope-router.outputs.run_python_dependency_audit == 'true' && needs.scope-router.outputs.run_full_dependency_audit != 'true'
+        run: python scripts/ci_contract.py run-group python-dependency-audit
+
+  critical-smoke:
+    name: Critical application smoke
+    needs: scope-router
+    if: needs.scope-router.result == 'success' && needs.scope-router.outputs.run_critical_smoke == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: |
+            backend/requirements-runtime.txt
+            bot/requirements.txt
+          cache-local-path: ${{ env.UV_CACHE_DIR }}
+          cache-suffix: critical-smoke
+      - name: Install application runtime dependencies
+        run: uv pip install -r backend/requirements-runtime.txt -r bot/requirements.txt
+      - name: Run shared critical smoke group
+        run: python scripts/ci_contract.py run-group critical-smoke
+
+  workflow-contracts:
+    name: Workflow contracts
+    needs: scope-router
+    if: needs.scope-router.result == 'success' && needs.scope-router.outputs.run_workflow_contracts == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Validate shared CI contract
+        if: needs.scope-router.outputs.run_workflow_config == 'true'
+        run: python scripts/ci_contract.py run-group workflow-config
+      - name: Validate image contract
+        if: needs.scope-router.outputs.run_image_contract == 'true'
+        run: python scripts/ci_contract.py run-group image-contract
+      - name: Validate deployment contract
+        if: needs.scope-router.outputs.run_deployment_contract == 'true'
+        run: python scripts/ci_contract.py run-group deployment-contract
 
   containers:
     name: Container (${{ matrix.image }})
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
+    needs: scope-router
+    if: needs.scope-router.result == 'success' && needs.scope-router.outputs.run_containers == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -323,7 +465,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [backend, bot]
+        include:
+          - image: backend
+            context: .
+            dockerfile: backend/Dockerfile
+            no_cache: false
+          - image: bot
+            context: bot
+            dockerfile: bot/Dockerfile
+            # Keep the bot image fail-closed until shared COPY-cache provenance is proven.
+            no_cache: true
     steps:
       - uses: actions/checkout@v4
       - name: Run shared container contract group
@@ -337,15 +488,27 @@ jobs:
       - name: Build and scan production image
         uses: docker/build-push-action@v7
         with:
-          context: ${{ matrix.image == 'backend' && '.' || 'bot' }}
-          file: ${{ matrix.image == 'backend' && 'backend/Dockerfile' || 'bot/Dockerfile' }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           load: true
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
           tags: ${{ steps.image.outputs.local_tag }}
+          no-cache: ${{ matrix.no_cache }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+      - name: Verify bot runtime image contract
+        if: matrix.image == 'bot'
+        shell: bash
+        env:
+          LOCAL_TAG: ${{ steps.image.outputs.local_tag }}
+        run: |
+          docker run --rm --network none \
+            --env TELEGRAM_BOT_TOKEN=ci-image-contract-token \
+            --env BOT_INTERNAL_TOKEN=ci-image-contract-internal-token \
+            "$LOCAL_TAG" \
+            python -c "import fitminiapp_bot.profile_sync; import fitminiapp_bot.public_profile; import fitminiapp_bot.telegram_client"
       - name: Scan image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
@@ -363,7 +526,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Publish immutable image after merge
+      - name: Publish scanned image
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         env:
           LOCAL_TAG: ${{ steps.image.outputs.local_tag }}
@@ -374,13 +537,22 @@ jobs:
     name: ${{ github.event_name == 'pull_request' && 'checks' || 'branch-checks' }}
     if: always()
     needs:
-      [task-provenance, merge-provenance, quality, policy, frontend, frontend-smoke, python-tests, migrated-stack, dependency-audit, containers]
+      [scope-router, task-provenance, merge-provenance, quality, policy, frontend, frontend-smoke, python-tests, migrated-stack, dependency-audit, containers, critical-smoke, workflow-contracts]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
       - name: Verify required result set
         env:
           EVENT_NAME: ${{ github.event_name }}
+          PROFILE: ${{ needs.scope-router.outputs.profile }}
+          EXPECTED_JOBS: ${{ needs.scope-router.outputs.required_jobs }}
+          REQUIRED_GROUPS: ${{ needs.scope-router.outputs.required_groups }}
+          SKIPPED_GROUPS: ${{ needs.scope-router.outputs.skipped_groups }}
+          SCOPE_ROUTER_RESULT: ${{ needs.scope-router.result }}
           TASK_PROVENANCE_RESULT: ${{ needs.task-provenance.result }}
           MERGE_PROVENANCE_RESULT: ${{ needs.merge-provenance.result }}
           QUALITY_RESULT: ${{ needs.quality.result }}
@@ -391,19 +563,41 @@ jobs:
           MIGRATED_STACK_RESULT: ${{ needs.migrated-stack.result }}
           DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}
           CONTAINERS_RESULT: ${{ needs.containers.result }}
+          CRITICAL_SMOKE_RESULT: ${{ needs.critical-smoke.result }}
+          WORKFLOW_CONTRACTS_RESULT: ${{ needs.workflow-contracts.result }}
         run: |
           set -Eeuo pipefail
-          if [ "$EVENT_NAME" = pull_request ]; then
-            test "$TASK_PROVENANCE_RESULT" = success
-            test "$QUALITY_RESULT" = success
-            test "$POLICY_RESULT" = success
-            test "$FRONTEND_RESULT" = success
-            test "$FRONTEND_SMOKE_RESULT" = success
-            test "$PYTHON_TESTS_RESULT" = success
-            test "$MIGRATED_STACK_RESULT" = success
-            test "$DEPENDENCY_AUDIT_RESULT" = success
-            test "$CONTAINERS_RESULT" = success
-          else
-            test "$MERGE_PROVENANCE_RESULT" = success
-            test "$CONTAINERS_RESULT" = success
-          fi
+          test "$SCOPE_ROUTER_RESULT" = success
+          test -n "$EXPECTED_JOBS"
+          echo "CI_RESULT_PROFILE=$PROFILE"
+          echo "CI_RESULT_REQUIRED_GROUPS=$REQUIRED_GROUPS"
+          echo "CI_RESULT_SKIPPED_GROUPS=$SKIPPED_GROUPS"
+          RESULTS_JSON="$(python - <<'PY'
+          import json
+          import os
+
+          result_names = (
+              "scope-router",
+              "task-provenance",
+              "merge-provenance",
+              "quality",
+              "policy",
+              "frontend",
+              "frontend-smoke",
+              "python-tests",
+              "migrated-stack",
+              "dependency-audit",
+              "containers",
+              "critical-smoke",
+              "workflow-contracts",
+          )
+          env_names = {
+              name: name.upper().replace("-", "_") + "_RESULT"
+              for name in result_names
+          }
+          print(json.dumps({name: os.environ[env_name] for name, env_name in env_names.items()}))
+          PY
+          )"
+          python scripts/ci_contract.py verify-results \
+            --expected-jobs "$EXPECTED_JOBS" \
+            --results-json "$RESULTS_JSON"

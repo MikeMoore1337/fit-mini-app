@@ -2,7 +2,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from scripts import ci_contract
+from scripts import ci_contract, pre_push_gate
 
 
 def test_ci_contract_is_valid_and_profiles_are_non_empty() -> None:
@@ -143,12 +143,33 @@ def test_workflow_calls_group_entrypoint_instead_of_inline_command_copy() -> Non
         "python-tests",
         "migrated-stack",
         "dependency-audit",
+        "frontend-dependency-audit",
+        "python-dependency-audit",
+        "critical-smoke",
+        "workflow-config",
+        "image-contract",
+        "deployment-contract",
         "container-contract",
     ):
         assert f"scripts/ci_contract.py run-group {group}" in workflow
     assert "npm run typecheck" not in workflow
     assert "npm run e2e:ci" not in workflow
     assert "scripts/run_pytest.py backend/tests" not in workflow
+
+
+def test_workflow_uses_lockfile_download_cache_without_audit_installation() -> None:
+    root = Path(__file__).parents[1]
+    workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    audit_start = workflow.index("  dependency-audit:")
+    audit_end = workflow.index("  critical-smoke:", audit_start)
+    audit_job = workflow[audit_start:audit_end]
+
+    assert "NPM_CONFIG_CACHE" not in workflow
+    assert "cache: npm" in workflow
+    assert "cache-dependency-path: frontend/package-lock.json" in workflow
+    assert "node_modules" not in workflow
+    assert "npm ci" not in audit_job
+    assert "run-group frontend-dependency-audit" in audit_job
 
 
 def test_workflow_keeps_four_way_smoke_and_python_shards_independent() -> None:
@@ -168,11 +189,298 @@ def test_workflow_keeps_four_way_smoke_and_python_shards_independent() -> None:
         == 2
     )
     assert (
-        "  frontend-smoke:\n    name: Frontend smoke (${{ matrix.shard }}/4)\n    if:" in workflow
+        "  frontend-smoke:\n    name: Frontend smoke (${{ matrix.shard }}/4)\n    needs: scope-router\n    if:"
+        in workflow
     )
-    assert "  migrated-stack:\n    name: Migrated PostgreSQL stack\n    if:" in workflow
+    assert (
+        "  migrated-stack:\n    name: Migrated PostgreSQL stack\n    needs: scope-router\n    if:"
+        in workflow
+    )
 
 
 def test_cross_stack_profile_includes_delivery_policy_gates() -> None:
     groups = set(ci_contract.PROFILE_GROUPS["cross-stack"])
     assert {"policy", "workflow-config", "deployment-contract"} <= groups
+
+
+@pytest.mark.parametrize(
+    ("paths", "profile", "required_groups", "forbidden_groups"),
+    [
+        (
+            ["docs/release-flow.md", "codex-backlog/tasks/140-scope.md"],
+            "documentation",
+            {"quality", "workflow-config"},
+            {
+                "frontend-e2e",
+                "python-tests",
+                "migrated-stack",
+                "dependency-audit",
+                "container-contract",
+            },
+        ),
+        (
+            ["security/README.md"],
+            "documentation",
+            {"quality", "workflow-config"},
+            {"container-contract", "dependency-audit", "frontend-e2e", "python-tests"},
+        ),
+        (
+            ["frontend/src/App.tsx"],
+            "frontend",
+            {"frontend-checks", "frontend-e2e", "critical-smoke"},
+            {"python-tests", "migrated-stack", "dependency-audit", "container-contract"},
+        ),
+        (
+            ["backend/fitminiapp_api/services/example.py"],
+            "backend",
+            {"python-tests", "critical-smoke"},
+            {
+                "frontend-checks",
+                "frontend-e2e",
+                "migrated-stack",
+                "dependency-audit",
+                "container-contract",
+            },
+        ),
+        (
+            ["backend/fitminiapp_api/schemas/example.py"],
+            "cross-stack",
+            {
+                "frontend-e2e",
+                "python-tests",
+                "migrated-stack",
+                "dependency-audit",
+                "container-contract",
+            },
+            set(),
+        ),
+        (
+            ["backend/alembic/versions/0040_feature.py"],
+            "migration",
+            {"python-tests", "migrated-stack", "critical-smoke", "deployment-contract"},
+            {"frontend-e2e", "dependency-audit", "container-contract"},
+        ),
+        (
+            ["frontend/package-lock.json"],
+            "frontend",
+            {"frontend-dependency-audit"},
+            {"python-dependency-audit", "container-contract"},
+        ),
+        (
+            ["backend/requirements-runtime.txt"],
+            "backend",
+            {"python-dependency-audit", "container-contract"},
+            {"frontend-e2e", "migrated-stack"},
+        ),
+        (
+            [".github/workflows/ci.yml"],
+            "workflow-platform",
+            {"policy", "workflow-config", "image-contract", "deployment-contract"},
+            {
+                "frontend-e2e",
+                "python-tests",
+                "migrated-stack",
+                "dependency-audit",
+                "container-contract",
+            },
+        ),
+        (
+            ["bot/.dockerignore"],
+            "cross-stack",
+            {"container-contract", "frontend-e2e", "python-tests", "migrated-stack"},
+            set(),
+        ),
+        (
+            [".trivyignore.yaml"],
+            "workflow-platform",
+            {"container-contract", "workflow-config", "image-contract", "deployment-contract"},
+            {"frontend-e2e", "python-tests", "migrated-stack"},
+        ),
+        (
+            ["scripts/ci_contract.py"],
+            "cross-stack",
+            {
+                "frontend-e2e",
+                "python-tests",
+                "migrated-stack",
+                "dependency-audit",
+                "container-contract",
+            },
+            set(),
+        ),
+        (
+            ["unknown/build-input.bin"],
+            "cross-stack",
+            {
+                "frontend-e2e",
+                "python-tests",
+                "migrated-stack",
+                "dependency-audit",
+                "container-contract",
+            },
+            set(),
+        ),
+    ],
+)
+def test_scope_router_is_conservative_and_profile_specific(
+    paths: list[str],
+    profile: str,
+    required_groups: set[str],
+    forbidden_groups: set[str],
+) -> None:
+    decision = ci_contract.classify_scope(paths)
+
+    assert decision["profile"] == profile
+    groups = set(decision["required_groups"])
+    assert required_groups <= groups
+    assert not forbidden_groups & groups
+
+
+def test_scope_router_preserves_dot_prefixed_workflow_paths() -> None:
+    decision = ci_contract.classify_scope(["./.github/workflows/ci.yml"])
+
+    assert decision["paths"] == [".github/workflows/ci.yml"]
+    assert decision["profile"] == "workflow-platform"
+
+
+def test_scope_router_writes_machine_readable_outputs(tmp_path: Path) -> None:
+    destination = tmp_path / "github-output"
+    decision = ci_contract.classify_scope(["frontend/package.json"])
+
+    ci_contract.write_router_outputs(decision, destination)
+
+    output = destination.read_text(encoding="utf-8")
+    assert "profile=frontend" in output
+    assert "run_frontend_dependency_audit=true" in output
+    assert 'required_jobs=["' in output
+
+
+def test_repository_router_uses_exact_pull_request_diff(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(
+        ci_contract,
+        "_git_changed_paths",
+        lambda root, base_sha, head_sha: ["backend/fitminiapp_api/main.py"],
+    )
+
+    decision = ci_contract.route_repository(
+        tmp_path,
+        event="pull_request",
+        base_sha="base",
+        head_sha="head",
+    )
+
+    assert decision["profile"] == "backend"
+    assert decision["base_sha"] == "base"
+    assert decision["head_sha"] == "head"
+
+
+def test_scheduled_and_manual_routes_use_full_regression_profile() -> None:
+    for event in ("schedule", "workflow_dispatch"):
+        decision = ci_contract.route_repository(Path.cwd(), event=event)
+        assert decision["profile"] == "cross-stack"
+        assert set(decision["required_groups"]) == set(ci_contract.PROFILE_GROUPS["cross-stack"])
+        assert decision["outputs"]["run_full_dependency_audit"] is True
+
+
+def test_push_route_keeps_merge_provenance_and_container_delivery() -> None:
+    decision = ci_contract.route_repository(Path.cwd(), event="push")
+
+    assert decision["required_jobs"] == ["containers", "merge-provenance", "scope-router"]
+    assert decision["outputs"]["run_merge_provenance"] is True
+    assert decision["outputs"]["run_containers"] is True
+
+
+def test_expected_result_set_rejects_missing_or_skipped_required_jobs() -> None:
+    expected = ["scope-router", "quality"]
+    ci_contract.verify_results(expected, {"scope-router": "success", "quality": "success"})
+
+    with pytest.raises(ci_contract.CIContractError, match="did not succeed"):
+        ci_contract.verify_results(expected, {"scope-router": "success"})
+    with pytest.raises(ci_contract.CIContractError, match="did not succeed"):
+        ci_contract.verify_results(expected, {"scope-router": "success", "quality": "skipped"})
+    with pytest.raises(ci_contract.CIContractError, match="outside the router result set"):
+        ci_contract.verify_results(
+            expected,
+            {"scope-router": "success", "quality": "success", "policy": "success"},
+        )
+
+
+def test_transient_dependency_failure_retries_with_bounded_backoff(
+    monkeypatch, tmp_path: Path
+) -> None:
+    calls = 0
+    sleeps: list[int] = []
+    command = ci_contract.CommandSpec(
+        name="audit",
+        argv=("audit",),
+        retry_on_transient=True,
+        retry_max_attempts=3,
+        retry_delays_seconds=(2, 10),
+    )
+
+    def fake_run(argv, **kwargs):
+        nonlocal calls
+        calls += 1
+        return SimpleNamespace(returncode=1, stdout="HTTP 503", stderr="")
+
+    monkeypatch.setattr(ci_contract.subprocess, "run", fake_run)
+    monkeypatch.setattr(ci_contract.time, "sleep", sleeps.append)
+
+    with pytest.raises(ci_contract.CIContractError, match="BLOCKED_INFRASTRUCTURE"):
+        ci_contract._run_command(command, argv=command.argv, cwd=tmp_path, env={}, group="audit")
+
+    assert calls == 3
+    assert sleeps == [2, 10]
+
+
+def test_dependency_vulnerability_failure_is_not_retried(monkeypatch, tmp_path: Path) -> None:
+    calls = 0
+    command = ci_contract.CommandSpec(
+        name="audit",
+        argv=("audit",),
+        retry_on_transient=True,
+        retry_max_attempts=3,
+        retry_delays_seconds=(2, 10),
+    )
+
+    def fake_run(argv, **kwargs):
+        nonlocal calls
+        calls += 1
+        return SimpleNamespace(returncode=1, stdout="high severity vulnerability", stderr="")
+
+    monkeypatch.setattr(ci_contract.subprocess, "run", fake_run)
+
+    with pytest.raises(ci_contract.CIContractError, match="failed at audit"):
+        ci_contract._run_command(command, argv=command.argv, cwd=tmp_path, env={}, group="audit")
+
+    assert calls == 1
+    assert not ci_contract._is_transient_failure("CWE-500: high severity vulnerability")
+    assert not ci_contract._is_transient_failure("npm error CWE-500: high severity vulnerability")
+    assert ci_contract._is_transient_failure("npm error code E503")
+
+
+def test_workflow_routes_scope_cancels_only_pull_request_runs() -> None:
+    root = Path(__file__).parents[1]
+    workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    deploy = (root / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
+
+    assert "scripts/ci_contract.py route" in workflow
+    assert "cancel-in-progress: ${{ github.event_name == 'pull_request' }}" in workflow
+    assert "schedule:" in workflow
+    assert "workflow_dispatch:" in workflow
+    assert 'test "$TARGET_REF" = refs/heads/master' in workflow
+    assert "group: production" in deploy
+    assert "cancel-in-progress: false" in deploy
+
+
+def test_local_gate_and_ci_router_share_the_same_decision() -> None:
+    fixtures = [
+        ["frontend/src/App.tsx"],
+        ["backend/fitminiapp_api/schemas/example.py"],
+        [".github/workflows/ci.yml"],
+        ["docs/release-flow.md"],
+        ["unknown/input.bin"],
+    ]
+
+    for paths in fixtures:
+        assert pre_push_gate.classify_scope(paths) == ci_contract.classify_scope(paths)
