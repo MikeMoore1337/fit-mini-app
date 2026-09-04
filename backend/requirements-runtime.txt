@@ -143,5 +143,5 @@ watchfiles==1.2.0
     # via uvicorn
 websockets==17.0.1
     # via uvicorn
-wrapt==2.3.0
+wrapt==2.4.0
     # via deprecated
