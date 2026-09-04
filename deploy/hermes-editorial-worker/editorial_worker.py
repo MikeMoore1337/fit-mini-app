@@ -370,6 +370,44 @@ def _provider_messages(source: SourcePacket) -> list[dict[str, str]]:
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
+def _draft_response_format() -> dict[str, Any]:
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "hermes_editorial_draft",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "headline": {"type": "string"},
+                    "summary": {"type": "string"},
+                    "why_it_matters": {"type": "string"},
+                },
+                "required": ["headline", "summary", "why_it_matters"],
+                "additionalProperties": False,
+            },
+        },
+    }
+
+
+def _provider_request_body(
+    source: SourcePacket,
+    *,
+    provider_mode: str,
+    model: str,
+) -> dict[str, Any]:
+    request_body: dict[str, Any] = {
+        "model": model,
+        "messages": _provider_messages(source),
+        "temperature": 0,
+        "max_tokens": 512,
+        "response_format": _draft_response_format(),
+    }
+    if provider_mode == EXTERNAL_MODE and model == EXTERNAL_PROVIDER_MODEL:
+        request_body["reasoning_format"] = "hidden"
+    return request_body
+
+
 def _read_bounded_response(response: httpx.Response, limit: int) -> bytes:
     body = bytearray()
     try:
@@ -389,15 +427,14 @@ def _provider_request_once(
     api_key: str,
     model: str,
     timeout_seconds: float,
+    provider_mode: str = LOCAL_MOCK_MODE,
 ) -> DraftProposal:
 
-    request_body = {
-        "model": model,
-        "messages": _provider_messages(source),
-        "temperature": 0,
-        "max_tokens": 512,
-        "response_format": {"type": "json_object"},
-    }
+    request_body = _provider_request_body(
+        source,
+        provider_mode=provider_mode,
+        model=model,
+    )
     endpoint = f"{base_url}/chat/completions"
     timeout = httpx.Timeout(timeout_seconds, connect=timeout_seconds)
     try:
@@ -478,6 +515,7 @@ def _provider_request(source: SourcePacket) -> DraftProposal:
                 api_key=api_key,
                 model=model,
                 timeout_seconds=timeout_seconds,
+                provider_mode=mode,
             )
         except WorkerError as exc:
             if exc.code not in RETRYABLE_PROVIDER_ERRORS or attempt + 1 >= max_attempts:
