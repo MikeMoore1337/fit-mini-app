@@ -265,18 +265,18 @@ repository-native coordination boundary. Runtime leases live only in the shared 
 missing/corrupted state is a blocker. Task PRs target only `master`, preserve `[Task <ID>]` in branch,
 commit and PR provenance, and merge only after exact-head `checks` against the current base. A
 production deployment run occupies only the shared delivery lane; it does not block a compatible
-implementation lease. Delivery ownership still remains required for refresh, final gate, PR,
-merge, deployment and production completion.
+`independent-write` implementation lease. Delivery ownership still remains required for refresh,
+final gate, PR, merge, deployment and production completion.
 The normal owner-facing entry is `python scripts/run_task_delivery.py <ID>`; direct controller
 commands are low-level implementation and recovery operations.
 
 Parallel read-only/research sessions are allowed only when task metadata permits them and each has
 its own lease. Parallel write branches may be prepared only when dependency/concurrency metadata
 explicitly marks them compatible; `independent-write` + `independent-write` is allowed, while any
-pair containing `exclusive-write` blocks a new implementation lease. `READY_FOR_DELIVERY`, waiting
-delivery, CI and production activity do not block compatible implementation; merge into `master`
-remains protected and serialized. Without explicit compatibility, keep one active writer and stop
-before creating another write lease.
+active nonterminal lease in a pair containing `exclusive-write` blocks a new implementation lease.
+`READY_FOR_DELIVERY`, waiting delivery, CI and production activity do not block a compatible
+independent implementation; merge into `master` remains protected and serialized. Without explicit
+compatibility, keep one active writer and stop before creating another write lease.
 
 # Dependencies
 

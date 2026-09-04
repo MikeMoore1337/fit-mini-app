@@ -16,8 +16,8 @@ Lifecycle разделён на две coordination boundary:
 
 - `implementation lane`: отдельные task leases и worktrees. Совместимые
   `independent-write` task могут одновременно находиться в `implementation`, `review`, `qa`,
-  `ready-for-delivery` и `waiting-for-delivery`; `exclusive-write` блокирует только новую
-  несовместимую implementation task.
+  `ready-for-delivery` и `waiting-for-delivery`; `exclusive-write` блокирует новую task при любой
+  несовместимой активной nonterminal lease, включая queued/delivery/recovery states.
 - `delivery lane`: один минимальный shared owner/queue в Git common directory. Только её owner
   может выполнить `refresh/rebase` относительно latest `origin/master`, final exact-HEAD gate,
   PR/CI, merge, production deploy, smoke и terminal closeout. Owner сохраняется до завершения

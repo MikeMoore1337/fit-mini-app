@@ -25,7 +25,8 @@ worktree используется для координации и closeout, н�
 refs могут оставаться в repository для recovery/inventory, но не являются частью normal delivery.
 
 Несколько task с `independent-write` могут одновременно иметь отдельные writer leases и worktrees.
-`exclusive-write` блокирует только новую несовместимую implementation task. Обычная task в
+`exclusive-write` блокирует новую task при любой несовместимой активной nonterminal lease, включая
+очередь, delivery и owner-safe recovery. Обычная `independent-write` task в
 `READY_FOR_DELIVERY`, ожидание delivery slot, GitHub CI или active production deploy не блокируют
 начало совместимой implementation. Merge в `master` и production deployment всегда serial.
 
@@ -54,7 +55,10 @@ commit provenance, approved review/QA, исходный base SHA, текущий
 `refresh-delivery` fetch/rebase-ит branch относительно latest `origin/master`, обновляет lease base
 и инвалидирует старое evidence; `validate-delivery` принимает только новый exact HEAD и новый
 `PRE_PUSH_CI_PASS`. Любой amend/rebase/commit или tracked modification после gate требует нового
-evidence.
+evidence. Если HEAD изменился после `READY_FOR_DELIVERY`, `refresh-delivery` останавливается до
+повторных review/QA; для owner-safe возврата в эту стадию используется
+`reopen-for-review --reason <...>`, который освобождает delivery lane и удаляет старый readiness
+snapshot.
 
 ## Leases и безопасный closeout
 
@@ -118,6 +122,7 @@ python scripts/task_session.py mark-ready 135 --head-sha <sha> --review-verdict 
 python scripts/task_session.py acquire-delivery 135
 python scripts/task_session.py refresh-delivery 135
 python scripts/task_session.py validate-delivery 135
+python scripts/task_session.py reopen-for-review 135 --reason "address review findings"
 python scripts/task_session.py complete-production 135 --pr <number> --merge-sha <sha> --deployed-sha <sha>
 python scripts/task_session.py finish 135
 ```

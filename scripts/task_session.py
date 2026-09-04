@@ -44,9 +44,10 @@ TARGET_BASE_BRANCH = "master"
 VALID_CHECK_CONCLUSIONS = {"SUCCESS"}
 UMBRELLA_TASK_IDS = {"90", "92", "93", "94", "95", "99", "100", "126"}
 
-# A write lease protects implementation work only while the task can still change its
-# worktree.  Once a task has reached the durable delivery queue, it no longer blocks a
-# compatible implementation lease; the delivery lane below is the only global mutex.
+# A write lease remains an implementation-safety boundary until the task reaches terminal
+# production success.  This keeps an exclusive-write task from being bypassed while it is
+# queued, delivering, or waiting for owner-safe recovery; independent-write pairs remain
+# the only compatible concurrent write leases.
 IMPLEMENTATION_STATES = frozenset({"starting", "implementation", "review", "qa"})
 READY_STATES = frozenset({"ready-for-delivery", "ready-for-pr"})
 WAITING_STATES = frozenset({"waiting-for-delivery"})
@@ -810,8 +811,8 @@ class TaskController:
         return str(lease.get("lifecycle_state", "")).strip().lower()
 
     @classmethod
-    def _is_implementation_lease(cls, lease: Mapping[str, Any]) -> bool:
-        return lease.get("mode") == "write" and cls._lease_state(lease) in IMPLEMENTATION_STATES
+    def _is_active_write_lease(cls, lease: Mapping[str, Any]) -> bool:
+        return lease.get("mode") == "write" and cls._lease_state(lease) not in TERMINAL_LEASE_STATES
 
     @classmethod
     def _implementation_lease_conflicts(
@@ -828,7 +829,7 @@ class TaskController:
                 continue
             if str(lease.get("task_id", "")).upper() == task_id.upper():
                 continue
-            if not cls._is_implementation_lease(lease):
+            if not cls._is_active_write_lease(lease):
                 continue
             existing_class = normalize_concurrency_class(str(lease.get("concurrency_class", "")))
             if not write_lanes_compatible(existing_class, candidate_class):
@@ -1701,6 +1702,12 @@ class TaskController:
                     or str(owner.get("task_id", "")).upper() != expected
                 ):
                     raise TaskSessionError("Task delivery ownership changed before master refresh")
+                ready_head = str(current.get("ready_head_sha", ""))
+                if not ready_head or head_before != ready_head:
+                    raise TaskSessionError(
+                        "Task branch HEAD changed after PR readiness; rerun review and QA "
+                        "before delivery refresh"
+                    )
                 current.update({"lifecycle_state": "delivery-refreshing", "updated_at": utc_now()})
                 StateStore.replace_json(lease_path, current)
             self.repository.fetch_origin_master(cwd=worktree)
@@ -1830,7 +1837,9 @@ class TaskController:
             StateStore.replace_json(lease_path, current)
         return current
 
-    def release_delivery(self, task_id: str, *, reason: str) -> dict[str, Any]:
+    def release_delivery(
+        self, task_id: str, *, reason: str, offline: bool = False
+    ) -> dict[str, Any]:
         expected = normalize_task_id(task_id)
         _, _ = self._require_delivery_owner(expected)
         with self.store.lock():
@@ -1844,6 +1853,7 @@ class TaskController:
                 or str(owner.get("task_id", "")).upper() != expected
             ):
                 raise TaskSessionError("Task delivery ownership changed before release")
+            production_active = False if offline else self._active_production_deployment()
             now = utc_now()
             current.update(
                 {
@@ -1858,9 +1868,78 @@ class TaskController:
             latest_delivery["updated_at"] = now
             StateStore.replace_json(lease_path, current)
             StateStore.replace_json(self.store.delivery_path, latest_delivery)
-            next_owner = self._promote_next_delivery_locked(latest_delivery)
+            next_owner = None
+            if not production_active:
+                next_owner = self._promote_next_delivery_locked(latest_delivery)
+            else:
+                current["delivery_handoff_blocker"] = "active production deployment"
             current["delivery_next_owner"] = next_owner
             StateStore.replace_json(lease_path, current)
+        return current
+
+    def reopen_for_review(self, task_id: str, *, reason: str) -> dict[str, Any]:
+        expected = normalize_task_id(task_id)
+        lease, _ = self._require_delivery_owner(expected)
+        if self._lease_state(lease) not in DELIVERY_STATES:
+            raise TaskSessionError(
+                f"Task {expected} cannot reopen for review from {lease.get('lifecycle_state')}"
+            )
+        worktree = Path(str(lease.get("worktree", ""))).resolve()
+        if self.repository.status(worktree):
+            raise TaskSessionError(f"Task {expected} review reopen refuses dirty worktree")
+        operations = self.repository.operation_issues(worktree)
+        if operations:
+            raise TaskSessionError(
+                f"Task {expected} review reopen refuses interrupted Git operation: {operations}"
+            )
+        with self.store.lock():
+            lease_path = self.store.task_lease_path(expected)
+            current = self.store.read_json(lease_path)
+            delivery = self.store.delivery_state()
+            owner = delivery.get("owner")
+            if (
+                not isinstance(current, dict)
+                or not isinstance(owner, dict)
+                or str(owner.get("task_id", "")).upper() != expected
+            ):
+                raise TaskSessionError("Task delivery ownership changed before review reopen")
+            if self._lease_state(current) not in DELIVERY_STATES:
+                raise TaskSessionError("Task delivery state changed before review reopen")
+            now = utc_now()
+            for key in (
+                "delivery_owner",
+                "delivery_acquired_at",
+                "delivery_base_origin_master_sha",
+                "delivery_head_sha",
+                "delivery_generation",
+                "delivery_gate_pass",
+                "ready_head_sha",
+                "ready_base_origin_master_sha",
+                "ready_for_delivery_at",
+                "ready_sequence",
+                "review_verdict",
+                "qa_verdict",
+                "task_provenance",
+            ):
+                current.pop(key, None)
+            current.update(
+                {
+                    "lifecycle_state": "review",
+                    "review_reopened_at": now,
+                    "review_reopen_reason": reason,
+                    "pre_push_ci_pass": None,
+                    "local_evidence": {
+                        "status": "invalidated-before-review-reopen",
+                        "invalidated_at": now,
+                        "reason": reason,
+                    },
+                    "updated_at": now,
+                }
+            )
+            delivery["owner"] = None
+            delivery["updated_at"] = now
+            StateStore.replace_json(lease_path, current)
+            StateStore.replace_json(self.store.delivery_path, delivery)
         return current
 
     def record_production_success(
@@ -2256,6 +2335,10 @@ def _parser() -> argparse.ArgumentParser:
     release_delivery = subparsers.add_parser("release-delivery")
     release_delivery.add_argument("task_id")
     release_delivery.add_argument("--reason", required=True)
+    release_delivery.add_argument("--offline", action="store_true")
+    reopen_review = subparsers.add_parser("reopen-for-review")
+    reopen_review.add_argument("task_id")
+    reopen_review.add_argument("--reason", required=True)
     production = subparsers.add_parser("complete-production")
     production.add_argument("task_id")
     production.add_argument("--pr", type=int, required=True)
@@ -2328,7 +2411,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             _print(controller.validate_delivery(args.task_id, offline=args.offline))
             return 0
         if args.command == "release-delivery":
-            _print(controller.release_delivery(args.task_id, reason=args.reason))
+            _print(
+                controller.release_delivery(args.task_id, reason=args.reason, offline=args.offline)
+            )
+            return 0
+        if args.command == "reopen-for-review":
+            _print(controller.reopen_for_review(args.task_id, reason=args.reason))
             return 0
         if args.command == "complete-production":
             _print(

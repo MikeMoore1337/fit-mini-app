@@ -477,6 +477,26 @@ def test_exclusive_write_is_a_real_implementation_blocker(
         controller.start("226", owner_launch=True, session_label="candidate", offline=True)
 
 
+def test_exclusive_lease_blocks_independent_start_after_delivery_acquisition(
+    repository: tuple[Path, Any],
+) -> None:
+    root, git_repository = repository
+    _write_task(root, "226A", "existing", concurrency="exclusive-write")
+    _write_task(root, "226B", "candidate", concurrency="independent-write")
+    controller = task_session.TaskController(git_repository)
+    existing = controller.start("226A", owner_launch=True, session_label="existing", offline=True)
+    existing_head = _commit_task(Path(existing["lease"]["worktree"]), "226A")
+    controller.mark_ready(
+        "226A", head_sha=existing_head, review_verdict="APPROVED", qa_verdict="PASS"
+    )
+    controller.acquire_delivery("226A", offline=True)
+
+    with pytest.raises(
+        task_session.TaskSessionError, match="incompatible implementation write lease"
+    ):
+        controller.start("226B", owner_launch=True, session_label="candidate", offline=True)
+
+
 def test_adopt_current_uses_same_compatible_lease_contract(
     repository: tuple[Path, Any],
 ) -> None:
@@ -554,13 +574,88 @@ def test_delivery_lane_is_serial_and_handoff_is_deterministic(
         "lifecycle_state"
     ] == ("waiting-for-delivery")
 
-    released = controller.release_delivery("232", reason="synthetic delivery interruption")
+    released = controller.release_delivery(
+        "232", reason="synthetic delivery interruption", offline=True
+    )
 
     assert released["lifecycle_state"] == "recovery-required"
     assert controller.store.delivery_state()["owner"]["task_id"] == "233"
     assert controller.store.read_json(controller.store.task_lease_path("233"))[
         "lifecycle_state"
     ] == ("delivering")
+
+
+def test_release_delivery_does_not_handoff_during_active_production(
+    repository: tuple[Path, Any],
+) -> None:
+    root, git_repository = repository
+    for task_id in ("233A", "233B"):
+        _write_task(root, task_id, f"queue-{task_id}", concurrency="independent-write")
+    github = FakeGitHub(git_repository.ref("origin/master"))
+    controller = task_session.TaskController(git_repository, github=github)
+    started = {
+        task_id: controller.start(
+            task_id, owner_launch=True, session_label=f"queue-{task_id}", offline=True
+        )
+        for task_id in ("233A", "233B")
+    }
+    for task_id in ("233A", "233B"):
+        head_sha = _commit_task(Path(started[task_id]["lease"]["worktree"]), task_id)
+        controller.mark_ready(
+            task_id, head_sha=head_sha, review_verdict="APPROVED", qa_verdict="PASS"
+        )
+    acquired = controller.acquire_delivery("233A", offline=True)
+    assert acquired["acquired"] is True
+
+    github.active_runs = [{"name": "Deploy production", "status": "in_progress"}]
+    released = controller.release_delivery("233A", reason="synthetic interruption")
+
+    assert released["delivery_next_owner"] is None
+    assert released["delivery_handoff_blocker"] == "active production deployment"
+    assert controller.store.delivery_state()["owner"] is None
+    assert controller.store.read_json(controller.store.task_lease_path("233B"))[
+        "lifecycle_state"
+    ] == ("ready-for-delivery")
+
+    github.active_runs = []
+    reacquired = controller.acquire_delivery("233B", offline=True)
+    assert reacquired["acquired"] is True
+
+
+def test_reopen_for_review_clears_delivery_snapshot_and_requires_new_readiness(
+    repository: tuple[Path, Any],
+) -> None:
+    _, _, controller, worktree, branch, sha_pair = _prepare_started(
+        repository, "234A", concurrency="independent-write"
+    )
+    base_sha, head_sha = sha_pair.split(":")
+    _write_gate_evidence(controller, "234A", branch=branch, head_sha=head_sha, base_sha=base_sha)
+    controller.mark_ready("234A", head_sha=head_sha, review_verdict="APPROVED", qa_verdict="PASS")
+    controller.acquire_delivery("234A", offline=True)
+    refreshed = controller.refresh_for_delivery("234A", offline=True)
+    _write_gate_evidence(
+        controller,
+        "234A",
+        branch=branch,
+        head_sha=refreshed["delivery_head_sha"],
+        base_sha=refreshed["base_origin_master_sha"],
+    )
+    controller.validate_delivery("234A", offline=True)
+
+    reopened = controller.reopen_for_review("234A", reason="address review findings")
+
+    assert reopened["lifecycle_state"] == "review"
+    assert reopened["pre_push_ci_pass"] is None
+    assert "delivery_head_sha" not in reopened
+    assert "ready_head_sha" not in reopened
+    assert controller.store.delivery_state()["owner"] is None
+
+    new_head = _commit_task(worktree, "234A", filename="review-fix.txt")
+    ready = controller.mark_ready(
+        "234A", head_sha=new_head, review_verdict="APPROVED", qa_verdict="PASS"
+    )
+    assert ready["lifecycle_state"] == "ready-for-delivery"
+    assert ready["ready_head_sha"] == new_head
 
 
 def test_busy_delivery_lane_does_not_block_compatible_implementation(
