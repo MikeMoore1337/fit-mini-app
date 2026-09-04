@@ -85,8 +85,9 @@ gate, evidence и точки остановки в task-файле.
 - Один executable task-файл = одна Codex-сессия = одна `task/<ID>-<slug>` ветка = один отдельный
   worktree = один законченный логический результат. Umbrella `90`, `92`, `93`, `94`, `95`, `99`,
   `100` являются coordination contracts и отдельно не выполняются. Writer lease защищает
-  implementation только до durable readiness; delivery lane хранится отдельным минимальным
-  mutex/queue.
+  implementation только до durable readiness для совместимых `independent-write` tasks; active
+  nonterminal `exclusive-write` lease остаётся глобальным write blocker. Delivery lane хранится
+  отдельным минимальным mutex/queue.
 - `master` является единственной защищённой release-веткой. Task branch/worktree создаются от
   чистого, проверенного exact `origin/master` SHA; feature implementation непосредственно в
   canonical controller worktree запрещена.
@@ -120,7 +121,9 @@ gate, evidence и точки остановки в task-файле.
   delivery owner может refresh/rebase, открыть/обновить PR, merge или deploy. Если current base
   изменился, ожидающий candidate обновляется перед final gate; busy delivery/production только
   переводит его в `WAITING_FOR_DELIVERY`, а dirty, interrupted, conflict или ambiguous state
-  останавливаются с точным blocker.
+  останавливаются с точным blocker. READY/waiting/CI/production не блокируют новую совместимую
+  `independent-write` task; active nonterminal `exclusive-write` остаётся несовместимым до terminal
+  success.
 - Task с явно обязательным owner checkpoint/approve, human/device evidence, manual visual approval,
   legal-counsel gate или destructive/external authorization останавливается ровно перед указанным
   gate до фактического прохождения. Task без tracked logical commit не создаёт PR; отсутствие

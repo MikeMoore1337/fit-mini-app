@@ -751,6 +751,28 @@ def test_refresh_requires_new_evidence_when_head_and_base_are_unchanged(
     assert validated["pre_push_ci_pass"]["delivery_generation"] == refreshed["delivery_generation"]
 
 
+def test_refresh_refuses_post_ready_commit_until_review_and_qa_repeat(
+    repository: tuple[Path, Any],
+) -> None:
+    _, _, controller, worktree, _, sha_pair = _prepare_started(
+        repository, "243A", concurrency="independent-write"
+    )
+    base_sha, head_sha = sha_pair.split(":")
+    controller.mark_ready("243A", head_sha=head_sha, review_verdict="APPROVED", qa_verdict="PASS")
+    controller.acquire_delivery("243A", offline=True)
+    _commit_task(worktree, "243A", filename="post-ready-change.txt")
+
+    with pytest.raises(task_session.TaskSessionError, match="changed after PR readiness"):
+        controller.refresh_for_delivery("243A", offline=True)
+
+    lease = controller.store.read_json(controller.store.task_lease_path("243A"))
+    assert isinstance(lease, dict)
+    assert lease["lifecycle_state"] == "recovery-required"
+    assert controller.store.delivery_state()["owner"] is None
+    assert lease["ready_head_sha"] == head_sha
+    assert base_sha == lease["base_origin_master_sha"]
+
+
 def test_local_master_behind_remote_is_informational_and_start_uses_remote_base(
     repository: tuple[Path, Any],
 ) -> None:

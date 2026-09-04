@@ -183,6 +183,8 @@ def _worker_prompt(task_id: str, started: dict[str, Any]) -> str:
         "новом exact HEAD перед PR/CI/merge. После rebase/conflict resolution выполни только "
         "targeted recheck изменённой поверхности; полный independent review повторяй только при "
         "существенном изменении поведения. Merge master и production deploy строго serial.\n"
+        "Не делай commit поверх READY_FOR_DELIVERY: если после readiness нужен review-fix, сначала "
+        "освободи delivery ownership через reopen-for-review, затем повтори review/QA и mark-ready.\n"
         "Не запускай следующую product task.\n\n"
         f"Controller context:\n{started.get('prompt', '')}"
     )

@@ -65,6 +65,7 @@ def test_worker_prompt_carries_one_launch_delivery_contract() -> None:
     assert "WAITING_FOR_DELIVERY" in prompt
     assert "refresh-delivery" in prompt
     assert "final applicable gate" in prompt
+    assert "reopen-for-review" in prompt
     assert "Не запускай следующую product task" in prompt
 
 
