@@ -15,7 +15,7 @@ argon2-cffi==25.1.0
     # via pwdlib
 argon2-cffi-bindings==25.1.0
     # via argon2-cffi
-authlib==1.7.2
+authlib==1.8.0
     # via -r backend/requirements.in
 certifi==2026.7.22
     # via
