@@ -87,8 +87,8 @@ class SourcePacket(BaseModel):
         parsed = urlsplit(value)
         if parsed.scheme != "https" or not parsed.hostname:
             raise ValueError("source_url_must_be_https")
-        if parsed.username or parsed.password or parsed.query or parsed.fragment:
-            raise ValueError("source_url_must_not_have_credentials_query_or_fragment")
+        if parsed.username or parsed.password or parsed.fragment:
+            raise ValueError("source_url_must_not_have_credentials_or_fragment")
         return value
 
 

@@ -321,3 +321,56 @@ The evidence boundary is explicit: local/mock proves deterministic contracts, ha
 idempotency, HMAC, taxonomy/risk and manual-required behavior; a shadow run requires owner approval
 and a real provider; production and Telegram/channel proof require later external gates. This
 repository integration grants neither Gate A nor any deployment authorization.
+
+### Scheduled source discovery и monitoring
+
+Source fetching не добавляется в hardened editorial worker. Отдельный stdlib-only
+`deploy/hermes-discovery/discovery_runner.py` получает только versioned definitions, рендеренные
+из canonical `backend/fitminiapp_api/resources/news_sources.json`, и пишет bounded jobs в
+локальный outbox. Команда рендера:
+
+```powershell
+python scripts/generate_hermes_source_definitions.py --output <versioned-output.json>
+```
+
+Output содержит SHA-256 canonical registry и `definitions_version`; ручной второй список источников
+не допускается. Реестр уже поддерживает RSS, JSON Feed и HTML metadata и фиксирует diversity
+vocabulary для `sports_nutrition`, `dietary_supplements`, medicine/health, fitness/training,
+bodybuilding, peptides, nutrition/food, fitness technology, research/guideline/regulation/product/
+safety. Фактический набор enabled/disabled источников остаётся каноническим YFC registry; runner
+не подменяет отсутствующее покрытие filler-источниками и не создаёт publication quota.
+Перед внешней установкой дополнительно фиксируется SHA-256 самого versioned deployment-файла в
+`HERMES_DISCOVERY_DEFINITIONS_SHA256`; external runner fail-closed отклоняет изменённый или
+неподготовленный definitions-файл.
+Discovery не делает обязательных publication quotas и не отбрасывает материал из-за неизвестного
+topic; taxonomy/risk/publication eligibility остаются серверной ответственностью YFC.
+
+На будущей отдельной Hermes VM systemd timer активирует `hermes-discovery.target`, который
+последовательно запускает `hermes-discovery.service` и `hermes-worker-drain.service`. Первый
+контейнер не получает provider/YFC secrets. Только второй host-side drain передаёт bounded job в
+hardened worker с provider key и YFC HMAC secret. Входящих Hermes ports нет; source discovery
+имеет exact host allowlist из definitions, HTTPS-only external mode, DNS resolution с запретом
+non-global адресов, revalidation каждого redirect, MIME/size/time/concurrency bounds и no
+JavaScript/browser. Host firewall должен быть default-deny и отдельно разрешать только approved
+source hosts, Groq и YFC intake.
+До установки нужен host preflight: account `hermes` и bind-mounted `/var/lib/hermes` должны
+согласовать UID/GID `10000:10000` контейнеров, а доступ к Docker должен быть явно ограничен
+rootless/systemd policy; этот PR не устанавливает Docker или VM.
+
+State — только bounded hashes, fetch metadata, reason codes и candidate metadata. Stable dedupe key
+использует `source_id + canonical URL + content hash + event date`; restart/uncertain state не
+создаёт новый idempotency key. Lock на Linux использует kernel `flock`, поэтому SIGKILL не оставляет
+вечный overlap blocker; пропущенный timer run не восполняет publication quota. Accepted/duplicate
+job удаляется из outbox после сохранения статуса, а pending/error job остаётся для той же retry.
+
+Полная локальная проверка:
+
+```powershell
+python scripts/hermes_worker.py verify
+```
+
+Она включает provenance canonical registry, отдельные image build/hardening/SBOM/Trivy для worker
+и discovery и E2E `fake RSS -> discovery container -> outbox -> hardened worker -> fake
+OpenAI-compatible HTTP -> real local YFC intake -> manual_required draft`. Проверяются malformed,
+timeout, oversized, invalid MIME, redirect SSRF, private IP, partial outage, prompt injection,
+duplicate, overlap и crash/restart. Это не live Internet/provider/Telegram и не production proof.

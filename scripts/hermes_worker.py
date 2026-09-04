@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +52,17 @@ def run(
             print(result.stderr, file=sys.stderr, end="")
         raise SystemExit(result.returncode)
     return result
+
+
+def discovery_verification(command: str) -> None:
+    """Run the companion discovery verification without importing its runtime."""
+    result = subprocess.run(
+        [sys.executable, str(repo_root() / "scripts" / "hermes_discovery.py"), command],
+        check=False,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise SystemExit(result.returncode)
 
 
 def write_json(path: Path, document: Any) -> None:
@@ -161,6 +173,7 @@ def provenance(source_dir: Path | None = None) -> None:
         raise SystemExit(f"provenance verification failed: {checks}")
     write_json(evidence_root() / "provenance.json", {"checks": checks, "document": document})
     print(json.dumps({"status": "passed", "checks": checks}, ensure_ascii=False, sort_keys=True))
+    discovery_verification("provenance")
 
 
 def ensure_evidence_path() -> None:
@@ -207,6 +220,7 @@ def build() -> None:
         ]
     )
     inspect()
+    discovery_verification("build")
 
 
 def inspect() -> dict[str, Any]:
@@ -242,8 +256,9 @@ def save_image() -> Path:
 
 def scanner_run(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
     image_tar = evidence_root() / "image.tar"
-    if not image_tar.is_file():
-        save_image()
+    # Always refresh the tarball so SBOM and vulnerability evidence belongs to
+    # the image currently addressed by image_ref(), never to a prior build.
+    save_image()
     command = [
         "docker",
         "run",
@@ -276,6 +291,7 @@ def sbom() -> None:
             {"status": "passed", "files": ["sbom.cdx.json", "sbom.spdx.json"]}, sort_keys=True
         )
     )
+    discovery_verification("sbom")
 
 
 def security() -> None:
@@ -300,6 +316,7 @@ def security() -> None:
     if result.returncode != 0:
         raise SystemExit(result.returncode)
     print(json.dumps({"status": "passed", "critical": 0, "high": 0}, sort_keys=True))
+    discovery_verification("security")
 
 
 def hardening() -> None:
@@ -352,13 +369,16 @@ def hardening() -> None:
     result = run(command, capture=True)
     (evidence_root() / "hardening-boundary.txt").write_text(result.stdout, encoding="utf-8")
     print(result.stdout, end="")
+    discovery_verification("hardening")
 
 
 def e2e() -> None:
     ensure_evidence_path()
     environment = os.environ.copy()
     environment["HERMES_WORKER_IMAGE"] = image_ref()
-    environment["TASK129_ARTIFACT_ROOT"] = str(evidence_root() / "local-e2e")
+    environment["TASK129_ARTIFACT_ROOT"] = tempfile.mkdtemp(
+        prefix="local-e2e-run-", dir=evidence_root()
+    )
     test_script = (
         repo_root() / "tests" / "integration" / "hermes_editorial_worker" / "local_worker_e2e.py"
     )
@@ -367,6 +387,7 @@ def e2e() -> None:
     )
     if result.returncode != 0:
         raise SystemExit(result.returncode)
+    discovery_verification("e2e")
 
 
 def main() -> int:

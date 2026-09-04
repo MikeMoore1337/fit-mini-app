@@ -60,6 +60,17 @@ def test_untrusted_source_and_capability_fields_fail_closed() -> None:
         )
 
 
+def test_source_packet_preserves_safe_query_but_rejects_fragment() -> None:
+    with_query = valid_job().source.model_copy(
+        update={"canonical_url": "https://example.com/unit?article=1"}
+    )
+    assert with_query.canonical_url.endswith("?article=1")
+    with pytest.raises(ValidationError):
+        editorial_worker.SourcePacket.model_validate(
+            valid_job().source.model_dump() | {"canonical_url": "https://example.com/unit#fragment"}
+        )
+
+
 def test_external_and_malformed_local_urls_are_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENDPOINT", "https://provider.example/v1")
     with pytest.raises(editorial_worker.WorkerError, match="not_local_allowlisted"):
