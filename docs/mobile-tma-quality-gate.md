@@ -72,7 +72,7 @@ production hooks только ради удобства теста.
 
 ### Lanes и evidence
 
-- `npm run e2e:ci` — authoritative Chromium suite; в CI он выполняется тремя shards и включает
+- `npm run e2e:ci` — authoritative Chromium suite; в CI он выполняется четырьмя shards и включает
   `tma-smoke.spec.ts` и `demo-mode.spec.ts`.
 - `npm run e2e:migrated-stack` — отдельный authoritative Chromium lane с FastAPI и PostgreSQL;
   он проверяет реальный browser/API/database path и не заменяется route mock.

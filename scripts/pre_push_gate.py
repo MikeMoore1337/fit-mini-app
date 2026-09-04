@@ -19,8 +19,8 @@ try:
     from scripts.ci_contract import (
         COMMAND_GROUPS,
         CONTRACT_VERSION,
-        PROFILE_GROUPS,
         CIContractError,
+        classify_scope,
         contract_digest,
         missing_prerequisites,
         run_group,
@@ -29,8 +29,8 @@ except ModuleNotFoundError:
     from ci_contract import (  # type: ignore[no-redef]
         COMMAND_GROUPS,
         CONTRACT_VERSION,
-        PROFILE_GROUPS,
         CIContractError,
+        classify_scope,
         contract_digest,
         missing_prerequisites,
         run_group,
@@ -128,56 +128,10 @@ def _status(root: Path) -> list[str]:
 
 def _changed_paths(root: Path, base_sha: str, head_sha: str) -> list[str]:
     output = _run(
-        ["git", "diff", "--name-status", "--find-renames", base_sha, head_sha], cwd=root
+        ["git", "diff", "--no-ext-diff", "--name-only", "-z", "--find-renames", base_sha, head_sha],
+        cwd=root,
     ).stdout
-    paths: list[str] = []
-    for line in output.splitlines():
-        fields = line.split("\t")
-        if len(fields) >= 2:
-            paths.extend(item.replace("\\", "/") for item in fields[1:])
-    return sorted(set(paths))
-
-
-def classify_scope(paths: Sequence[str]) -> dict[str, Any]:
-    normalized = sorted({path.replace("\\", "/") for path in paths})
-    frontend = any(path == "frontend" or path.startswith("frontend/") for path in normalized)
-    backend = any(
-        path == "backend" or path.startswith(("backend/", "bot/", "tests/integration/"))
-        for path in normalized
-    )
-    workflow = any(
-        path.startswith((".github/", "scripts/", "deploy/"))
-        or path in {".pre-commit-config.yaml", "docker-compose.yml", "pyproject.toml"}
-        for path in normalized
-    )
-    documentation = bool(normalized) and all(
-        path.startswith(("docs/", "codex-backlog/", ".agents/"))
-        or path in {"README.md", "AGENTS.md"}
-        for path in normalized
-    )
-    if frontend and backend:
-        profile = "cross-stack"
-    elif workflow:
-        profile = "workflow-platform"
-    elif frontend:
-        profile = "frontend"
-    elif backend:
-        profile = "backend"
-    elif documentation:
-        profile = "documentation"
-    else:
-        profile = "cross-stack"
-    return {
-        "profile": profile,
-        "paths": normalized,
-        "signals": {
-            "frontend": frontend,
-            "backend": backend,
-            "workflow_platform": workflow,
-            "documentation": documentation,
-        },
-        "groups": list(PROFILE_GROUPS[profile]),
-    }
+    return sorted({item.replace("\\", "/") for item in output.split("\0") if item})
 
 
 def _validate_base(root: Path, base_sha: str, head_sha: str) -> None:
