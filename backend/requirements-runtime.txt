@@ -78,7 +78,7 @@ pillow==12.3.0
     #   reportlab
 psycopg==3.3.4
     # via -r backend/requirements.in
-psycopg-binary==3.3.4 ; implementation_name != 'pypy'
+psycopg-binary==3.3.5 ; implementation_name != 'pypy'
     # via psycopg
 pwdlib==0.3.0
     # via -r backend/requirements.in
