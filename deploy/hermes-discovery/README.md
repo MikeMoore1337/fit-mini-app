@@ -68,7 +68,7 @@ state не создаёт новый idempotency key автоматически.
 только после bounded age threshold. Missed timer run не replay'ится (`Persistent=false`), а
 следующий запуск снова применяет dedupe без publication quota.
 
-## Установка после approval (не выполняется этим PR)
+## Установка после Gate A (не выполняется этим PR)
 
 1. Из exact release bundle сгенерировать definitions из canonical registry и зафиксировать
    SHA-256 самого deployment-файла.
@@ -76,14 +76,45 @@ state не создаёт новый idempotency key автоматически.
    этот SHA-256 как `HERMES_DISCOVERY_DEFINITIONS_SHA256`; floating `latest` запрещён.
 3. Создать отдельную Linux x86_64 Hermes VM и `/etc/hermes/source-definitions.json` (0444),
    `/etc/hermes/worker.env` (0600), `/var/lib/hermes` (0700). Для bind mount каталога
-   container UID/GID `10000:10000` должны иметь запись в `/var/lib/hermes`; host service account
-   `hermes` должен быть согласован с этим UID/GID и иметь только требуемый Docker/rootless-Docker
-   доступ. VM не содержит YFC repo/runtime/DB.
+   container UID/GID `10000:10000` должны иметь запись в `/var/lib/hermes`. Пользователь `hermes`
+   должен иметь UID/GID `10000:10000`, но не должен состоять в группе `docker` и не должен видеть
+   `/var/run/docker.sock`. Оба host-side systemd launcher-а запускаются от `root` только для
+   точной команды Docker; внутри обоих контейнеров остаются `--user 10000:10000`, `--read-only`,
+   `--cap-drop ALL` и `no-new-privileges`, без socket mount. VM не содержит YFC repo/runtime/DB.
+   Обе units используют одну owner-approved сеть `HERMES_DOCKER_NETWORK=hermes-net`; имя для
+   worker drain дополнительно проверяется allowlist-ом `hermes-*` и встроенные Docker-сети
+   отвергаются.
 4. Настроить default-deny egress firewall: exact approved source hosts для discovery, exact
    Groq host и exact YFC intake host/path для worker; deny Telegram Bot API, PostgreSQL/Redis,
    SSH, metadata, registry и arbitrary internet. Inbound Hermes ports отсутствуют.
 5. Включить timer только после Gate A и owner-approved credentials. `HERMES_INTAKE_ENABLED`
    остаётся false до отдельного approval; production `NEWS_*` flags не меняются.
+
+После рендера шаблонов с exact image digests и definitions digest установить units можно так
+(команды выполняются на Hermes VM, не в этом локальном PR):
+
+```sh
+install -o root -g root -m 0644 hermes-discovery.service /etc/systemd/system/hermes-discovery.service
+install -o root -g root -m 0644 hermes-worker-drain.service /etc/systemd/system/hermes-worker-drain.service
+install -o root -g root -m 0644 hermes-discovery.target /etc/systemd/system/hermes-discovery.target
+install -o root -g root -m 0644 hermes-discovery.timer /etc/systemd/system/hermes-discovery.timer
+systemd-analyze verify /etc/systemd/system/hermes-discovery.service /etc/systemd/system/hermes-worker-drain.service /etc/systemd/system/hermes-discovery.target /etc/systemd/system/hermes-discovery.timer
+systemctl daemon-reload
+systemctl enable hermes-discovery.timer
+```
+
+До включения timer проверить exact boundary без запуска job:
+
+```sh
+id hermes
+id -nG hermes
+docker network inspect hermes-net
+systemctl cat hermes-discovery.service hermes-worker-drain.service
+systemctl status hermes-discovery.timer --no-pager
+```
+
+`systemctl start hermes-discovery.target` выполняется только после отдельного owner approval на
+внешний Gate A и подготовленных credentials; до этого timer можно только установить и проверить.
 
 `hermes_worker_drain.py` — host-side launcher; secrets передаются только worker container.
 Discovery service не получает ни provider key, ни YFC HMAC secret. Рабочий runtime запускается

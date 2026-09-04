@@ -68,6 +68,8 @@ def provenance() -> None:
     drain_unit = (root / "systemd" / "hermes-worker-drain.service.template").read_text(
         encoding="utf-8"
     )
+    drain_path = root / "hermes_worker_drain.py"
+    drain_source = drain_path.read_text(encoding="utf-8")
     timer_unit = (root / "systemd" / "hermes-discovery.timer").read_text(encoding="utf-8")
     tree = ast.parse(runner_path.read_text(encoding="utf-8"), filename=str(runner_path))
     imports = {
@@ -96,6 +98,54 @@ def provenance() -> None:
         "systemd.definitions_digest": all(
             "HERMES_DISCOVERY_DEFINITIONS_SHA256=@SOURCE_DEFINITIONS_SHA256@" in unit
             for unit in (discovery_unit, drain_unit)
+        ),
+        "systemd.discovery_once": "@DISCOVERY_IMAGE@ --once" in discovery_unit,
+        "systemd.discovery_network": (
+            "Environment=HERMES_DOCKER_NETWORK=hermes-net" in discovery_unit
+            and "--network=${HERMES_DOCKER_NETWORK}" in discovery_unit
+        ),
+        "systemd.drain_network": "Environment=HERMES_DOCKER_NETWORK=hermes-net" in drain_unit,
+        "systemd.shared_host_root_launchers": all(
+            "User=root" in unit
+            and "Group=root" in unit
+            and "User=hermes" not in unit
+            and "docker.sock" not in unit
+            for unit in (discovery_unit, drain_unit)
+        ),
+        "systemd.discovery_container_hardening": all(
+            token in discovery_unit
+            for token in (
+                "--read-only",
+                "--cap-drop ALL",
+                "--security-opt no-new-privileges:true",
+                "--pids-limit 32",
+                "--memory 256m",
+                "--cpus 0.25",
+                "--user 10000:10000",
+            )
+        ),
+        "systemd.discovery_no_floating_image": ":latest" not in discovery_unit,
+        "systemd.discovery_no_bridge": "--network bridge" not in discovery_unit,
+        "systemd.drain_service_resources": all(
+            token in drain_unit for token in ("TasksMax=32", "MemoryMax=512M", "CPUQuota=50%")
+        ),
+        "worker.docker_network_validation": all(
+            token in drain_source
+            for token in (
+                "HERMES_DOCKER_NETWORK",
+                "_validate_docker_network",
+                '"--network",',
+                '"--user",\n        "10000:10000"',
+            )
+        ),
+        "worker.no_hardcoded_bridge": '"--network",\n        "bridge"' not in drain_source,
+        "worker.resources": all(
+            token in drain_source
+            for token in (
+                '"--pids-limit",\n        "32"',
+                '"--memory",\n        "512m"',
+                '"--cpus",\n        "0.50"',
+            )
         ),
         "systemd.no_missed_run_replay": "Persistent=false" in timer_unit,
         "source.runner_imports": not imports.intersection(forbidden_imports),

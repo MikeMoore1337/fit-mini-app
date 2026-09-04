@@ -5,10 +5,13 @@ After=hermes-discovery.service
 
 [Service]
 Type=oneshot
-User=hermes
-Group=hermes
+# The host-side launcher needs Docker access and is intentionally root-owned.
+# The spawned worker remains UID/GID 10000:10000; no Docker socket is mounted.
+User=root
+Group=root
 UMask=0077
 EnvironmentFile=/etc/hermes/worker.env
+Environment=HERMES_DOCKER_NETWORK=hermes-net
 Environment=HERMES_DISCOVERY_DEFINITIONS=/etc/hermes/source-definitions.json
 Environment=HERMES_DISCOVERY_DEFINITIONS_SHA256=@SOURCE_DEFINITIONS_SHA256@
 Environment=HERMES_DISCOVERY_STATE_DIR=/var/lib/hermes
@@ -29,6 +32,6 @@ ReadWritePaths=/var/lib/hermes
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 RestrictSUIDSGID=true
 LockPersonality=true
-TasksMax=64
-MemoryMax=768M
-CPUQuota=75%
+TasksMax=32
+MemoryMax=512M
+CPUQuota=50%

@@ -11,6 +11,7 @@ import pytest
 
 WORKSPACE = Path(__file__).resolve().parents[3]
 DISCOVERY_ROOT = WORKSPACE / "deploy" / "hermes-discovery"
+SYSTEMD_ROOT = DISCOVERY_ROOT / "systemd"
 sys.path.insert(0, str(DISCOVERY_ROOT))
 
 import discovery_runner  # noqa: E402
@@ -23,6 +24,96 @@ GENERATOR_SPEC = importlib.util.spec_from_file_location(
 assert GENERATOR_SPEC is not None and GENERATOR_SPEC.loader is not None
 GENERATOR_MODULE = importlib.util.module_from_spec(GENERATOR_SPEC)
 GENERATOR_SPEC.loader.exec_module(GENERATOR_MODULE)
+
+
+def _systemd_unit(name: str) -> str:
+    return (SYSTEMD_ROOT / name).read_text(encoding="utf-8")
+
+
+def test_shared_host_systemd_launchers_are_root_only_and_container_hardening_is_explicit() -> None:
+    discovery_unit = _systemd_unit("hermes-discovery.service.template")
+    drain_unit = _systemd_unit("hermes-worker-drain.service.template")
+
+    assert "User=root" in discovery_unit
+    assert "Group=root" in discovery_unit
+    assert "User=hermes" not in discovery_unit
+    assert "Group=hermes" not in discovery_unit
+    assert "Environment=HERMES_DOCKER_NETWORK=hermes-net" in discovery_unit
+    assert "--network=${HERMES_DOCKER_NETWORK}" in discovery_unit
+    assert "@DISCOVERY_IMAGE@ --once" in discovery_unit
+    assert "--read-only" in discovery_unit
+    assert "--cap-drop ALL" in discovery_unit
+    assert "--security-opt no-new-privileges:true" in discovery_unit
+    assert "--user 10000:10000" in discovery_unit
+    assert "--pids-limit 32" in discovery_unit
+    assert "--memory 256m" in discovery_unit
+    assert "--cpus 0.25" in discovery_unit
+    assert "TasksMax=32" in discovery_unit
+    assert "MemoryMax=256M" in discovery_unit
+    assert "CPUQuota=25%" in discovery_unit
+
+    assert "User=root" in drain_unit
+    assert "Group=root" in drain_unit
+    assert "User=hermes" not in drain_unit
+    assert "Group=hermes" not in drain_unit
+    assert "Environment=HERMES_DOCKER_NETWORK=hermes-net" in drain_unit
+    assert "ExecStart=/usr/bin/python3 /opt/hermes/hermes_worker_drain.py --once" in drain_unit
+    assert "TasksMax=32" in drain_unit
+    assert "MemoryMax=512M" in drain_unit
+    assert "CPUQuota=50%" in drain_unit
+
+    for unit in (discovery_unit, drain_unit):
+        assert "docker.sock" not in unit
+        assert "--privileged" not in unit
+        assert ":latest" not in unit
+
+
+def test_worker_drain_network_has_a_safe_default_and_strict_validation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("HERMES_DOCKER_NETWORK", raising=False)
+    assert hermes_worker_drain._docker_network() == "hermes-net"
+    assert hermes_worker_drain._validate_docker_network("hermes-shadow") == "hermes-shadow"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "",
+        "bridge",
+        "default",
+        "host",
+        "none",
+        "other-network",
+        "Hermes-net",
+        "hermes net",
+        "hermes/net",
+        "hermes-",
+        "hermes-" + "a" * 58,
+    ],
+)
+def test_worker_drain_rejects_unsafe_or_unbounded_network_names(
+    value: str,
+) -> None:
+    with pytest.raises(hermes_worker_drain.DrainError, match="hermes_docker_network_invalid"):
+        hermes_worker_drain._validate_docker_network(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "registry.invalid/hermes-worker:latest",
+        "registry.invalid/hermes-worker:stable",
+        "registry.invalid/hermes-worker",
+    ],
+)
+def test_worker_drain_rejects_non_immutable_or_floating_images(
+    value: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("HERMES_WORKER_IMAGE", value)
+    with pytest.raises(hermes_worker_drain.DrainError, match="hermes_worker_image_not_immutable"):
+        hermes_worker_drain._worker_image()
 
 
 def test_canonical_registry_renders_versioned_allowlist() -> None:
@@ -167,6 +258,14 @@ def test_worker_drain_handoff_is_immutable_and_does_not_put_secret_values_in_arg
     for name in hermes_worker_drain.WORKER_ENV_NAMES:
         assert name in command
         assert f"{name}=" not in command
+    assert command[command.index("--network") + 1] == "hermes-net"
+    assert command[command.index("--pids-limit") + 1] == "32"
+    assert command[command.index("--memory") + 1] == "512m"
+    assert command[command.index("--cpus") + 1] == "0.50"
+    assert command[command.index("--user") + 1] == "10000:10000"
+    assert "--read-only" in command
+    assert "--cap-drop" in command
+    assert "docker.sock" not in command
 
     monkeypatch.setattr(
         hermes_worker_drain.subprocess,

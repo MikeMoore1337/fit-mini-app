@@ -354,8 +354,12 @@ non-global адресов, revalidation каждого redirect, MIME/size/time/
 JavaScript/browser. Host firewall должен быть default-deny и отдельно разрешать только approved
 source hosts, Groq и YFC intake.
 До установки нужен host preflight: account `hermes` и bind-mounted `/var/lib/hermes` должны
-согласовать UID/GID `10000:10000` контейнеров, а доступ к Docker должен быть явно ограничен
-rootless/systemd policy; этот PR не устанавливает Docker или VM.
+согласовать UID/GID `10000:10000` контейнеров, но `hermes` не должен иметь membership в группе
+`docker` или доступ к `/var/run/docker.sock`. Host-side discovery/drain units запускаются от
+`root` только для точных Docker/launcher commands; сами контейнеры остаются non-root с
+`--user 10000:10000`, read-only rootfs, cap-drop ALL и no-new-privileges. Обе units закрепляют
+одну owner-approved Docker network `hermes-net`; worker drain валидирует только bounded `hermes-*`
+имя и отвергает встроенные `bridge`/`host`/`none` сети. Этот PR не устанавливает Docker или VM.
 
 State — только bounded hashes, fetch metadata, reason codes и candidate metadata. Stable dedupe key
 использует `source_id + canonical URL + content hash + event date`; restart/uncertain state не
