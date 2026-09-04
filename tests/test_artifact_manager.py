@@ -151,6 +151,32 @@ def test_cleanup_task_blocks_non_terminal_target_lease(tmp_path: Path) -> None:
     assert result["preserved"] == ["tasks/133/temporary/run/open.txt"]
 
 
+def test_cleanup_task_allows_production_success_target_lease(tmp_path: Path) -> None:
+    manager = _manager(tmp_path)
+    state = tmp_path / "state"
+    (state / "leases").mkdir(parents=True)
+    (state / "leases" / "task-133.json").write_text(
+        json.dumps({"task_id": "133", "mode": "write", "lifecycle_state": "production-success"}),
+        encoding="utf-8",
+    )
+    manager.controller_state_dir = state
+    target = manager.allocate_directory(
+        "133",
+        "temporary",
+        "temporary/run",
+        purpose="terminal closeout output",
+        command="test",
+    )
+    artifact = target / "closeout.txt"
+    artifact.write_text("remove after production success\n", encoding="utf-8")
+
+    result = manager.cleanup_task("133", terminal_state="finished")
+
+    assert result["status"] == "completed"
+    assert result["removed_count"] == 1
+    assert not artifact.exists()
+
+
 def test_shared_cleanup_blocks_parallel_lease_and_unfinished_task_132(tmp_path: Path) -> None:
     manager = _manager(tmp_path)
     state = tmp_path / "state"
