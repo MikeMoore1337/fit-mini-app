@@ -19,11 +19,21 @@ shadow-run. В этом режиме worker принимает исключит�
 или health claim. Worker требует сохранить неопределённость и редакторскую проверку primary
 source, study design, limitations и applicability до любого health claim.
 
-Provider retry ограничен максимум двумя попытками того же Groq candidate. 429, quota,
+Общий бюджет provider ограничен максимум двумя попытками того же Groq candidate, включая
+первичный draft, retry transient-ошибки и одну bounded quality-repair попытку. 429, quota,
 timeout, network unavailable и 5xx не запускают paid tier или cloud fallback: после
-bounded retry результатом остаётся manual/no-provider. `HERMES_PROVIDER_MODEL` остаётся
+исчерпания bounded budget результатом остаётся manual/no-provider. `HERMES_PROVIDER_MODEL` остаётся
 provider-neutral contract, но external mode сейчас принимает только зафиксированный
 candidate `openai/gpt-oss-120b`.
+
+До HMAC intake worker выполняет детерминированный editorial preflight: числовые токены draft
+должны быть заземлены в разрешённом source packet, а консервативная plain-text photo caption
+вместе с доверенным source URL и меткой `Источник` должна укладываться в лимит 1024 UTF-16
+символа Telegram. Для этих двух blocker worker может один раз запросить исправление у того же
+approved provider в рамках общего лимита попыток. Нерешённый blocker останавливает job
+fail-closed и не вызывает ни YFC intake, ни Telegram preview/autopublish. Успешный preflight
+не является approval публикации: `manual_required`, Gate B/C и единственный publisher остаются
+на стороне YFC.
 
 Worker не содержит source fetching, scheduler, database client, shell/tool dispatch,
 browser, MCP, plugins, Telegram Bot API или publish endpoint. Полный Hermes monolith

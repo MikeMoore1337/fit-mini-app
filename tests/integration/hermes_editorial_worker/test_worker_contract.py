@@ -59,6 +59,41 @@ class _CaptureProviderHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
+class _SequenceProviderHandler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    response_documents: ClassVar[list[dict[str, object]]] = []
+    captured_requests: ClassVar[list[dict[str, object]]] = []
+
+    def log_message(self, *_args: object) -> None:
+        return
+
+    def do_POST(self) -> None:
+        length = int(self.headers.get("Content-Length", "0"))
+        raw = self.rfile.read(length)
+        request = json.loads(raw.decode("utf-8"))
+        self.__class__.captured_requests.append(request)
+        response_document = self.__class__.response_documents.pop(0)
+        body = json.dumps(
+            {
+                "model": "mock-editorial-v1",
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(response_document, ensure_ascii=False),
+                        }
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        ).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.wfile.write(body)
+
+
 def valid_job() -> editorial_worker.EditorialJob:
     return editorial_worker.EditorialJob.model_validate(
         {
@@ -105,6 +140,137 @@ def _provider_request_with_capture(
         thread.join(timeout=5)
         server.server_close()
         _CaptureProviderHandler.response_document = previous_response_document
+
+
+def _provider_request_with_sequence(
+    monkeypatch: pytest.MonkeyPatch,
+    response_documents: list[dict[str, object]],
+) -> tuple[editorial_worker.DraftProposal, list[dict[str, object]]]:
+    monkeypatch.setenv("HERMES_PROVIDER_MODE", editorial_worker.LOCAL_MOCK_MODE)
+    monkeypatch.setenv("HERMES_PROVIDER_API_KEY", "test-only-key")
+    monkeypatch.setenv("HERMES_PROVIDER_MODEL", "mock-editorial-v1")
+    monkeypatch.setenv("HERMES_PROVIDER_MAX_ATTEMPTS", "2")
+    monkeypatch.setenv("HERMES_PROVIDER_RETRY_BACKOFF_SECONDS", "0")
+    _SequenceProviderHandler.response_documents = list(response_documents)
+    _SequenceProviderHandler.captured_requests = []
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _SequenceProviderHandler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    monkeypatch.setenv("HERMES_PROVIDER_BASE_URL", f"http://127.0.0.1:{server.server_port}/v1")
+    try:
+        proposal = editorial_worker._provider_request(valid_job().source)
+        return proposal, list(_SequenceProviderHandler.captured_requests)
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
+
+
+def test_preflight_uses_source_packet_numbers_and_trusted_url_budget() -> None:
+    source = valid_job().source.model_copy(
+        update={
+            "content": "В исследовании участвовали 12 взрослых в течение 8 недель.",
+        }
+    )
+    proposal = editorial_worker.DraftProposal(
+        headline="Исследование о восстановлении",
+        summary="Авторы описали результаты для 12 взрослых за 8 недель.",
+        why_it_matters="Данные требуют редакторской проверки.",
+    )
+
+    assert editorial_worker._preflight_warnings(proposal, source) == ()
+    assert (
+        editorial_worker._telegram_photo_caption_length(proposal, source)
+        <= editorial_worker.TELEGRAM_PHOTO_CAPTION_LIMIT
+    )
+
+
+def test_preflight_repairs_unsupported_number_with_same_provider(monkeypatch) -> None:
+    rejected = {
+        "headline": "Что показала новая работа",
+        "summary": "Авторы описали результат с улучшением на 99%.",
+        "why_it_matters": "Материал требует редакторской проверки.",
+    }
+    repaired = {
+        "headline": "Что показала новая работа",
+        "summary": "Авторы описали результат в исследованной группе.",
+        "why_it_matters": "Материал требует редакторской проверки.",
+    }
+
+    proposal, requests = _provider_request_with_sequence(monkeypatch, [rejected, repaired])
+
+    assert proposal.summary == repaired["summary"]
+    assert len(requests) == 2
+    assert "REPAIR_REQUEST" in requests[1]["messages"][-1]["content"]
+    assert "unsupported_number" in requests[1]["messages"][-1]["content"]
+    assert editorial_worker._preflight_warnings(proposal, valid_job().source) == ()
+
+
+def test_preflight_repairs_photo_caption_with_trusted_source_url(monkeypatch) -> None:
+    rejected = {
+        "headline": "З" * 180,
+        "summary": "С" * 810,
+        "why_it_matters": "",
+    }
+    repaired = {
+        "headline": "Короткий заголовок исследования",
+        "summary": "Авторы описали результат и обозначили ограничение.",
+        "why_it_matters": "Материал требует редакторской проверки.",
+    }
+    source = valid_job().source
+    assert (
+        editorial_worker._telegram_photo_caption_length(
+            editorial_worker.DraftProposal.model_validate(rejected), source
+        )
+        > editorial_worker.TELEGRAM_PHOTO_CAPTION_LIMIT
+    )
+    assert (
+        editorial_worker._telegram_character_count(
+            f"{rejected['headline']}\n\n{rejected['summary']}"
+        )
+        <= editorial_worker.TELEGRAM_PHOTO_CAPTION_LIMIT
+    )
+
+    proposal, requests = _provider_request_with_sequence(monkeypatch, [rejected, repaired])
+
+    assert proposal.headline == repaired["headline"]
+    assert len(requests) == 2
+    repair_content = requests[1]["messages"][-1]["content"]
+    assert "telegram_photo_caption_too_long" in repair_content
+    assert str(source.canonical_url) in repair_content
+    assert editorial_worker._telegram_photo_caption_length(proposal, source) <= 1024
+
+
+def test_unresolved_repair_fails_closed_before_hmac_intake(monkeypatch) -> None:
+    rejected = {
+        "headline": "Что показала новая работа",
+        "summary": "Авторы описали результат с улучшением на 99%.",
+        "why_it_matters": "Материал требует редакторской проверки.",
+    }
+    monkeypatch.setenv("HERMES_SOURCE_ALLOWLIST", "journal-one")
+    monkeypatch.setenv("HERMES_PROVIDER_MODE", editorial_worker.LOCAL_MOCK_MODE)
+    monkeypatch.setenv("HERMES_PROVIDER_API_KEY", "test-only-key")
+    monkeypatch.setenv("HERMES_PROVIDER_MODEL", "mock-editorial-v1")
+    monkeypatch.setenv("HERMES_PROVIDER_BASE_URL", "http://127.0.0.1:18080/v1")
+    monkeypatch.setenv("HERMES_PROVIDER_MAX_ATTEMPTS", "2")
+    monkeypatch.setenv("HERMES_PROVIDER_RETRY_BACKOFF_SECONDS", "0")
+    calls = 0
+
+    def always_rejected(*_args: object, **_kwargs: object) -> editorial_worker.DraftProposal:
+        nonlocal calls
+        calls += 1
+        return editorial_worker.DraftProposal.model_validate(rejected)
+
+    monkeypatch.setattr(editorial_worker, "_provider_request_once", always_rejected)
+    monkeypatch.setattr(
+        editorial_worker,
+        "_post_intake",
+        lambda _job, _body: pytest.fail("HMAC intake must not run after unresolved preflight"),
+    )
+
+    with pytest.raises(editorial_worker.WorkerError, match="editorial_preflight_repair_failed"):
+        editorial_worker.run_job(valid_job())
+    assert calls == 2
 
 
 def test_intake_payload_excludes_source_content(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -254,6 +420,34 @@ def test_external_gpt_oss_request_uses_hidden_reasoning_and_strict_schema() -> N
     )
     assert schema["required"] == ["headline", "summary", "why_it_matters"]
     assert schema["additionalProperties"] is False
+    assert "tools" not in request
+
+
+def test_external_repair_keeps_the_pinned_provider_contract() -> None:
+    previous = editorial_worker.DraftProposal(
+        headline="Заголовок",
+        summary="Результат с улучшением на 99%.",
+        why_it_matters="Ограниченный смысл",
+    )
+
+    request = editorial_worker._provider_request_body(
+        valid_job().source,
+        provider_mode=editorial_worker.EXTERNAL_MODE,
+        model=editorial_worker.EXTERNAL_PROVIDER_MODEL,
+        repair_warnings=("unsupported_number",),
+        previous_proposal=previous,
+    )
+
+    assert request["model"] == editorial_worker.EXTERNAL_PROVIDER_MODEL
+    assert len(request["messages"]) == 1
+    assert request["messages"][0]["role"] == "user"
+    assert "REPAIR_REQUEST" in request["messages"][0]["content"]
+    assert "unsupported_number" in request["messages"][0]["content"]
+    assert valid_job().source.canonical_url in request["messages"][0]["content"]
+    assert request["max_completion_tokens"] == 2048
+    assert request["reasoning_effort"] == "low"
+    assert request["reasoning_format"] == "hidden"
+    assert request["temperature"] == 0.6
     assert "tools" not in request
 
 
