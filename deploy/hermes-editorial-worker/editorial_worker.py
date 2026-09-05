@@ -29,7 +29,7 @@ UPSTREAM_TAG = "v2026.8.31"
 UPSTREAM_COMMIT = "29112bef099274229cadff79cdff7bf7b99c4b77"
 JOB_SCHEMA_VERSION = "hermes-editorial-job-v1"
 INTAKE_SCHEMA_VERSION = "hermes-editorial-intake-v1"
-PROMPT_VERSION = "task142-editorial-worker-v1"
+PROMPT_VERSION = "task143-editorial-worker-v1"
 SKILL_VERSION = "yfc-hermes-editorial-v1"
 LOCAL_MOCK_MODE = "local_mock"
 EXTERNAL_MODE = "external"
@@ -63,7 +63,8 @@ TELEGRAM_PHOTO_CAPTION_LIMIT = 1024
 NUMBER_PATTERN = re.compile(r"(?<![\w])\d+(?:[.,]\d+)?(?:%|\s?(?:mg|g|kg|мг|г|кг))?")
 EXTERNAL_GPT_OSS_SOFT_BUDGETS = (
     "Soft editorial budgets (not JSON Schema constraints): headline <= 140 characters; "
-    "summary <= 900 characters; why_it_matters <= 240 characters. Keep the draft concise; "
+    "summary uses the remaining available caption budget; why_it_matters <= 240 characters. "
+    "Keep the draft concise; "
     "the worker enforces separate hard limits locally."
 )
 LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "host.docker.internal"})
@@ -426,6 +427,29 @@ def _telegram_photo_caption_length(proposal: DraftProposal, source: SourcePacket
     return _telegram_character_count(_telegram_photo_caption_text(proposal, source))
 
 
+def _external_caption_draft_budget(source: SourcePacket) -> int:
+    trusted_source_line = f"Источник\n{_trusted_source_url(source)}"
+    reserved_separators = 3 * _telegram_character_count("\n\n")
+    return max(
+        0,
+        TELEGRAM_PHOTO_CAPTION_LIMIT
+        - _telegram_character_count(trusted_source_line)
+        - reserved_separators,
+    )
+
+
+def _external_gpt_oss_soft_budgets(source: SourcePacket) -> str:
+    available_budget = _external_caption_draft_budget(source)
+    return (
+        f"{EXTERNAL_GPT_OSS_SOFT_BUDGETS} Use as much of the available source-grounded "
+        "detail as useful, without filler or repetition. Keep the combined UTF-16 length "
+        f"of the three draft fields at or below {available_budget} characters so the final "
+        "photo caption leaves room for the trusted source label and URL. This is a soft "
+        "editorial budget, not a JSON Schema constraint; the worker applies hard limits "
+        "locally."
+    )
+
+
 def _preflight_warnings(proposal: DraftProposal, source: SourcePacket) -> tuple[str, ...]:
     warnings: list[str] = []
     source_numbers = set(NUMBER_PATTERN.findall(_source_grounding_text(source)))
@@ -489,7 +513,7 @@ def _repair_provider_messages(
                 "role": "user",
                 "content": (
                     f"{system_message['content']}\n\n"
-                    f"{EXTERNAL_GPT_OSS_SOFT_BUDGETS}\n\n"
+                    f"{_external_gpt_oss_soft_budgets(source)}\n\n"
                     f"{user_message['content']}\n\n"
                     f"{repair_message}"
                 ),
@@ -515,7 +539,7 @@ def _external_gpt_oss_messages(source: SourcePacket) -> list[dict[str, str]]:
             "role": "user",
             "content": (
                 f"{system_message['content']}\n\n"
-                f"{EXTERNAL_GPT_OSS_SOFT_BUDGETS}\n\n"
+                f"{_external_gpt_oss_soft_budgets(source)}\n\n"
                 f"{user_message['content']}"
             ),
         }

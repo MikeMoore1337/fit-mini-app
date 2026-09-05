@@ -89,6 +89,9 @@ payload.  Normal logs contain correlation-safe ids/reason codes only.
 числового утверждения. Консервативный plain-text photo caption считается вместе с доверенным
 source URL и меткой `Источник` и должен укладываться в лимит 1024 UTF-16 символа, установленный
 [официальной документацией Telegram Bot API](https://core.telegram.org/bots/api).
+Внешний GPT-OSS prompt получает динамический мягкий бюджет для трёх полей с учётом длины
+доверенного URL и служебных разделителей, чтобы использовать доступное место для подтверждённых
+деталей без filler; лимит 1024 и hard limits полей не изменяются.
 
 Для `unsupported_number` и `telegram_photo_caption_too_long` разрешён один bounded repair request
 к тому же approved provider. Он делит общий бюджет максимум двух provider attempts с исходным
