@@ -105,6 +105,82 @@ export function emptyHydrationDay(diaryDate: string) {
   };
 }
 
+export const contextualReminderTemplates = [
+  {
+    template_key: 'meal_logging',
+    version: 'v1',
+    label: 'Записать приём пищи',
+    purpose: 'Мягко напомнить добавить запись, когда выбранное окно ещё пусто.',
+    schedule_kind: 'times',
+    allowed_schedule: 'До трёх выбранных окон в выбранные дни недели.',
+    quiet_hours_behavior: 'Окно внутри тихих часов пропускается без переноса на утро.',
+    deep_link: 'Питание → быстрый ввод за выбранный приём пищи.',
+    suppression: 'Пропускается, если в этом окне уже есть сохранённая запись питания.',
+    neutral_copy: 'Можно записать приём пищи. Подробности — в приложении.',
+    default_enabled: false,
+    enabled: false,
+    weekdays: [0, 1, 2, 3, 4, 5, 6],
+    times: ['08:00:00', '13:00:00', '19:00:00'],
+    window_start: null,
+    window_end: null,
+    interval_minutes: null,
+    max_per_day: 3,
+    minimum_spacing_minutes: 120,
+    telegram_linked: true,
+    telegram_enabled: true,
+    channel_note: 'Событие появится в приложении; в Telegram придёт нейтральный текст.',
+  },
+  {
+    template_key: 'hydration',
+    version: 'v1',
+    label: 'Выпить воду',
+    purpose: 'Напомнить отметить воду или другой напиток в дневнике.',
+    schedule_kind: 'interval',
+    allowed_schedule: 'Повтор в выбранном рабочем окне с ограничением числа напоминаний в день.',
+    quiet_hours_behavior: 'Слоты внутри тихих часов пропускаются без catch-up серии.',
+    deep_link: 'Питание → быстрый ввод воды за текущую дату.',
+    suppression: 'Ближайший слот пропускается после недавней записи гидратации.',
+    neutral_copy: 'Можно выпить воды. Подробности — в приложении.',
+    default_enabled: false,
+    enabled: false,
+    weekdays: [0, 1, 2, 3, 4, 5, 6],
+    times: [],
+    window_start: '09:00:00',
+    window_end: '21:00:00',
+    interval_minutes: 120,
+    max_per_day: 6,
+    minimum_spacing_minutes: 120,
+    telegram_linked: true,
+    telegram_enabled: true,
+    channel_note: 'Событие появится в приложении; в Telegram придёт нейтральный текст.',
+  },
+  {
+    template_key: 'movement_break',
+    version: 'v1',
+    label: 'Разминка / перерыв от сидения',
+    purpose: 'Предложить короткий перерыв и немного подвигаться по расписанию.',
+    schedule_kind: 'interval',
+    allowed_schedule: 'Плановые слоты в выбранном рабочем окне; приложение не измеряет сидение.',
+    quiet_hours_behavior: 'Слоты внутри тихих часов пропускаются без catch-up серии.',
+    deep_link: 'Сегодня → контекст приложения для короткого перерыва.',
+    suppression: 'Слот не переносится автоматически, если он был пропущен.',
+    neutral_copy:
+      'Пора сделать короткий перерыв и немного подвигаться. Подробности — в приложении.',
+    default_enabled: false,
+    enabled: false,
+    weekdays: [0, 1, 2, 3, 4],
+    times: [],
+    window_start: '10:00:00',
+    window_end: '18:00:00',
+    interval_minutes: 120,
+    max_per_day: 5,
+    minimum_spacing_minutes: 120,
+    telegram_linked: true,
+    telegram_enabled: true,
+    channel_note: 'Событие появится в приложении; в Telegram придёт нейтральный текст.',
+  },
+];
+
 export async function installPlatformApi(
   page: Page,
   options: PlatformApiOptions = {},
@@ -1798,6 +1874,9 @@ export async function installPlatformApi(
           workout_reminders_enabled: true,
           weekly_check_in_reminders_enabled: true,
           measurement_reminders_enabled: false,
+          meal_reminders_enabled: false,
+          hydration_reminders_enabled: false,
+          movement_reminders_enabled: false,
           telegram_enabled: true,
           telegram_linked: linked,
           reminder_hour: 9,
@@ -1805,6 +1884,25 @@ export async function installPlatformApi(
           quiet_hours_end: '08:00:00',
         },
       });
+    }
+    if (path.endsWith('/notifications/templates')) {
+      const linked = options.notificationState !== 'unlinked';
+      return route.fulfill({
+        json: contextualReminderTemplates.map((template) => ({
+          ...template,
+          telegram_linked: linked,
+          channel_note: linked
+            ? template.channel_note
+            : 'В приложении доступно всегда; Telegram появится после связывания аккаунта.',
+        })),
+      });
+    }
+    if (/\/notifications\/templates\/(meal_logging|hydration|movement_break)$/.test(path)) {
+      const templateKey = path.split('/').pop();
+      const template = contextualReminderTemplates.find(
+        (item) => item.template_key === templateKey,
+      );
+      return route.fulfill({ json: { ...template, ...request.postDataJSON() } });
     }
     if (path.endsWith('/notifications/read-all')) {
       notificationsRead = true;

@@ -45,6 +45,8 @@ ALLOWED_NOTIFICATION_QUERY_KEYS = frozenset(
         "report_handoff_id",
         "weekly_review",
         "date",
+        "meal",
+        "hydration",
         "return_to",
     }
 )
@@ -90,6 +92,22 @@ def normalize_notification_action_url(action_url: str | None) -> str | None:
     weekly_review = query.get("weekly_review", [None])[0]
     if weekly_review is not None and weekly_review != "1":
         raise ValueError("invalid weekly review destination")
+    date_value = query.get("date", [None])[0]
+    if date_value is not None:
+        try:
+            date.fromisoformat(date_value)
+        except ValueError as exc:
+            raise ValueError("invalid notification date") from exc
+    meal = query.get("meal", [None])[0]
+    if meal is not None and meal not in {"breakfast", "lunch", "dinner", "snacks"}:
+        raise ValueError("invalid notification meal")
+    hydration = query.get("hydration", [None])[0]
+    if hydration is not None and hydration != "quick":
+        raise ValueError("invalid hydration destination")
+    if meal is not None and section != "nutrition":
+        raise ValueError("meal must open nutrition section")
+    if hydration is not None and section != "nutrition":
+        raise ValueError("hydration must open nutrition section")
     return_to = query.get("return_to", [None])[0]
     if return_to is not None and return_to != "/app?section=profile#profile-notifications":
         raise ValueError("invalid notification return destination")
@@ -113,6 +131,11 @@ def neutral_telegram_text(notification: Notification) -> str:
         "trainer_program_update": "Тренер обновил программу. Подробности — в приложении.",
         "weekly_check_in_reminder": "Пора подвести итоги недели. Подробности — в приложении.",
         "measurement_reminder": "Можно обновить замеры. Подробности — в приложении.",
+        "meal_logging_reminder": "Можно записать приём пищи. Подробности — в приложении.",
+        "hydration_reminder": "Можно выпить воды. Подробности — в приложении.",
+        "movement_break_reminder": (
+            "Пора сделать короткий перерыв и немного подвигаться. Подробности — в приложении."
+        ),
         "relationship_event": "Статус связи с тренером изменился. Подробности — в приложении.",
         "nutrition_update": "Ориентиры питания обновлены. Подробности — в приложении.",
         "workout_change": "Расписание тренировки изменилось. Подробности — в приложении.",
@@ -134,6 +157,9 @@ def reminder_category_enabled(
         "workout_reminder": setting.workout_reminders_enabled,
         "weekly_check_in_reminder": setting.weekly_check_in_reminders_enabled,
         "measurement_reminder": setting.measurement_reminders_enabled,
+        "meal_logging_reminder": setting.meal_reminders_enabled,
+        "hydration_reminder": setting.hydration_reminders_enabled,
+        "movement_break_reminder": setting.movement_reminders_enabled,
     }
     return category_flags.get(notification.category, True)
 
@@ -172,6 +198,9 @@ def resolve_notification_destination(
         "trainer_program_update": "/app?section=programs",
         "weekly_check_in_reminder": "/app?section=progress&weekly_review=1",
         "measurement_reminder": "/app?section=progress",
+        "meal_logging_reminder": "/app?section=nutrition",
+        "hydration_reminder": "/app?section=nutrition",
+        "movement_break_reminder": "/app?section=today",
         "relationship_event": "/app?section=profile",
         "nutrition_update": "/app?section=nutrition",
         "workout_change": "/app?section=progress",

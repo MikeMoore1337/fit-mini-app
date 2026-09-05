@@ -104,6 +104,19 @@ function requestedNutritionDate(search: string): string | undefined {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
 }
 
+type NutritionMealType = 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+
+function requestedNutritionMeal(search: string): NutritionMealType | undefined {
+  const value = new URLSearchParams(search).get('meal');
+  return value === 'breakfast' || value === 'lunch' || value === 'dinner' || value === 'snacks'
+    ? value
+    : undefined;
+}
+
+function requestedHydrationQuick(search: string): boolean {
+  return new URLSearchParams(search).get('hydration') === 'quick';
+}
+
 function requestedWellbeingDate(search: string): string | undefined {
   const value = new URLSearchParams(search).get('wellbeing_date');
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
@@ -185,6 +198,9 @@ export default function MiniAppPage() {
       : 'today';
   });
   const section = requestedSection(search) ?? fallbackSection;
+  const nutritionDate = requestedNutritionDate(search);
+  const nutritionMeal = requestedNutritionMeal(search);
+  const nutritionHydrationOpen = requestedHydrationQuick(search);
   const reportHandoffId =
     section === 'progress'
       ? positiveId(new URLSearchParams(search).get('report_handoff_id'))
@@ -393,9 +409,16 @@ export default function MiniAppPage() {
             {section === 'catalog' && <ExerciseCatalog canCreate={Boolean(user?.is_coach)} />}
             {section === 'nutrition' && (
               <NutritionPage
-                key={JSON.stringify(user?.profile?.kbju ?? null)}
+                key={JSON.stringify([
+                  user?.profile?.kbju ?? null,
+                  nutritionDate,
+                  nutritionMeal,
+                  nutritionHydrationOpen,
+                ])}
                 initial={user?.profile?.kbju}
-                initialDate={requestedNutritionDate(search)}
+                initialDate={nutritionDate}
+                initialMealType={nutritionMeal}
+                initialHydrationOpen={nutritionHydrationOpen}
                 returnPath={requestedProgressReturn(search)}
                 timeZone={user?.profile?.timezone}
                 onSaved={async () => void (await reloadUser())}

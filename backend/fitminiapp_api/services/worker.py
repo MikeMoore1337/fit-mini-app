@@ -40,6 +40,7 @@ from fitminiapp_api.services.notifications import (
     sync_workout_reminders,
     validate_notification_destination,
 )
+from fitminiapp_api.services.reminder_templates import sync_contextual_reminders
 from fitminiapp_api.services.weekly_digest import (
     claim_due_digest_deliveries,
     digest_delivery_counts,
@@ -515,6 +516,7 @@ async def run_once(*, sync_reminders: bool = True) -> None:
             sync_workout_reminders(db)
             sync_weekly_check_in_reminders(db)
             sync_measurement_reminders(db)
+            sync_contextual_reminders(db)
         rows = claim_due_notifications(db)
         users = {
             user.id: user

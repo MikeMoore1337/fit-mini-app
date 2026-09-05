@@ -2,16 +2,21 @@ import type { NutritionTarget } from '../../shared/api/types';
 import { AppLink } from '../../shared/navigation/router';
 import { NutritionDiary } from './NutritionDiary';
 import { NutritionForm } from './NutritionForm';
+import type { MealType } from './FoodPickerDialog';
 
 export function NutritionPage({
   initial,
   initialDate,
+  initialMealType,
+  initialHydrationOpen = false,
   onSaved,
   returnPath,
   timeZone,
 }: {
   initial?: NutritionTarget | null;
   initialDate?: string;
+  initialMealType?: MealType;
+  initialHydrationOpen?: boolean;
   onSaved?: () => void | Promise<void>;
   returnPath?: string;
   timeZone?: string | null;
@@ -25,7 +30,12 @@ export function NutritionPage({
           </AppLink>
         </nav>
       )}
-      <NutritionDiary initialDate={initialDate} timeZone={timeZone} />
+      <NutritionDiary
+        initialDate={initialDate}
+        initialMealType={initialMealType}
+        initialHydrationOpen={initialHydrationOpen}
+        timeZone={timeZone}
+      />
       <div id="nutrition-target-settings" className="nutrition-target-settings">
         <NutritionForm initial={initial} timeZone={timeZone} onSaved={onSaved} />
       </div>

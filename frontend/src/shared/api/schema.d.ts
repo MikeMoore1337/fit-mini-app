@@ -2433,6 +2433,40 @@ export interface paths {
         patch: operations["update_notification_settings_api_v1_notifications_settings_patch"];
         trace?: never;
     };
+    "/api/v1/notifications/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Reminder Templates */
+        get: operations["get_reminder_templates_api_v1_notifications_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/templates/{template_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Reminder Template */
+        patch: operations["patch_reminder_template_api_v1_notifications_templates__template_key__patch"];
+        trace?: never;
+    };
     "/api/v1/notifications": {
         parameters: {
             query?: never;
@@ -6156,6 +6190,12 @@ export interface components {
             weekly_check_in_reminders_enabled: boolean;
             /** Measurement Reminders Enabled */
             measurement_reminders_enabled: boolean;
+            /** Meal Reminders Enabled */
+            meal_reminders_enabled: boolean;
+            /** Hydration Reminders Enabled */
+            hydration_reminders_enabled: boolean;
+            /** Movement Reminders Enabled */
+            movement_reminders_enabled: boolean;
             /** Telegram Enabled */
             telegram_enabled: boolean;
             /** Telegram Linked */
@@ -6175,6 +6215,12 @@ export interface components {
             weekly_check_in_reminders_enabled?: boolean | null;
             /** Measurement Reminders Enabled */
             measurement_reminders_enabled?: boolean | null;
+            /** Meal Reminders Enabled */
+            meal_reminders_enabled?: boolean | null;
+            /** Hydration Reminders Enabled */
+            hydration_reminders_enabled?: boolean | null;
+            /** Movement Reminders Enabled */
+            movement_reminders_enabled?: boolean | null;
             /** Telegram Enabled */
             telegram_enabled?: boolean | null;
             /** Reminder Hour */
@@ -7444,6 +7490,78 @@ export interface components {
             verification_required: boolean;
             /** Verification Token */
             verification_token?: string | null;
+        };
+        /** ReminderTemplateResponse */
+        ReminderTemplateResponse: {
+            /**
+             * Template Key
+             * @enum {string}
+             */
+            template_key: "meal_logging" | "hydration" | "movement_break";
+            /** Version */
+            version: string;
+            /** Label */
+            label: string;
+            /** Purpose */
+            purpose: string;
+            /**
+             * Schedule Kind
+             * @enum {string}
+             */
+            schedule_kind: "times" | "interval";
+            /** Allowed Schedule */
+            allowed_schedule: string;
+            /** Quiet Hours Behavior */
+            quiet_hours_behavior: string;
+            /** Deep Link */
+            deep_link: string;
+            /** Suppression */
+            suppression: string;
+            /** Neutral Copy */
+            neutral_copy: string;
+            /** Default Enabled */
+            default_enabled: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /** Weekdays */
+            weekdays: number[];
+            /** Times */
+            times: string[];
+            /** Window Start */
+            window_start?: string | null;
+            /** Window End */
+            window_end?: string | null;
+            /** Interval Minutes */
+            interval_minutes?: number | null;
+            /** Max Per Day */
+            max_per_day: number;
+            /** Minimum Spacing Minutes */
+            minimum_spacing_minutes: number;
+            /** Telegram Linked */
+            telegram_linked: boolean;
+            /** Telegram Enabled */
+            telegram_enabled: boolean;
+            /** Channel Note */
+            channel_note: string;
+        };
+        /** ReminderTemplateUpdate */
+        ReminderTemplateUpdate: {
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Weekdays */
+            weekdays?: number[] | null;
+            /** Times */
+            times?: string[] | null;
+            /** Window Start */
+            window_start?: string | null;
+            /** Window End */
+            window_end?: string | null;
+            /** Interval Minutes */
+            interval_minutes?: number | null;
+            /** Max Per Day */
+            max_per_day?: number | null;
+            /** Minimum Spacing Minutes */
+            minimum_spacing_minutes?: number | null;
         };
         /** ReportHandoffCheckIn */
         ReportHandoffCheckIn: {
@@ -14239,6 +14357,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotificationSettingResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_reminder_templates_api_v1_notifications_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderTemplateResponse"][];
+                };
+            };
+        };
+    };
+    patch_reminder_template_api_v1_notifications_templates__template_key__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReminderTemplateUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderTemplateResponse"];
                 };
             };
             /** @description Validation Error */

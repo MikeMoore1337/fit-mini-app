@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { nutritionDaySummary, openDetailsByHeading as openCard } from './fixtures/locators';
-import { emptyHydrationDay } from './fixtures/platform-api';
+import { contextualReminderTemplates, emptyHydrationDay } from './fixtures/platform-api';
 
 type AppDestination = 'Сегодня' | 'Программа' | 'Прогресс' | 'Питание' | 'Упражнения' | 'Профиль';
 
@@ -736,6 +736,9 @@ async function mockApi(
           workout_reminders_enabled: true,
           weekly_check_in_reminders_enabled: true,
           measurement_reminders_enabled: false,
+          meal_reminders_enabled: false,
+          hydration_reminders_enabled: false,
+          movement_reminders_enabled: false,
           telegram_enabled: true,
           telegram_linked: telegramLinked,
           reminder_hour: 9,
@@ -743,6 +746,23 @@ async function mockApi(
           quiet_hours_end: null,
         },
       });
+    if (path.endsWith('/notifications/templates'))
+      return route.fulfill({
+        json: contextualReminderTemplates.map((template) => ({
+          ...template,
+          telegram_linked: telegramLinked,
+          channel_note: telegramLinked
+            ? template.channel_note
+            : 'В приложении доступно всегда; Telegram появится после связывания аккаунта.',
+        })),
+      });
+    if (/\/notifications\/templates\/(meal_logging|hydration|movement_break)$/.test(path)) {
+      const templateKey = path.split('/').pop();
+      const template = contextualReminderTemplates.find(
+        (item) => item.template_key === templateKey,
+      );
+      return route.fulfill({ json: { ...template, ...request.postDataJSON() } });
+    }
     if (path.endsWith('/notifications/read-all'))
       return route.fulfill({ json: { updated: notificationItems.length } });
     const notificationOpenMatch = path.match(/\/notifications\/(\d+)\/open$/);
@@ -1873,6 +1893,37 @@ test('notification settings explain unavailable Telegram and stale targets recov
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Профиль');
   await page.getByRole('link', { name: 'Уведомления' }).click();
+  const templatesDisclosure = page.locator('details.notification-templates');
+  await expect(templatesDisclosure).not.toHaveAttribute('open');
+  await templatesDisclosure.locator(':scope > summary').click();
+  await expect(templatesDisclosure).toHaveAttribute('open');
+  const reminderTemplates = page.locator('.notification-template-card');
+  await expect(reminderTemplates).toHaveCount(3);
+  const mealTemplate = reminderTemplates.filter({ hasText: 'Записать приём пищи' });
+  await expect(
+    mealTemplate.getByRole('button', { name: 'Сохранить шаблон «Записать приём пищи»' }),
+  ).toBeDisabled();
+  await mealTemplate.getByRole('checkbox', { name: 'Включить: Записать приём пищи' }).check();
+  await expect(mealTemplate.getByText('Окно 1')).toBeVisible();
+  await expect(
+    mealTemplate.getByRole('button', { name: 'Сохранить шаблон «Записать приём пищи»' }),
+  ).toBeEnabled();
+  for (const visualState of [
+    { scheme: 'light' as const, width: 1280, height: 900, name: 'desktop-light' },
+    { scheme: 'dark' as const, width: 1280, height: 900, name: 'desktop-dark' },
+    { scheme: 'light' as const, width: 390, height: 844, name: 'mobile-light' },
+    { scheme: 'dark' as const, width: 390, height: 844, name: 'mobile-dark' },
+  ]) {
+    await page.emulateMedia({ colorScheme: visualState.scheme, reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: visualState.width, height: visualState.height });
+    await expect(page.locator('html')).toHaveAttribute('data-color-scheme', visualState.scheme);
+    const sectionBox = await page.locator('#profile-notifications').boundingBox();
+    expect(sectionBox).not.toBeNull();
+    expect(sectionBox!.width).toBeLessThanOrEqual(visualState.width);
+    await page.locator('#profile-notifications').screenshot({
+      path: `../.artifacts/tasks/84/evidence/visual/${visualState.name}.png`,
+    });
+  }
   const notificationCenter = page.locator('details.notification-center');
   await notificationCenter.locator(':scope > summary').click();
   await expect(notificationCenter).toHaveAttribute('open');
@@ -1917,6 +1968,23 @@ test('notification settings explain unavailable Telegram and stale targets recov
   await page.getByRole('button', { name: 'Открыть: Комментарий тренера к тренировке' }).click();
   await expect(page).toHaveURL('/app?section=profile#profile-notifications');
   await expect(page.getByText(/Связанный объект больше недоступен/)).toBeVisible();
+});
+
+test('notification nutrition deep links open the intended quick entry context', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockApi(page);
+  await page.addInitScript(() => sessionStorage.setItem('fit_access_token', 'test-token'));
+  await page.goto('/app?section=nutrition&date=2030-01-10&meal=lunch');
+  await expect(page.getByRole('dialog', { name: 'Быстрый ввод' })).toBeVisible();
+  await expect(
+    page.getByText('Обед · 2030-01-10. Название и время можно не указывать.'),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Закрыть добавление' }).click();
+
+  await page.goto('/app?section=nutrition&date=2030-01-10&hydration=quick');
+  await expect(page.getByRole('button', { name: 'Скрыть детали' })).toBeVisible();
 });
 
 test('notification empty and error states keep compact profile rhythm', async ({ page }) => {

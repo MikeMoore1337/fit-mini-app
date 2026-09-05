@@ -11,6 +11,8 @@ from fitminiapp_api.schemas.notification import (
     NotificationResponse,
     NotificationSettingResponse,
     NotificationSettingUpdate,
+    ReminderTemplateResponse,
+    ReminderTemplateUpdate,
 )
 from fitminiapp_api.services.notifications import (
     create_manual_notification,
@@ -21,6 +23,11 @@ from fitminiapp_api.services.notifications import (
     mark_notification_read,
     resolve_notification_destination,
 )
+from fitminiapp_api.services.reminder_templates import (
+    get_template_definition,
+    list_reminder_templates,
+    update_reminder_template,
+)
 
 router = APIRouter()
 
@@ -30,6 +37,9 @@ def _settings_response(settings, user: User) -> NotificationSettingResponse:
         workout_reminders_enabled=settings.workout_reminders_enabled,
         weekly_check_in_reminders_enabled=settings.weekly_check_in_reminders_enabled,
         measurement_reminders_enabled=settings.measurement_reminders_enabled,
+        meal_reminders_enabled=settings.meal_reminders_enabled,
+        hydration_reminders_enabled=settings.hydration_reminders_enabled,
+        movement_reminders_enabled=settings.movement_reminders_enabled,
         telegram_enabled=settings.telegram_enabled,
         telegram_linked=user.telegram_user_id is not None,
         reminder_hour=settings.reminder_hour,
@@ -89,6 +99,9 @@ def update_notification_settings(
         "workout_reminders_enabled",
         "weekly_check_in_reminders_enabled",
         "measurement_reminders_enabled",
+        "meal_reminders_enabled",
+        "hydration_reminders_enabled",
+        "movement_reminders_enabled",
         "telegram_enabled",
         "reminder_hour",
         "quiet_hours_start",
@@ -99,6 +112,30 @@ def update_notification_settings(
     db.commit()
     db.refresh(settings)
     return _settings_response(settings, current_user)
+
+
+@router.get("/templates", response_model=list[ReminderTemplateResponse])
+def get_reminder_templates(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    settings = get_or_create_settings(db, current_user)
+    return list_reminder_templates(db, current_user, settings)
+
+
+@router.patch("/templates/{template_key}", response_model=ReminderTemplateResponse)
+def patch_reminder_template(
+    template_key: str,
+    payload: ReminderTemplateUpdate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        get_template_definition(template_key)
+        settings = get_or_create_settings(db, current_user)
+        return update_reminder_template(db, current_user, settings, template_key, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("", response_model=list[NotificationResponse])

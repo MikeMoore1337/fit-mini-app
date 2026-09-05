@@ -164,11 +164,16 @@ function HydrationEntryRow({ entry, onChanged }: { entry: HydrationEntry; onChan
   );
 }
 
-export function HydrationTracker({ diaryDate }: { diaryDate: string }) {
+export function HydrationTracker({
+  diaryDate,
+  initialExpanded = false,
+}: {
+  diaryDate: string;
+  initialExpanded?: boolean;
+}) {
   const queryClient = useQueryClient();
   const { toast } = useFeedback();
-  const deepLinked = new URLSearchParams(window.location.search).get('hydration') === 'quick';
-  const [expanded, setExpanded] = useState(deepLinked);
+  const [expanded, setExpanded] = useState(initialExpanded);
   const [customVolume, setCustomVolume] = useState('');
   const [beverageType, setBeverageType] = useState('water');
   const [undoEntry, setUndoEntry] = useState<HydrationEntry | null>(null);
