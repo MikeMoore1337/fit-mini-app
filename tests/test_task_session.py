@@ -363,6 +363,44 @@ def test_validate_pr_event_rejects_base_behind_live_master(
         task_session.validate_pr_event(object(), github, event_path)  # type: ignore[arg-type]
 
 
+def test_validate_pr_event_accepts_trusted_dependabot_without_task_branch(
+    tmp_path: Path,
+) -> None:
+    base_sha = "a" * 40
+    live_master_sha = "c" * 40
+    head_sha = "b" * 40
+    pull_request = _task_pr(178, "178", base_sha, head_sha)
+    pull_request["head"]["ref"] = "dependabot/pip/wrapt-2.4.0"
+    pull_request["user"] = {"login": "dependabot[bot]", "type": "Bot"}
+    event_path = tmp_path / "event.json"
+    event_path.write_text(json.dumps({"pull_request": pull_request}), encoding="utf-8")
+
+    result = task_session.validate_pr_event(
+        object(),
+        FakeGitHub(live_master_sha),
+        event_path,  # type: ignore[arg-type]
+    )
+
+    assert result == {"kind": "dependabot-pr", "head_sha": head_sha}
+
+
+def test_validate_pr_event_rejects_dependabot_branch_for_regular_user(
+    tmp_path: Path,
+) -> None:
+    base_sha = "a" * 40
+    head_sha = "b" * 40
+    pull_request = _task_pr(178, "178", base_sha, head_sha)
+    pull_request["head"]["ref"] = "dependabot/pip/wrapt-2.4.0"
+    pull_request["user"] = {"login": "ordinary-user", "type": "User"}
+    event_path = tmp_path / "event.json"
+    event_path.write_text(json.dumps({"pull_request": pull_request}), encoding="utf-8")
+    github = FakeGitHub(base_sha)
+    github.commits[178] = [_task_commit("178")]
+
+    with pytest.raises(task_session.TaskSessionError, match="must match"):
+        task_session.validate_pr_event(object(), github, event_path)  # type: ignore[arg-type]
+
+
 def test_master_ruleset_requires_pr_current_base_and_aggregate_check() -> None:
     weak = [
         {
@@ -989,6 +1027,37 @@ def test_verify_master_merge_accepts_only_one_task_pr_for_current_master() -> No
     result = task_session.verify_master_merge(object(), github, sha=merge_sha)
     assert result["kind"] == "task-pr-merge"
     assert result["pull_request"]["number"] == 205
+
+
+def test_verify_master_merge_accepts_trusted_dependabot_pr() -> None:
+    base_sha = "a" * 40
+    merge_sha = "c" * 40
+    dependabot_pr = _task_pr(178, "178", base_sha, "b" * 40, merge_sha=merge_sha)
+    dependabot_pr["title"] = "build(deps): bump wrapt from 2.3.0 to 2.4.0"
+    dependabot_pr["user"] = {"login": "dependabot[bot]", "type": "Bot"}
+    dependabot_pr["head"]["ref"] = "dependabot/pip/wrapt-2.4.0"
+    github = FakeGitHub(merge_sha)
+    github.associated_pulls = [dependabot_pr]
+
+    result = task_session.verify_master_merge(object(), github, sha=merge_sha)
+
+    assert result["kind"] == "dependabot-pr-merge"
+    assert result["pull_request"]["number"] == 178
+
+
+def test_verify_master_merge_rejects_dependabot_fork_pr() -> None:
+    base_sha = "a" * 40
+    merge_sha = "c" * 40
+    dependabot_pr = _task_pr(178, "178", base_sha, "b" * 40, merge_sha=merge_sha)
+    dependabot_pr["title"] = "build(deps): bump wrapt from 2.3.0 to 2.4.0"
+    dependabot_pr["user"] = {"login": "dependabot[bot]", "type": "Bot"}
+    dependabot_pr["head"]["ref"] = "dependabot/pip/wrapt-2.4.0"
+    dependabot_pr["head"]["repo"]["full_name"] = "dependabot/fork"
+    github = FakeGitHub(merge_sha)
+    github.associated_pulls = [dependabot_pr]
+
+    with pytest.raises(task_session.TaskSessionError, match="not exactly one merged task PR"):
+        task_session.verify_master_merge(object(), github, sha=merge_sha)
 
 
 def test_recover_is_read_only_and_preserves_dirty_unique_task_state(

@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import yaml
+
 
 def _sources() -> dict[str, str]:
     root = Path(__file__).resolve().parents[1]
@@ -13,6 +15,7 @@ def _sources() -> dict[str, str]:
         "deploy": (root / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8"),
         "controller": (root / "scripts" / "task_session.py").read_text(encoding="utf-8"),
         "launcher": (root / "scripts" / "run_task_delivery.py").read_text(encoding="utf-8"),
+        "dependabot": (root / ".github" / "dependabot.yml").read_text(encoding="utf-8"),
     }
 
 
@@ -24,6 +27,8 @@ def test_ci_runs_full_regression_on_task_pr_and_only_provenance_on_master_push()
     assert "if: github.event_name == 'pull_request'" in ci
     assert "task-provenance:" in ci
     assert "merge-provenance:" in ci
+    assert "Validate task provenance or trusted Dependabot identity" in ci
+    assert "TASK_PROVENANCE_RESULT: ${{ needs.task-provenance.result }}" in ci
     assert "python scripts/ci_contract.py run-group" in ci
     assert "frontend-checks" in ci
     assert "frontend-e2e" in ci
@@ -35,6 +40,36 @@ def test_ci_runs_full_regression_on_task_pr_and_only_provenance_on_master_push()
     assert "verify-dev-provenance" not in ci
     assert "sync-dev" not in ci
     assert "dev-release" not in ci
+
+
+def test_dependabot_allows_only_patch_minor_version_updates() -> None:
+    sources = _sources()
+    config = yaml.safe_load(sources["dependabot"])
+
+    assert config["version"] == 2
+    updates = config["updates"]
+    assert len(updates) == 5
+    expected_update_types = {
+        "version-update:semver-minor",
+        "version-update:semver-patch",
+    }
+
+    for update in updates:
+        assert update["allow"] == [
+            {"dependency-name": "*", "update-types": sorted(expected_update_types)}
+        ]
+        for group in update.get("groups", {}).values():
+            if group.get("applies-to", "version-updates") == "version-updates":
+                assert set(group.get("update-types", ())) <= {"minor", "patch"}
+        assert "ignore" not in update
+
+    root = Path(__file__).resolve().parents[1]
+    dev_lock = root / "backend" / "requirements-dev.txt"
+    assert dev_lock.is_file()
+    assert not (root / "backend" / "requirements.txt").exists()
+    dev_lock_text = dev_lock.read_text(encoding="utf-8")
+    for package in ("pytest==", "mypy==", "ruff==", "pre-commit=="):
+        assert package in dev_lock_text
 
 
 def test_deploy_is_master_only_immutable_bundle_flow_without_vps_git_checkout() -> None:

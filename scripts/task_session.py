@@ -41,6 +41,7 @@ TASK_FILE_RE = re.compile(rf"^(?P<task_id>{TASK_ID_PATTERN})-(?P<slug>.+)\.md$",
 TASK_STATE_VERSION = 2
 STATE_DIRECTORY_NAME = "codex-task-sessions-v1"
 TARGET_BASE_BRANCH = "master"
+DEPENDABOT_LOGIN = "dependabot[bot]"
 VALID_CHECK_CONCLUSIONS = {"SUCCESS"}
 UMBRELLA_TASK_IDS = {"90", "92", "93", "94", "95", "99", "100", "126"}
 
@@ -79,6 +80,11 @@ def task_id_from_branch(branch: str) -> str:
     if match.group("slug") != match.group("slug").lower():
         raise TaskSessionError(f"Branch {branch!r} must match task/<ID>-<lowercase-kebab-slug>")
     return match.group("task_id").upper()
+
+
+def is_dependabot_pull_request(pull_request: Mapping[str, Any]) -> bool:
+    user = pull_request.get("user")
+    return isinstance(user, Mapping) and user.get("login") == DEPENDABOT_LOGIN
 
 
 def normalize_concurrency_class(value: str) -> str:
@@ -723,6 +729,19 @@ def validate_pr_event(
         raise TaskSessionError(
             f"Unsupported pull request base: {pull_request.get('base', {}).get('ref')}"
         )
+    if is_dependabot_pull_request(pull_request):
+        base = pull_request.get("base", {})
+        head = pull_request.get("head", {})
+        base_repo = base.get("repo", {}).get("full_name")
+        head_repo = head.get("repo", {}).get("full_name")
+        if not base_repo or not head_repo or head_repo != base_repo:
+            raise TaskSessionError(
+                "Dependabot pull request must originate from the same repository"
+            )
+        head_sha = str(head.get("sha", ""))
+        if not head_sha:
+            raise TaskSessionError("Dependabot pull request head SHA is missing")
+        return {"kind": "dependabot-pr", "head_sha": head_sha}
     event_base_sha = str(pull_request.get("base", {}).get("sha", ""))
     current_master_sha = github.branch_head(TARGET_BASE_BRANCH)
     if event_base_sha != current_master_sha:
@@ -756,21 +775,47 @@ def verify_master_merge(
     for pull_request in associated:
         base = pull_request.get("base", {})
         head = pull_request.get("head", {})
-        if (
+        if not (
             pull_request.get("merged_at")
             and pull_request.get("merge_commit_sha") == sha
             and base.get("ref") == TARGET_BASE_BRANCH
-            and TASK_BRANCH_RE.fullmatch(str(head.get("ref", "")))
-            and str(pull_request.get("title", "")).startswith("[Task ")
         ):
-            matches.append(
-                {"number": pull_request.get("number"), "title": pull_request.get("title")}
-            )
+            continue
+        is_task_merge = TASK_BRANCH_RE.fullmatch(str(head.get("ref", ""))) and str(
+            pull_request.get("title", "")
+        ).startswith("[Task ")
+        base_repo = base.get("repo", {})
+        head_repo = head.get("repo", {})
+        is_same_repository = (
+            isinstance(base_repo, Mapping)
+            and isinstance(head_repo, Mapping)
+            and bool(base_repo.get("full_name"))
+            and head_repo.get("full_name") == base_repo.get("full_name")
+        )
+        is_dependabot_merge = is_dependabot_pull_request(pull_request) and is_same_repository
+        if is_task_merge:
+            merge_kind = "task-pr-merge"
+        elif is_dependabot_merge:
+            merge_kind = "dependabot-pr-merge"
+        else:
+            continue
+        matches.append(
+            {
+                "kind": merge_kind,
+                "number": pull_request.get("number"),
+                "title": pull_request.get("title"),
+            }
+        )
     if len(matches) != 1:
         raise TaskSessionError(
             f"Master revision {sha} is not exactly one merged task PR result: found {len(matches)}"
         )
-    return {"kind": "task-pr-merge", "sha": sha, "pull_request": matches[0]}
+    match = matches[0]
+    return {
+        "kind": match["kind"],
+        "sha": sha,
+        "pull_request": {"number": match["number"], "title": match["title"]},
+    }
 
 
 class TaskController:

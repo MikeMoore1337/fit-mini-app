@@ -93,7 +93,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Validate task PR provenance
+      - name: Validate task provenance or trusted Dependabot identity
         env:
           GH_TOKEN: ${{ github.token }}
         run: python scripts/task_session.py validate-pr --event "$GITHUB_EVENT_PATH"
@@ -147,12 +147,12 @@ jobs:
           version: "0.11.32"
           enable-cache: true
           cache-dependency-glob: |
-            backend/requirements.txt
+            backend/requirements-dev.txt
             bot/requirements.txt
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           cache-suffix: policy
       - name: Install Python dependencies
-        run: uv pip install -r backend/requirements.txt -r bot/requirements.txt
+        run: uv pip install -r backend/requirements-dev.txt -r bot/requirements.txt
       - name: Prepare pytest runtime directories
         run: mkdir -p .artifacts/runtime/tests
       - name: Run shared delivery policy group
@@ -278,12 +278,12 @@ jobs:
           version: "0.11.32"
           enable-cache: true
           cache-dependency-glob: |
-            backend/requirements.txt
+            backend/requirements-dev.txt
             bot/requirements.txt
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           cache-suffix: python-tests
       - name: Install Python dependencies
-        run: uv pip install -r backend/requirements.txt -r bot/requirements.txt
+        run: uv pip install -r backend/requirements-dev.txt -r bot/requirements.txt
       - name: Run shared Python tests group
         env:
           TEST_DATABASE_URL: postgresql+psycopg://fitminiapp:test-password@127.0.0.1:5432/fitminiapp_test
@@ -332,7 +332,7 @@ jobs:
         with:
           version: "0.11.32"
           enable-cache: true
-          cache-dependency-glob: backend/requirements.txt
+          cache-dependency-glob: backend/requirements-dev.txt
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           cache-suffix: migrated-stack
       - name: Cache Playwright browsers
@@ -342,7 +342,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
       - name: Install stack dependencies
         run: |
-          uv pip install -r backend/requirements.txt
+          uv pip install -r backend/requirements-dev.txt
           npm --prefix frontend ci
       - name: Install Playwright Chromium
         working-directory: frontend
