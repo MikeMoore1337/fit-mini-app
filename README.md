@@ -101,7 +101,7 @@ Bot запускайте только с отдельным тестовым tok
 
 ```bash
 python3.14 -m venv .venv
-.venv/bin/python -m pip install -r backend/requirements.txt -r bot/requirements.txt
+.venv/bin/python -m pip install -r backend/requirements-dev.txt -r bot/requirements.txt
 npm --prefix frontend ci
 docker compose up -d db
 ```

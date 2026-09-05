@@ -4,6 +4,13 @@ updates:
     directories:
       - /backend
       - /bot
+    # Ordinary version updates stay on patch/minor. Security updates are not
+    # filtered by allow.update-types and remain eligible for explicit review.
+    allow:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
     schedule:
       interval: weekly
       day: monday
@@ -25,6 +32,11 @@ updates:
 
   - package-ecosystem: npm
     directory: /frontend
+    allow:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
     schedule:
       interval: weekly
       day: tuesday
@@ -48,6 +60,11 @@ updates:
     directories:
       - /backend
       - /bot
+    allow:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
     schedule:
       interval: weekly
       day: wednesday
@@ -64,6 +81,11 @@ updates:
 
   - package-ecosystem: docker-compose
     directory: /
+    allow:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
     schedule:
       interval: weekly
       day: wednesday
@@ -75,6 +97,11 @@ updates:
 
   - package-ecosystem: github-actions
     directory: /
+    allow:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
     schedule:
       interval: weekly
       day: thursday
