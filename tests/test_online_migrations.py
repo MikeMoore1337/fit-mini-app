@@ -65,6 +65,17 @@ def test_online_migration_accepts_empty_table_and_its_index(tmp_path: Path) -> N
     validate_added_migration(path)
 
 
+def test_contextual_reminder_migrations_satisfy_production_online_contract() -> None:
+    root = Path(__file__).resolve().parents[1]
+
+    validate_added_migration(
+        root / "backend" / "alembic" / "versions" / "0074_contextual_reminder_templates.py"
+    )
+    validate_added_migration(
+        root / "backend" / "alembic" / "versions" / "0075_contextual_template_flags.py"
+    )
+
+
 def test_online_migration_rejects_index_on_existing_table(tmp_path: Path) -> None:
     path = _migration(
         tmp_path / "0065_existing_index.py",
