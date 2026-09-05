@@ -82,6 +82,22 @@ closed.  Body size, source count, clock skew, replay TTL and request rate are co
 Receipts retain only operational metadata and hashes, never the full submitted source or draft
 payload.  Normal logs contain correlation-safe ids/reason codes only.
 
+### Hermes deterministic preflight and bounded repair (Task 142)
+
+Перед HMAC intake worker выполняет детерминированный preflight. Числовые токены в draft должны
+быть заземлены в разрешённом source packet; идентификаторы и URL не считаются доказательством
+числового утверждения. Консервативный plain-text photo caption считается вместе с доверенным
+source URL и меткой `Источник` и должен укладываться в лимит 1024 UTF-16 символа, установленный
+[официальной документацией Telegram Bot API](https://core.telegram.org/bots/api).
+
+Для `unsupported_number` и `telegram_photo_caption_too_long` разрешён один bounded repair request
+к тому же approved provider. Он делит общий бюджет максимум двух provider attempts с исходным
+draft и transient retry; paid/cloud fallback, новые credentials и provider shortcut запрещены.
+Если repair не снимает blocker, worker завершает job fail-closed: HMAC intake, Telegram preview
+и autopublish не вызываются. Успешный preflight только допускает intake; он не подтверждает
+публикацию. YFC по-прежнему применяет `manual_required`, Gate B/C и остаётся единственным
+publisher.
+
 ## Taxonomy and policy
 
 `NewsCluster` stores versioned independent fields:

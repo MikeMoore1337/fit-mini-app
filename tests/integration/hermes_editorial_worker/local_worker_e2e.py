@@ -1,4 +1,4 @@
-"""Local-only HTTP E2E and fail-closed negative-path harness for Task 129."""
+"""Local-only HTTP E2E and fail-closed negative-path harness for Tasks 129 and 142."""
 
 from __future__ import annotations
 
@@ -105,6 +105,11 @@ class ProviderHandler(BaseHTTPRequestHandler):
                     "model": request.get("model"),
                     "message_count": len(request.get("messages", [])),
                     "has_tools": "tools" in request,
+                    "repair_request": any(
+                        "REPAIR_REQUEST" in str(message.get("content", ""))
+                        for message in request.get("messages", [])
+                        if isinstance(message, dict)
+                    ),
                     "response_format": request.get("response_format"),
                 }
             )
@@ -151,6 +156,31 @@ class ProviderHandler(BaseHTTPRequestHandler):
         if mode == "oversized":
             self._send_json(200, _completion_document("x" * 20_000))
             return
+        if mode == "unsupported_number":
+            is_repair = any(
+                "REPAIR_REQUEST" in str(message.get("content", ""))
+                for message in request.get("messages", [])
+                if isinstance(message, dict)
+            )
+            self._send_json(
+                200,
+                _completion_document(_valid_draft() if is_repair else _unsupported_number_draft()),
+            )
+            return
+        if mode == "overlong_caption":
+            is_repair = any(
+                "REPAIR_REQUEST" in str(message.get("content", ""))
+                for message in request.get("messages", [])
+                if isinstance(message, dict)
+            )
+            self._send_json(
+                200,
+                _completion_document(_valid_draft() if is_repair else _overlong_caption_draft()),
+            )
+            return
+        if mode == "repair_unresolved":
+            self._send_json(200, _completion_document(_unsupported_number_draft()))
+            return
         self._send_json(200, _completion_document(_valid_draft()))
 
 
@@ -162,6 +192,24 @@ def _valid_draft() -> dict[str, str]:
             "Результат относится к исследованной группе и не заменяет индивидуальную оценку."
         ),
         "why_it_matters": "Данные помогают точнее обсуждать восстановление после нагрузки.",
+    }
+
+
+def _unsupported_number_draft() -> dict[str, str]:
+    return {
+        "headline": "Силовые тренировки и восстановление: что показало исследование",
+        "summary": "Авторы описали результат с улучшением на 99%.",
+        "why_it_matters": "Данные требуют редакторской проверки.",
+    }
+
+
+def _overlong_caption_draft() -> dict[str, str]:
+    return {
+        "headline": "Силовые тренировки и восстановление: что показало исследование",
+        "summary": " ".join(
+            ["Авторы описали результат исследованной группы и обозначили контекст."] * 24
+        ),
+        "why_it_matters": "Данные требуют редакторской проверки.",
     }
 
 
@@ -513,6 +561,93 @@ def main() -> int:
             }
         )
 
+        for mode in ("unsupported_number", "overlong_caption"):
+            job = write_job(f"repair-{mode}")
+            before_provider = provider_state.snapshot()
+            before_db = db_snapshot(db_path)
+            repaired = run_worker(
+                job,
+                provider_server.server_port,
+                yfc_port,
+                preview_server.server_port,
+                provider_state=provider_state,
+                mode=mode,
+            )
+            if repaired["exit_code"] != 0 or repaired["result"].get("status") != "accepted":
+                raise AssertionError({"repaired": mode, "result": repaired})
+            after_provider = provider_state.snapshot()
+            new_records = after_provider["request_records"][before_provider["request_count"] :]
+            if (
+                len(new_records) != 2
+                or new_records[0]["repair_request"]
+                or not new_records[1]["repair_request"]
+            ):
+                raise AssertionError(
+                    {"repair_attempt_budget": {"mode": mode, "records": new_records}}
+                )
+            after_db = db_snapshot(db_path)
+            if (
+                after_db["hermes_submissions"] != before_db["hermes_submissions"] + 1
+                or after_db["draft_revisions"] != before_db["draft_revisions"] + 1
+            ):
+                raise AssertionError(
+                    {"repair_db": {"mode": mode, "before": before_db, "after": after_db}}
+                )
+            cases.append(
+                {
+                    "name": f"bounded_provider_repair_{mode}",
+                    "exit_code": repaired["exit_code"],
+                    "result": repaired["result"],
+                    "provider_records": new_records,
+                    "db": after_db,
+                }
+            )
+
+        unresolved_job = write_job("repair-unresolved")
+        before_provider = provider_state.snapshot()
+        before_db = db_snapshot(db_path)
+        before_preview_count = len(preview_state.records)
+        unresolved = run_worker(
+            unresolved_job,
+            provider_server.server_port,
+            yfc_port,
+            preview_server.server_port,
+            provider_state=provider_state,
+            mode="repair_unresolved",
+        )
+        assert_error(unresolved, "editorial_preflight_repair_failed")
+        after_provider = provider_state.snapshot()
+        new_records = after_provider["request_records"][before_provider["request_count"] :]
+        if (
+            len(new_records) != 2
+            or new_records[0]["repair_request"]
+            or not new_records[1]["repair_request"]
+        ):
+            raise AssertionError({"unresolved_repair_attempt_budget": new_records})
+        after_db = db_snapshot(db_path)
+        if after_db != before_db or len(preview_state.records) != before_preview_count:
+            raise AssertionError(
+                {
+                    "unresolved_repair_side_effects": {
+                        "before_db": before_db,
+                        "after_db": after_db,
+                        "before_preview_count": before_preview_count,
+                        "after_preview_count": len(preview_state.records),
+                    }
+                }
+            )
+        cases.append(
+            {
+                "name": "unresolved_repair_fails_closed",
+                "exit_code": unresolved["exit_code"],
+                "result": unresolved["result"],
+                "provider_records": new_records,
+                "db": after_db,
+                "preview_count": len(preview_state.records),
+            }
+        )
+
+        before_duplicate = db_snapshot(db_path)
         duplicate = run_worker(
             fixture,
             provider_server.server_port,
@@ -523,11 +658,10 @@ def main() -> int:
         if duplicate["exit_code"] != 0 or duplicate["result"].get("status") != "duplicate":
             raise AssertionError({"duplicate": duplicate})
         snapshot_after_duplicate = db_snapshot(db_path)
-        if (
-            snapshot_after_duplicate["hermes_submissions"] != 1
-            or snapshot_after_duplicate["draft_revisions"] != 1
-        ):
-            raise AssertionError({"duplicate_db": snapshot_after_duplicate})
+        if snapshot_after_duplicate != before_duplicate:
+            raise AssertionError(
+                {"duplicate_db": {"before": before_duplicate, "after": snapshot_after_duplicate}}
+            )
         cases.append(
             {
                 "name": "idempotency_replay",
@@ -710,6 +844,7 @@ def main() -> int:
             )
             crash_process.wait(timeout=15)
             provider_state.release_timeout.set()
+        before_recovery = db_snapshot(db_path)
         recovered = run_worker(
             crash_job,
             provider_server.server_port,
@@ -722,10 +857,13 @@ def main() -> int:
             raise AssertionError({"recovered": recovered})
         snapshot_after_recovery = db_snapshot(db_path)
         if (
-            snapshot_after_recovery["hermes_submissions"] != 2
-            or snapshot_after_recovery["draft_revisions"] != 2
+            snapshot_after_recovery["hermes_submissions"]
+            != before_recovery["hermes_submissions"] + 1
+            or snapshot_after_recovery["draft_revisions"] != before_recovery["draft_revisions"] + 1
         ):
-            raise AssertionError({"recovery_db": snapshot_after_recovery})
+            raise AssertionError(
+                {"recovery_db": {"before": before_recovery, "after": snapshot_after_recovery}}
+            )
         cases.append(
             {
                 "name": "worker_crash_restart_recovery",
@@ -751,7 +889,7 @@ def main() -> int:
         )
 
         preview_records = list(preview_state.records)
-        if len(preview_records) != 2 or any(
+        if len(preview_records) != 4 or any(
             record["published"] is not False for record in preview_records
         ):
             raise AssertionError({"preview_records": preview_records})
