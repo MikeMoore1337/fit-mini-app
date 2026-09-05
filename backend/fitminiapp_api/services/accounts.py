@@ -35,6 +35,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutExercise,
     UserWorkoutSet,
 )
+from fitminiapp_api.models.reminder_template import ReminderTemplateSchedule
 from fitminiapp_api.models.report_handoff import ReportHandoff
 from fitminiapp_api.models.support import BotSupportCase
 from fitminiapp_api.models.token import RefreshToken
@@ -323,6 +324,9 @@ def delete_user_cascade(db: Session, user: User) -> None:
     )
     db.query(Notification).filter(Notification.user_id == user.id).delete(synchronize_session=False)
     db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).delete(
+        synchronize_session=False
+    )
+    db.query(ReminderTemplateSchedule).filter(ReminderTemplateSchedule.user_id == user.id).delete(
         synchronize_session=False
     )
     db.query(WeeklyDigestDelivery).filter(WeeklyDigestDelivery.user_id == user.id).delete(

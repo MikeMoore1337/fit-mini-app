@@ -729,16 +729,22 @@ function defaultMealType(timeZone?: string | null): MealType {
 export function NutritionDiary({
   timeZone,
   initialDate,
+  initialMealType,
+  initialHydrationOpen = false,
 }: {
   timeZone?: string | null;
   initialDate?: string;
+  initialMealType?: MealType;
+  initialHydrationOpen?: boolean;
 }) {
   const today = dateInputValue(new Date(), timeZone || undefined);
   const [selectedDate, setSelectedDate] = useState(initialDate || today);
   const [addingTo, setAddingTo] = useState<{
     mealType: MealType;
     initialView?: 'browse' | 'quick-add';
-  } | null>(null);
+  } | null>(() =>
+    initialMealType ? { mealType: initialMealType, initialView: 'quick-add' } : null,
+  );
   const [copySubject, setCopySubject] = useState<CopySubject | null>(null);
   const [lastAddedEntryId, setLastAddedEntryId] = useState<number | null>(null);
   const [mealExpansion, setMealExpansion] = useState<Partial<Record<MealType, boolean>>>({});
@@ -884,7 +890,7 @@ export function NutritionDiary({
         </>
       )}
 
-      <HydrationTracker diaryDate={selectedDate} />
+      <HydrationTracker diaryDate={selectedDate} initialExpanded={initialHydrationOpen} />
 
       {addingTo && (
         <FoodPickerDialog

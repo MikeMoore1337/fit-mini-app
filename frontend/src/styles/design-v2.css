@@ -5503,6 +5503,272 @@ body:has(.standalone-page--design-v2) {
   min-height: 48px;
 }
 
+.notification-templates {
+  display: grid;
+  gap: var(--v2-space-3);
+  padding-block: var(--v2-space-5);
+  border-top: 1px solid var(--v2-border);
+}
+
+.notification-templates.profile-disclosure {
+  padding-block: var(--v2-space-3);
+  border-block: 1px solid var(--v2-border);
+}
+
+.notification-templates.profile-disclosure > .profile-disclosure__body {
+  margin-top: var(--v2-space-3);
+}
+
+.notification-template-list {
+  display: grid;
+  gap: var(--v2-space-3);
+}
+
+.notification-template-card {
+  display: grid;
+  gap: var(--v2-space-3);
+  min-width: 0;
+  padding: var(--v2-space-4);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.notification-template-card.is-enabled {
+  border-color: color-mix(in srgb, var(--v2-lime) 46%, var(--v2-border));
+}
+
+.notification-template-card__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.4fr);
+  align-items: start;
+  gap: var(--v2-space-4);
+}
+
+.notification-template-card__head h4,
+.notification-template-card__head p,
+.notification-template-card__summary p,
+.notification-template-card__summary small,
+.notification-template-card__notes p {
+  margin: 0;
+}
+
+.notification-template-card__head h4 {
+  margin-top: 3px;
+  font-size: 1.08rem;
+}
+
+.notification-template-card__head p {
+  max-width: 58ch;
+  margin-top: var(--v2-space-1);
+  color: var(--v2-text-secondary);
+  line-height: 1.45;
+}
+
+.notification-template-card__eyebrow {
+  color: var(--v2-accent-text);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.notification-template-toggle {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--v2-space-2);
+  min-height: 64px;
+  padding: var(--v2-space-2) var(--v2-space-3);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface);
+  cursor: pointer;
+}
+
+.notification-template-toggle input[type='checkbox'] {
+  width: 22px;
+  height: 22px;
+  margin: 0 auto;
+  accent-color: var(--v2-lime);
+}
+
+.notification-template-toggle > span {
+  display: grid;
+  gap: var(--v2-space-1);
+  min-width: 0;
+}
+
+.notification-template-toggle small,
+.notification-template-card__actions small {
+  color: var(--v2-text-secondary);
+  line-height: 1.4;
+}
+
+.notification-template-card__summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--v2-space-3);
+  padding-block: var(--v2-space-3);
+  border-block: 1px solid var(--v2-border);
+}
+
+.notification-template-card__summary > div {
+  display: grid;
+  align-content: start;
+  gap: var(--v2-space-1);
+  min-width: 0;
+}
+
+.notification-template-card__summary > div + div {
+  padding-inline-start: var(--v2-space-3);
+  border-inline-start: 1px solid var(--v2-border);
+}
+
+.notification-template-card__summary > div > span,
+.notification-template-fields__label > span,
+.notification-template-weekdays legend {
+  color: var(--v2-text-secondary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.notification-template-card__summary strong {
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
+.notification-template-card__summary p,
+.notification-template-card__summary small {
+  color: var(--v2-text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.notification-template-card__editor {
+  display: grid;
+  gap: var(--v2-space-3);
+}
+
+.notification-template-weekdays {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.notification-template-weekdays legend {
+  margin-bottom: var(--v2-space-2);
+}
+
+.notification-template-weekdays__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v2-space-1);
+}
+
+.notification-template-day {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--v2-space-1);
+  min-width: 48px;
+  min-height: 44px;
+  padding: 0 var(--v2-space-2);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface);
+  cursor: pointer;
+}
+
+.notification-template-day:has(input:checked) {
+  border-color: var(--v2-lime);
+  background: color-mix(in srgb, var(--v2-lime) 14%, var(--v2-surface));
+}
+
+.notification-template-day input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--v2-lime);
+}
+
+.notification-template-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(180px, 0.75fr);
+  align-items: start;
+  gap: var(--v2-space-3);
+}
+
+.notification-template-fields--interval {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.notification-template-times,
+.notification-template-fields__label {
+  display: grid;
+  gap: var(--v2-space-2);
+}
+
+.notification-template-fields__label small {
+  color: var(--v2-text-secondary);
+  line-height: 1.4;
+}
+
+.notification-template-times__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--v2-space-2);
+}
+
+.notification-template-time {
+  display: grid;
+  align-content: start;
+  gap: var(--v2-space-1);
+  min-width: 0;
+}
+
+.notification-template-time__remove {
+  width: auto;
+  justify-self: start;
+  min-height: 32px;
+  padding: 4px 0;
+  color: var(--v2-text-secondary);
+  font-size: 0.78rem;
+}
+
+.notification-template-card__notes {
+  display: grid;
+  gap: var(--v2-space-1);
+  padding-top: var(--v2-space-2);
+  border-top: 1px solid var(--v2-border);
+  color: var(--v2-text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.notification-template-card__notes strong {
+  color: var(--v2-text-primary);
+}
+
+.notification-template-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--v2-space-3);
+}
+
+.notification-template-card__actions small {
+  max-width: 58ch;
+}
+
+.notification-template-card__actions > button {
+  width: auto;
+  min-width: 190px;
+  min-height: 44px;
+}
+
 .notification-center {
   display: grid;
   gap: var(--v2-space-3);
@@ -5632,6 +5898,37 @@ button.notification-row__main:focus-visible {
   .notification-schedule-grid,
   .notification-quiet-hours {
     grid-template-columns: 1fr;
+  }
+
+  .notification-template-card__head,
+  .notification-template-card__summary,
+  .notification-template-fields,
+  .notification-template-fields--interval {
+    grid-template-columns: 1fr;
+  }
+
+  .notification-template-toggle {
+    width: 100%;
+  }
+
+  .notification-template-card__summary > div + div {
+    padding-inline-start: 0;
+    padding-top: var(--v2-space-2);
+    border-top: 1px solid var(--v2-border);
+    border-inline-start: 0;
+  }
+
+  .notification-template-times__list {
+    grid-template-columns: 1fr;
+  }
+
+  .notification-template-card__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .notification-template-card__actions > button {
+    width: 100%;
   }
 
   .notification-center__head {

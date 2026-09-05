@@ -39,6 +39,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutExercise,
 )
 from fitminiapp_api.models.recipe import Recipe
+from fitminiapp_api.models.reminder_template import ReminderTemplateSchedule
 from fitminiapp_api.models.report_handoff import ReportHandoff
 from fitminiapp_api.models.user import (
     BodyMeasurement,
@@ -102,6 +103,7 @@ ACCOUNT_EXPORT_DATA_INVENTORY: dict[str, str] = {
     "workout_comments": "workout_comments",
     "workout_comment_revisions": "workout_comments",
     "notification_settings": "notification_settings",
+    "reminder_template_schedules": "reminder_template_schedules",
     "notifications": "notifications",
     "report_handoffs": "report_handoffs",
     "weekly_digest_preferences": "weekly_digest_preference",
@@ -656,6 +658,12 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
         for exercise_id in custom_exercise_ids
     }
     setting = db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).first()
+    reminder_template_schedules = (
+        db.query(ReminderTemplateSchedule)
+        .filter(ReminderTemplateSchedule.user_id == user.id)
+        .order_by(ReminderTemplateSchedule.template_key.asc())
+        .all()
+    )
     notifications = (
         db.query(Notification)
         .filter(Notification.user_id == user.id)
@@ -1049,6 +1057,9 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
                     "workout_reminders_enabled",
                     "weekly_check_in_reminders_enabled",
                     "measurement_reminders_enabled",
+                    "meal_reminders_enabled",
+                    "hydration_reminders_enabled",
+                    "movement_reminders_enabled",
                     "telegram_enabled",
                     "reminder_hour",
                     "quiet_hours_start",
@@ -1058,6 +1069,25 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
             if setting
             else None
         ),
+        "reminder_template_schedules": [
+            _fields(
+                schedule,
+                (
+                    "template_key",
+                    "template_version",
+                    "weekdays",
+                    "schedule_times",
+                    "window_start",
+                    "window_end",
+                    "interval_minutes",
+                    "max_per_day",
+                    "minimum_spacing_minutes",
+                    "created_at",
+                    "updated_at",
+                ),
+            )
+            for schedule in reminder_template_schedules
+        ],
         "notifications": [
             _fields(
                 row,
