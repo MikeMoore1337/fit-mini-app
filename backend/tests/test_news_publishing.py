@@ -330,6 +330,43 @@ def test_news_card_headline_is_centered_between_rubric_and_review_label() -> Non
     assert abs(top_gap - bottom_gap) <= 1
 
 
+def test_news_card_headline_keeps_all_words_and_fits_available_area() -> None:
+    canvas = Image.new("RGB", news_images.CANVAS_SIZE, "#101310")
+    draw = news_images.ImageDraw.Draw(canvas)
+    rubric_font = news_images._font(24, bold=True)
+    review_label_font = news_images._font(22)
+    rubric_text = "РЕДАКЦИОННЫЙ РАЗБОР"
+    review_label_text = "Проверено редактором • Источник — в публикации"
+    headline = "Оценка воспринимаемой нагрузки (RPE) может отражать потерю скорости при приседе со средней нагрузкой"
+    rubric_bounds = draw.textbbox(news_images.RUBRIC_POSITION, rubric_text, font=rubric_font)
+    review_label_bounds = draw.textbbox(
+        news_images.REVIEW_LABEL_POSITION,
+        review_label_text,
+        font=review_label_font,
+    )
+
+    headline_text, headline_font, headline_y = news_images._fit_headline_layout(
+        draw,
+        headline,
+        rubric_bounds=rubric_bounds,
+        review_label_bounds=review_label_bounds,
+    )
+    headline_lines = headline_text.splitlines()
+    headline_bounds = draw.multiline_textbbox(
+        (news_images.HEADLINE_X, headline_y),
+        headline_text,
+        font=headline_font,
+        spacing=news_images.HEADLINE_SPACING,
+    )
+
+    assert " ".join(headline_text.split()) == headline
+    assert max(draw.textlength(line, font=headline_font) for line in headline_lines) <= (
+        news_images.HEADLINE_MAX_WIDTH
+    )
+    assert headline_bounds[1] >= rubric_bounds[3]
+    assert headline_bounds[3] <= review_label_bounds[1]
+
+
 def test_renderer_enforces_exact_telegram_photo_and_message_boundaries() -> None:
     source_url = "https://example.test/source"
     image = NewsImageRevision()
