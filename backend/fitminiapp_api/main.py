@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -156,6 +156,30 @@ def health_live() -> dict[str, str]:
 @app.get("/health/ready")
 def health_ready() -> dict[str, str]:
     return health()
+
+
+def _frontend_pwa_asset(filename: str, media_type: str) -> FileResponse:
+    asset = FRONTEND_DIST_DIR / filename
+    if not asset.is_file():
+        raise HTTPException(status_code=404, detail="Frontend PWA asset unavailable")
+    return FileResponse(
+        asset,
+        media_type=media_type,
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+@app.get("/manifest.webmanifest", include_in_schema=False)
+def pwa_manifest() -> FileResponse:
+    return _frontend_pwa_asset("manifest.webmanifest", "application/manifest+json")
+
+
+@app.get("/sw.js", include_in_schema=False)
+def pwa_service_worker() -> FileResponse:
+    return _frontend_pwa_asset("sw.js", "application/javascript")
 
 
 def _frontend_index(

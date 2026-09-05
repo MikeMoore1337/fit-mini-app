@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { ApiError, api } from '../../shared/api/client';
@@ -20,9 +20,12 @@ import {
 } from '../../shared/dateTime';
 import { AppLink } from '../../shared/navigation/router';
 import { queryKeys } from '../../shared/queryKeys';
+import { crossContextCoordinator } from '../../shared/browser/crossContextLock';
 import {
+  activeWorkoutLockName,
   loadActiveWorkoutQueue,
   loadCurrentActiveWorkoutSnapshot,
+  saveActiveWorkoutSnapshot,
 } from '../workouts/activeWorkoutQueue';
 import { WorkoutAdaptation } from '../workouts/WorkoutAdaptation';
 import { TodayWorkout } from '../workouts/TodayWorkout';
@@ -43,6 +46,7 @@ import {
   trackCoreProductEvent,
   trackProductEvent,
 } from '../../shared/analytics/productEvents';
+import { isPwaStandalone } from '../../shared/pwa/pwaRuntime';
 
 export function formatTodayHeading(value: string): { title: string } {
   const weekday = formatCalendarDate(value, { weekday: 'long' });
@@ -700,6 +704,55 @@ export function TodayDashboard({
     user && workout.data && loadActiveWorkoutQueue(user.id, workout.data.id).queue.length > 0,
   );
   const visibleWorkout = noTodayWorkout && !hasPendingLocalChanges ? undefined : workout.data;
+
+  const persistSnapshotOnSuspend = useCallback(() => {
+    if (!user || !workout.data || workout.data.status !== 'in_progress') return;
+    void crossContextCoordinator
+      .run(activeWorkoutLockName(user.id, workout.data.id), () => {
+        saveActiveWorkoutSnapshot(user.id, workout.data!);
+      })
+      .catch(() => undefined);
+  }, [user, workout.data]);
+
+  useEffect(() => {
+    const refreshOnReturn = () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+      void queryClient.invalidateQueries({ queryKey: ['workout', 'today'], exact: true });
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') persistSnapshotOnSuspend();
+      else refreshOnReturn();
+    };
+    window.addEventListener('pagehide', persistSnapshotOnSuspend);
+    window.addEventListener('freeze', persistSnapshotOnSuspend);
+    window.addEventListener('pageshow', refreshOnReturn);
+    window.addEventListener('focus', refreshOnReturn);
+    window.addEventListener('online', refreshOnReturn);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('pagehide', persistSnapshotOnSuspend);
+      window.removeEventListener('freeze', persistSnapshotOnSuspend);
+      window.removeEventListener('pageshow', refreshOnReturn);
+      window.removeEventListener('focus', refreshOnReturn);
+      window.removeEventListener('online', refreshOnReturn);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [persistSnapshotOnSuspend, queryClient]);
+
+  useEffect(() => {
+    if (!user || !isPwaStandalone() || workout.fetchStatus !== 'idle') return;
+    const snapshot = loadCurrentActiveWorkoutSnapshot(user.id);
+    if (!snapshot || snapshot.status !== 'in_progress') return;
+    const resumed = visibleWorkout?.id === snapshot.id && visibleWorkout.status === 'in_progress';
+    trackProductEvent(
+      {
+        name: resumed ? 'pwa_workout_resume_success' : 'pwa_workout_resume_failure',
+        surface: productEventSurface(),
+      },
+      { dedupe: 'session', dedupeKey: `workout:${snapshot.id}` },
+    );
+  }, [user, visibleWorkout, workout.fetchStatus]);
+
   const todayScheduleItem =
     weekWorkoutForDate(week.data, today) ??
     (visibleWorkout

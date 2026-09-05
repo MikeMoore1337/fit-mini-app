@@ -12,6 +12,7 @@ import {
   AccountIdentity,
   accountRoleLabel,
 } from '../shared/account/AccountIdentity';
+import { usePwa } from '../shared/pwa/PwaProvider';
 
 export type AppSection = 'today' | 'progress' | 'programs' | 'catalog' | 'nutrition' | 'profile';
 
@@ -63,6 +64,61 @@ function useMobileNavigation(): boolean {
   }, []);
 
   return mobile;
+}
+
+function PwaInstallPrompt() {
+  const pwa = usePwa();
+  const { markInstallOptionShown, recordAppValue, shouldShowInstallPrompt } = pwa;
+  const shownRef = useRef(false);
+
+  useEffect(() => {
+    recordAppValue();
+  }, [recordAppValue]);
+
+  useEffect(() => {
+    if (shouldShowInstallPrompt && !shownRef.current) {
+      shownRef.current = true;
+      markInstallOptionShown();
+    }
+  }, [markInstallOptionShown, shouldShowInstallPrompt]);
+
+  if (!shouldShowInstallPrompt) return null;
+
+  return (
+    <aside
+      className="pwa-install-prompt"
+      data-testid="pwa-install-prompt"
+      aria-label="Установка приложения"
+    >
+      <div className="pwa-install-prompt__content">
+        <strong>Быстрый возврат к тренировке</strong>
+        {pwa.installPromptAvailable ? (
+          <p>
+            Установите YFC на устройство: приложение откроется отдельным окном и быстрее вернёт вас
+            к «Сегодня».
+          </p>
+        ) : (
+          <>
+            <p>В Safari добавьте YFC на экран «Домой», чтобы открывать его отдельным окном.</p>
+            <ol>
+              <li>Нажмите «Поделиться».</li>
+              <li>Выберите «На экран Домой».</li>
+            </ol>
+          </>
+        )}
+      </div>
+      <div className="pwa-install-prompt__actions">
+        {pwa.installPromptAvailable && (
+          <button type="button" disabled={pwa.installPending} onClick={() => void pwa.install()}>
+            {pwa.installPending ? 'Открываем…' : 'Установить'}
+          </button>
+        )}
+        <button type="button" className="secondary" onClick={pwa.dismissInstall}>
+          {pwa.installPromptAvailable ? 'Не сейчас' : 'Понятно'}
+        </button>
+      </div>
+    </aside>
+  );
 }
 
 export function AppShell({
@@ -140,6 +196,9 @@ export function AppShell({
     },
   ].filter((destination) => destination.visible);
   const morePhase = moreOpen && morePresence.phase === 'closed' ? 'open' : morePresence.phase;
+  const showPwaInstallPrompt = Boolean(
+    !demo && user && shellVisible && path === '/app' && section === 'today',
+  );
 
   const closeMore = (restoreFocus = false) => {
     setMoreOpen(false);
@@ -234,6 +293,7 @@ export function AppShell({
           </button>
         </header>
       )}
+      {showPwaInstallPrompt && <PwaInstallPrompt />}
       <main id="appContent" className={`container app-shell__content${narrow ? ' narrow' : ''}`}>
         {children}
       </main>

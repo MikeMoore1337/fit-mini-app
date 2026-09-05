@@ -115,21 +115,49 @@ export function useActiveWorkoutQueue(userId: number | undefined, workout: Worko
     return fresh;
   }, [userId, validSetIds, workout, workoutId]);
 
+  const persistSnapshot = useCallback(() => {
+    if (!userId || !workout || workout.status !== 'in_progress') return;
+    const next = saveActiveWorkoutSnapshot(userId, workout);
+    if (!next) return;
+    memoryState.current = next;
+    setStoredState({ key: activeWorkoutQueueKey(userId, workout.id), data: next });
+  }, [userId, workout]);
+
+  const persistSnapshotWithLock = useCallback(() => {
+    if (!lockName) {
+      persistSnapshot();
+      return;
+    }
+    void crossContextCoordinator.run(lockName, persistSnapshot).catch(() => undefined);
+  }, [lockName, persistSnapshot]);
+
   useEffect(() => {
     if (!userId || !workout || workout.status !== 'in_progress') return;
     let cancelled = false;
     void crossContextCoordinator
       .run(activeWorkoutLockName(userId, workout.id), () => {
-        const next = saveActiveWorkoutSnapshot(userId, workout);
-        if (!next || cancelled) return;
-        memoryState.current = next;
-        setStoredState({ key: activeWorkoutQueueKey(userId, workout.id), data: next });
+        if (cancelled) return;
+        persistSnapshot();
       })
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [userId, validSetIds, workout]);
+  }, [persistSnapshot, userId, validSetIds, workout]);
+
+  useEffect(() => {
+    const persistWhenHidden = () => {
+      if (document.visibilityState === 'hidden') persistSnapshotWithLock();
+    };
+    window.addEventListener('pagehide', persistSnapshotWithLock);
+    window.addEventListener('freeze', persistSnapshotWithLock);
+    document.addEventListener('visibilitychange', persistWhenHidden);
+    return () => {
+      window.removeEventListener('pagehide', persistSnapshotWithLock);
+      window.removeEventListener('freeze', persistSnapshotWithLock);
+      document.removeEventListener('visibilitychange', persistWhenHidden);
+    };
+  }, [persistSnapshotWithLock]);
 
   const runQueue = useCallback(async (): Promise<boolean> => {
     if (!userId || !workoutId || !navigator.onLine) {
@@ -313,6 +341,12 @@ export function useActiveWorkoutQueue(userId: number | undefined, workout: Worko
   useEffect(() => {
     if (!key) return;
     const retry = () => void flushNow();
+    const refreshWorkout = () => {
+      if (navigator.onLine) {
+        void queryClient.invalidateQueries({ queryKey: ['workout', 'today'], exact: true });
+      }
+      retry();
+    };
     const onStorage = (event: StorageEvent) => {
       if (event.key !== key) return;
       const fresh = readFresh();
@@ -321,21 +355,23 @@ export function useActiveWorkoutQueue(userId: number | undefined, workout: Worko
       retry();
     };
     const onVisible = () => {
-      if (document.visibilityState === 'visible') retry();
+      if (document.visibilityState === 'visible') refreshWorkout();
     };
     window.addEventListener('online', retry);
-    window.addEventListener('focus', retry);
+    window.addEventListener('focus', refreshWorkout);
+    window.addEventListener('pageshow', refreshWorkout);
     window.addEventListener(YFC_PLATFORM_ACTIVATED_EVENT, retry);
     window.addEventListener('storage', onStorage);
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       window.removeEventListener('online', retry);
-      window.removeEventListener('focus', retry);
+      window.removeEventListener('focus', refreshWorkout);
+      window.removeEventListener('pageshow', refreshWorkout);
       window.removeEventListener(YFC_PLATFORM_ACTIVATED_EVENT, retry);
       window.removeEventListener('storage', onStorage);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [flushNow, key, readFresh]);
+  }, [flushNow, key, queryClient, readFresh]);
 
   const pendingBySet = useMemo(() => {
     const result = new Map<number, ReturnType<typeof latestMutationForSet>>();

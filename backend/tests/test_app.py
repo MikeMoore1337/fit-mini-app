@@ -224,6 +224,31 @@ def test_versioned_frontend_assets_have_immutable_cache_contract(client):
     assert response.headers["cache-control"] == "public, max-age=31536000, immutable"
 
 
+def test_pwa_control_assets_are_same_origin_and_not_cached(client, monkeypatch, tmp_path):
+    from fitminiapp_api import main
+
+    (tmp_path / "manifest.webmanifest").write_text(
+        '{"id":"/app","start_url":"/app?source=pwa","scope":"/"}',
+        encoding="utf-8",
+    )
+    (tmp_path / "sw.js").write_text(
+        "self.addEventListener('fetch', () => undefined);", encoding="utf-8"
+    )
+    monkeypatch.setattr(main, "FRONTEND_DIST_DIR", tmp_path)
+
+    manifest = client.get("/manifest.webmanifest")
+    worker = client.get("/sw.js")
+
+    assert manifest.status_code == 200
+    assert manifest.headers["content-type"] == "application/manifest+json"
+    assert manifest.headers["cache-control"] == "no-store, no-cache, must-revalidate, max-age=0"
+    assert worker.status_code == 200
+    assert worker.headers["content-type"] == "application/javascript"
+    assert worker.headers["cache-control"] == "no-store, no-cache, must-revalidate, max-age=0"
+    assert "access_token" not in manifest.text
+    assert "access_token" not in worker.text
+
+
 def test_production_settings_reject_placeholder_bot_internal_token():
     with pytest.raises(ValidationError, match="BOT_INTERNAL_TOKEN"):
         Settings(
@@ -3433,6 +3458,7 @@ def test_csp_blocks_unhashed_inline_scripts(client):
     source_template = (Path(__file__).resolve().parents[2] / "frontend" / "index.html").read_text(
         encoding="utf-8"
     )
+    assert '<link rel="manifest" href="/manifest.webmanifest" />' in source_template
     assert '<script src="/assets/theme-bootstrap-20260826.js"></script>' in source_template
     source_inline_scripts = re.findall(r"<script(?:\s+[^>]*)?>([\s\S]*?)</script>", source_template)
     assert all(not source.strip() for source in source_inline_scripts)

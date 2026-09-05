@@ -30,6 +30,7 @@ import { WorkoutCompletionSummary } from './WorkoutCompletionSummary';
 import { reconcileFinishedWorkout } from './finishWorkoutRecovery';
 import { useActiveWorkoutQueue } from './useActiveWorkoutQueue';
 import { productEventSurface, trackCoreProductEvent } from '../../shared/analytics/productEvents';
+import { PWA_SAFE_UPDATE_EVENT } from '../../shared/pwa/pwaRuntime';
 import { ProgressionGuidance } from './ProgressionGuidance';
 
 type WorkoutSet = Workout['exercises'][number]['sets'][number];
@@ -777,6 +778,7 @@ export function TodayWorkout({
           await activeSync.clear();
           await queryClient.invalidateQueries({ queryKey: ['workout'] });
         }
+        window.dispatchEvent(new Event(PWA_SAFE_UPDATE_EVENT));
         haptic('success');
       } else {
         if (variables.path.endsWith('/start')) {
