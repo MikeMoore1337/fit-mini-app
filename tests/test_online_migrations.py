@@ -71,9 +71,6 @@ def test_contextual_reminder_migrations_satisfy_production_online_contract() -> 
     validate_added_migration(
         root / "backend" / "alembic" / "versions" / "0074_contextual_reminder_templates.py"
     )
-    validate_added_migration(
-        root / "backend" / "alembic" / "versions" / "0075_contextual_template_flags.py"
-    )
 
 
 def test_online_migration_rejects_index_on_existing_table(tmp_path: Path) -> None:
@@ -210,6 +207,7 @@ def test_online_expand_rejects_lock_prone_operations(tmp_path: Path, operation: 
     [
         'sa.Column("nickname", sa.String(), nullable=False)',
         'sa.Column("nickname", sa.String(), nullable=True, server_default="")',
+        'sa.Column("nickname", sa.String(), nullable=True, server_default=sa.text("TRUE"))',
         'sa.Column("nickname", sa.String(), nullable=True, unique=True)',
         'sa.Column("nickname", sa.String(), nullable=True, index=True)',
     ],
@@ -226,6 +224,19 @@ def test_online_expand_rejects_rewrite_or_constraint_add_column(
 
     with pytest.raises(OnlineMigrationError, match="add_column"):
         validate_added_migration(path)
+
+
+def test_online_expand_accepts_only_constant_false_server_default(tmp_path: Path) -> None:
+    path = _migration(
+        tmp_path / "0064_safe_default.py",
+        'online_rollout_phase = "expand"\n'
+        'online_rollout_notes = "constant false compatibility default"\n\n'
+        "def upgrade():\n"
+        '    op.add_column("users", sa.Column("enabled", sa.Boolean(), nullable=True, '
+        'server_default=sa.text("FALSE")))\n',
+    )
+
+    validate_added_migration(path)
 
 
 def test_online_expand_rejects_positional_foreign_key_in_add_column(tmp_path: Path) -> None:

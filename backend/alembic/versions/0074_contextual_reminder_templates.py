@@ -17,26 +17,37 @@ depends_on: str | Sequence[str] | None = None
 
 online_rollout_phase = "expand"
 online_rollout_notes = (
-    "Adds nullable default-off reminder flags and empty per-user template schedules; existing "
-    "notification rows are backfilled by the following migration."
+    "Adds nullable reminder flags with a constant FALSE PostgreSQL fast default for existing "
+    "rows and old writers, plus empty per-user template schedules; no populated table scan."
 )
 
 
 def upgrade() -> None:
     op.add_column(
         "notification_settings",
-        sa.Column("meal_reminders_enabled", sa.Boolean(), nullable=True),
-    )
-    op.add_column(
-        "notification_settings",
         sa.Column(
-            "hydration_reminders_enabled", sa.Boolean(), nullable=True
+            "meal_reminders_enabled",
+            sa.Boolean(),
+            nullable=True,
+            server_default=sa.text("FALSE"),
         ),
     )
     op.add_column(
         "notification_settings",
         sa.Column(
-            "movement_reminders_enabled", sa.Boolean(), nullable=True
+            "hydration_reminders_enabled",
+            sa.Boolean(),
+            nullable=True,
+            server_default=sa.text("FALSE"),
+        ),
+    )
+    op.add_column(
+        "notification_settings",
+        sa.Column(
+            "movement_reminders_enabled",
+            sa.Boolean(),
+            nullable=True,
+            server_default=sa.text("FALSE"),
         ),
     )
     op.create_table(

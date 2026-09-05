@@ -270,12 +270,31 @@ def _validate_nullable_add_column(path: Path, call: ast.Call) -> None:
         )
     for unsafe_keyword in ("server_default", "unique", "index"):
         value = keywords.get(unsafe_keyword)
-        if value is not None and not (
-            isinstance(value, ast.Constant) and value.value in {None, False}
-        ):
+        if unsafe_keyword == "server_default":
+            safe = value is None or _is_constant_false_server_default(value)
+        else:
+            safe = value is None or (
+                isinstance(value, ast.Constant) and value.value in {None, False}
+            )
+        if not safe:
             raise OnlineMigrationError(
                 f"{path} add_column cannot use {unsafe_keyword} during an online expand"
             )
+
+
+def _is_constant_false_server_default(value: ast.AST | None) -> bool:
+    return (
+        isinstance(value, ast.Call)
+        and isinstance(value.func, ast.Attribute)
+        and isinstance(value.func.value, ast.Name)
+        and value.func.value.id == "sa"
+        and value.func.attr == "text"
+        and len(value.args) == 1
+        and not value.keywords
+        and isinstance(value.args[0], ast.Constant)
+        and isinstance(value.args[0].value, str)
+        and value.args[0].value.strip().upper() == "FALSE"
+    )
 
 
 def validate_added_migration(path: Path) -> None:
