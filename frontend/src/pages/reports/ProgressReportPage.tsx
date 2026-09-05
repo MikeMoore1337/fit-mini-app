@@ -940,14 +940,14 @@ export default function ProgressReportPage() {
         </section>
       )}
 
-      {handoffId === null && auth?.user && !clientId && (
+      {handoffId === null && auth?.user?.trainer && !clientId && (
         <ReportHandoffPanel
           dateFrom={applied.dateFrom}
           dateTo={applied.dateTo}
           loading={displayFetching}
           period={applied.period}
           report={displayReport}
-          trainer={auth.user?.trainer ?? null}
+          trainer={auth.user.trainer}
         />
       )}
 
