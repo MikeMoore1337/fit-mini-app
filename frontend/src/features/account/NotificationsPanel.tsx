@@ -26,6 +26,7 @@ const categoryLabels: Record<string, string> = {
   relationship_event: 'Связь с тренером',
   nutrition_update: 'Питание',
   workout_change: 'Расписание',
+  report_handoff: 'Отчёт тренеру',
   custom_reminder: 'Личное напоминание',
 };
 
@@ -38,6 +39,7 @@ const navigableCategories = new Set([
   'relationship_event',
   'nutrition_update',
   'workout_change',
+  'report_handoff',
 ]);
 
 function timeValue(value: string | null | undefined, fallback: string): string {

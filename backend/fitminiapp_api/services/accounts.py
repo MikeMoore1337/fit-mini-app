@@ -35,6 +35,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutExercise,
     UserWorkoutSet,
 )
+from fitminiapp_api.models.report_handoff import ReportHandoff
 from fitminiapp_api.models.support import BotSupportCase
 from fitminiapp_api.models.token import RefreshToken
 from fitminiapp_api.models.user import (
@@ -261,6 +262,12 @@ def delete_user_cascade(db: Session, user: User) -> None:
         {"assigned_by_user_id": None}, synchronize_session=False
     )
     _delete_or_anonymize_user_exercises(db, user.id)
+    db.query(ReportHandoff).filter(
+        or_(
+            ReportHandoff.sender_user_id == user.id,
+            ReportHandoff.trainer_user_id == user.id,
+        )
+    ).delete(synchronize_session=False)
     db.query(CoachClient).filter(
         or_(CoachClient.coach_user_id == user.id, CoachClient.client_user_id == user.id)
     ).delete(synchronize_session=False)

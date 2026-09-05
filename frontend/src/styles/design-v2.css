@@ -25,6 +25,8 @@ body:has(.app-shell--design-v2) {
 .progress-report-controls,
 .progress-report-exercise-picker,
 .progress-report-tma-fallback,
+.progress-report-handoff,
+.progress-report-handoff-banner,
 .progress-report-filename,
 .progress-report-document {
   width: min(100%, 1180px);
@@ -132,6 +134,206 @@ body:has(.app-shell--design-v2) {
   padding: 12px 18px;
   border-left: 3px solid var(--v2-lime);
   background: var(--v2-surface-secondary);
+}
+
+.progress-report-handoff {
+  display: grid;
+  gap: 24px;
+  margin-block: 28px;
+  padding: 24px;
+  border: 1px solid var(--v2-border);
+  border-radius: 18px;
+  background: var(--v2-surface-secondary);
+}
+
+.progress-report-handoff__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.progress-report-handoff__header > div,
+.progress-report-handoff__preview > div,
+.progress-report-handoff__recipient label,
+.progress-report-handoff__history {
+  display: grid;
+  gap: 6px;
+}
+
+.progress-report-handoff__header h2,
+.progress-report-handoff__header p,
+.progress-report-handoff__history h3,
+.progress-report-handoff__history ul,
+.progress-report-handoff__recipient legend,
+.progress-report-handoff__preview strong,
+.progress-report-handoff__preview ul,
+.progress-report-handoff__status,
+.progress-report-handoff__error {
+  margin: 0;
+}
+
+.progress-report-handoff__header h2 {
+  margin-top: 4px;
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  letter-spacing: -0.025em;
+}
+
+.progress-report-handoff__header p {
+  max-width: 68ch;
+  color: var(--v2-text-secondary);
+}
+
+.progress-report-handoff__live {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid var(--v2-success-border);
+  border-radius: 999px;
+  background: var(--v2-success-surface);
+  color: var(--v2-success-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.progress-report-handoff__preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--v2-border);
+  background: var(--v2-border);
+}
+
+.progress-report-handoff__preview > div {
+  min-width: 0;
+  padding: 16px;
+  background: var(--v2-surface);
+}
+
+.progress-report-handoff__label {
+  color: var(--v2-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.progress-report-handoff__preview strong {
+  overflow-wrap: anywhere;
+}
+
+.progress-report-handoff__preview ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.progress-report-handoff__preview li::before {
+  margin-right: 6px;
+  color: var(--v2-lime);
+  content: '•';
+}
+
+.progress-report-handoff__recipient {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.progress-report-handoff__recipient legend {
+  padding: 0;
+  font-weight: 800;
+}
+
+.progress-report-handoff__recipient label {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  width: min(100%, 520px);
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1px solid var(--v2-border);
+  border-radius: 10px;
+  background: var(--v2-surface);
+  cursor: pointer;
+}
+
+.progress-report-handoff__recipient input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--v2-lime);
+}
+
+.progress-report-handoff__recipient small {
+  color: var(--v2-text-secondary);
+}
+
+.progress-report-handoff__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+}
+
+.progress-report-handoff__actions .ui-button {
+  min-height: 44px;
+}
+
+.progress-report-handoff__status {
+  color: var(--v2-success-text);
+  font-weight: 700;
+}
+
+.progress-report-handoff__error {
+  color: var(--v2-danger);
+}
+
+.progress-report-handoff__history {
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--v2-border);
+}
+
+.progress-report-handoff__history ul {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--v2-border);
+}
+
+.progress-report-handoff__history li {
+  display: grid;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.progress-report-handoff__history small {
+  color: var(--v2-text-secondary);
+}
+
+.progress-report-handoff-banner {
+  display: grid;
+  gap: 4px;
+  margin-block: 18px;
+  padding: 14px 18px;
+  border-left: 3px solid var(--v2-lime);
+  background: var(--v2-surface-secondary);
+}
+
+.progress-report-handoff-banner strong,
+.progress-report-handoff-banner p {
+  margin: 0;
+}
+
+.progress-report-handoff-banner p {
+  color: var(--v2-text-secondary);
 }
 
 .progress-report-document {
@@ -391,6 +593,25 @@ body:has(.app-shell--design-v2) {
     background: transparent;
   }
 
+  .progress-report-handoff {
+    margin-block: 18px;
+    padding: 18px;
+    border-inline: 0;
+    border-radius: 0;
+  }
+
+  .progress-report-handoff__header {
+    display: grid;
+  }
+
+  .progress-report-handoff__live {
+    justify-self: start;
+  }
+
+  .progress-report-handoff__preview {
+    grid-template-columns: 1fr;
+  }
+
   .progress-report-overview {
     grid-template-columns: 1fr;
     gap: 18px;
@@ -434,6 +655,18 @@ body:has(.app-shell--design-v2) {
   .progress-report-exercises dl,
   .progress-report-checkin dl {
     grid-template-columns: 1fr;
+  }
+
+  .progress-report-handoff {
+    padding-inline: 0;
+  }
+
+  .progress-report-handoff__actions {
+    align-items: stretch;
+  }
+
+  .progress-report-handoff__actions .ui-button {
+    width: 100%;
   }
 }
 
