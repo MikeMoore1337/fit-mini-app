@@ -83,6 +83,10 @@ body:has(.app-shell--design-v2) {
   gap: 12px;
 }
 
+.progress-report-custom > .ui-field {
+  align-self: start;
+}
+
 .progress-report-custom .ui-button {
   min-height: 44px;
 }
