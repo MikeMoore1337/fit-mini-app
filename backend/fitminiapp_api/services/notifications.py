@@ -303,9 +303,9 @@ def list_my_notifications(db: Session, user: User, limit: int = 100) -> list[Not
 def prune_terminal_records(db: Session) -> int:
     """Bound terminal operational history while preserving relation/audit rows."""
     cutoff = now_msk_naive() - TERMINAL_RETENTION
-    notification_ids = [
-        row.id
-        for row in db.query(Notification.id)
+    terminal_notifications = [
+        (row.id, row.status)
+        for row in db.query(Notification.id, Notification.status)
         .filter(
             Notification.status.in_(("sent", "cancelled", "failed")),
             Notification.created_at < cutoff,
@@ -314,6 +314,7 @@ def prune_terminal_records(db: Session) -> int:
         .limit(RETENTION_BATCH_SIZE)
         .all()
     ]
+    notification_ids = [notification_id for notification_id, _status in terminal_notifications]
     invite_ids = [
         row.id
         for row in db.query(CoachClientInvite.id)
@@ -326,6 +327,24 @@ def prune_terminal_records(db: Session) -> int:
         .all()
     ]
     if notification_ids:
+        delivered_ids = [
+            notification_id
+            for notification_id, notification_status in terminal_notifications
+            if notification_status == "sent"
+        ]
+        failed_ids = [
+            notification_id
+            for notification_id, notification_status in terminal_notifications
+            if notification_status != "sent"
+        ]
+        if delivered_ids:
+            db.query(ReportHandoff).filter(ReportHandoff.notification_id.in_(delivered_ids)).update(
+                {ReportHandoff.delivery_status: "delivered"}, synchronize_session=False
+            )
+        if failed_ids:
+            db.query(ReportHandoff).filter(ReportHandoff.notification_id.in_(failed_ids)).update(
+                {ReportHandoff.delivery_status: "failed"}, synchronize_session=False
+            )
         db.query(Notification).filter(Notification.id.in_(notification_ids)).delete(
             synchronize_session=False
         )
@@ -886,6 +905,11 @@ def delete_notification_for_user(
     if not row:
         return False
 
+    handoffs = db.query(ReportHandoff).filter(ReportHandoff.notification_id == row.id).all()
+    for handoff in handoffs:
+        handoff.delivery_status = "delivered" if row.status == "sent" else "failed"
+    if handoffs:
+        db.flush()
     db.delete(row)
     db.commit()
     return True

@@ -201,10 +201,10 @@ def _section_ids(report: dict) -> list[str]:
 
 def _notification_delivery_status(db: Session, handoff: ReportHandoff) -> str:
     if handoff.notification_id is None:
-        return "failed"
+        return handoff.delivery_status
     notification = db.get(Notification, handoff.notification_id)
     if notification is None:
-        return "failed"
+        return handoff.delivery_status
     if notification.status in {"sent", "succeeded"}:
         return "delivered"
     if notification.status in {"queued", "processing"}:
@@ -388,6 +388,7 @@ def create_report_handoff(
         report_revision=revision,
         idempotency_key=normalized_key,
         request_fingerprint=fingerprint,
+        delivery_status="pending",
         delivery_attempt=1,
     )
     db.add(handoff)
@@ -397,6 +398,7 @@ def create_report_handoff(
         db.add(notification)
         db.flush()
         handoff.notification_id = notification.id
+        handoff.delivery_status = "delivered"
         db.commit()
         db.refresh(handoff)
     except IntegrityError:
@@ -486,7 +488,13 @@ def retry_report_handoff(
     if handoff.last_retry_idempotency_key == normalized_key:
         return _handoff_response(db, handoff, trainer)
 
-    current_notification = db.get(Notification, handoff.notification_id)
+    current_notification = (
+        db.get(Notification, handoff.notification_id)
+        if handoff.notification_id is not None
+        else None
+    )
+    if current_notification is None and handoff.delivery_status != "failed":
+        return _handoff_response(db, handoff, trainer)
     if current_notification is not None and current_notification.status not in {
         "failed",
         "cancelled",
@@ -499,6 +507,7 @@ def retry_report_handoff(
     try:
         db.flush()
         handoff.notification_id = notification.id
+        handoff.delivery_status = "delivered"
         handoff.delivery_attempt = next_attempt
         handoff.last_retry_idempotency_key = normalized_key
         db.commit()

@@ -14,6 +14,7 @@ type CurrentTrainer = NonNullable<User['trainer']>;
 interface ReportHandoffPanelProps {
   dateFrom: string;
   dateTo: string;
+  loading: boolean;
   period: NutritionReportPeriod;
   report: ProgressReport;
   trainer: CurrentTrainer | null;
@@ -93,6 +94,7 @@ function formatCreatedAt(value: string, timezone: string): string {
 function ReportHandoffPanelContent({
   dateFrom,
   dateTo,
+  loading,
   period,
   report,
   trainer,
@@ -145,6 +147,7 @@ function ReportHandoffPanelContent({
   const mutationError = createMutation.error ?? retryMutation.error;
   const isPending = createMutation.isPending || retryMutation.isPending;
   const send = (forceNewVersion = false) => {
+    if (loading) return;
     if (forceNewVersion) {
       const nextKey = idempotencyKey();
       setHandoffKey(nextKey);
@@ -234,7 +237,7 @@ function ReportHandoffPanelContent({
 
       <div className="progress-report-handoff__actions">
         <Button
-          disabled={!trainer || isPending || lastHandoff?.delivery_status === 'pending'}
+          disabled={!trainer || loading || isPending || lastHandoff?.delivery_status === 'pending'}
           onClick={() => send(lastHandoff?.delivery_status === 'delivered')}
           type="button"
         >

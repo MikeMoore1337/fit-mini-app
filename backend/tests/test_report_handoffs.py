@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import timedelta
 from urllib.parse import parse_qs, urlsplit
 
-from fitminiapp_api.core.timezone import today_msk
+from fitminiapp_api.core.timezone import now_msk_naive, today_msk
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.check_in import WeeklyCheckIn
 from fitminiapp_api.models.notification import Notification
@@ -11,6 +11,7 @@ from fitminiapp_api.models.report_handoff import ReportHandoff
 from fitminiapp_api.models.user import BodyMeasurement, CoachClient, User
 from fitminiapp_api.services.account_export import build_account_export
 from fitminiapp_api.services.accounts import delete_user_cascade
+from fitminiapp_api.services.notifications import prune_terminal_records
 
 
 def _auth(client, telegram_user_id: int, *, is_coach: bool = False) -> dict[str, str]:
@@ -249,6 +250,48 @@ def test_handoff_retry_and_stale_notification_are_safe(client) -> None:
     assert stale_open.json()["destination"] == "/app?section=profile#profile-notifications"
     assert revoked_view.status_code == 404
     assert revoked_retry.status_code == 404
+
+
+def test_handoff_delivery_status_survives_notification_retention(client) -> None:
+    sender_headers = _auth(client, 83_151)
+    trainer_headers = _auth(client, 83_152, is_coach=True)
+    sender_id = _user_id(83_151)
+    trainer_id = _user_id(83_152)
+    _link(sender_id, trainer_id)
+
+    created = client.post(
+        "/api/v1/report-handoffs",
+        json={"period": "days_7"},
+        headers={**sender_headers, "Idempotency-Key": "handoff-83-retention"},
+    )
+    assert created.status_code == 201, created.text
+    handoff_id = created.json()["id"]
+
+    with get_session_context() as db:
+        handoff = db.get(ReportHandoff, handoff_id)
+        assert handoff is not None and handoff.notification_id is not None
+        notification = db.get(Notification, handoff.notification_id)
+        assert notification is not None
+        notification.created_at = now_msk_naive() - timedelta(days=91)
+
+    with get_session_context() as db:
+        assert prune_terminal_records(db) == 1
+        retained = db.get(ReportHandoff, handoff_id)
+        assert retained is not None
+        assert retained.notification_id is None
+        assert retained.delivery_status == "delivered"
+
+    view = client.get(f"/api/v1/report-handoffs/{handoff_id}", headers=trainer_headers)
+    assert view.status_code == 200, view.text
+    assert view.json()["handoff"]["delivery_status"] == "delivered"
+
+    retry = client.post(
+        f"/api/v1/report-handoffs/{handoff_id}/retry",
+        headers={**sender_headers, "Idempotency-Key": "handoff-83-retention-retry"},
+    )
+    assert retry.status_code == 200, retry.text
+    assert retry.json()["delivery_status"] == "delivered"
+    assert retry.json()["delivery_attempt"] == 1
 
 
 def test_handoff_requires_active_trainer_and_valid_period(client) -> None:

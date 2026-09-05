@@ -944,6 +944,7 @@ export default function ProgressReportPage() {
         <ReportHandoffPanel
           dateFrom={applied.dateFrom}
           dateTo={applied.dateTo}
+          loading={displayFetching}
           period={applied.period}
           report={displayReport}
           trainer={auth.user?.trainer ?? null}

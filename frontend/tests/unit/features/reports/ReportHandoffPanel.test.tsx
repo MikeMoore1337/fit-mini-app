@@ -25,7 +25,7 @@ function makeHandoff(
   };
 }
 
-function renderPanel() {
+function renderPanel(loading = false) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -34,6 +34,7 @@ function renderPanel() {
       <ReportHandoffPanel
         dateFrom=""
         dateTo=""
+        loading={loading}
         period="days_30"
         report={makeProgressReportFixture()}
         trainer={{
@@ -148,5 +149,18 @@ describe('ReportHandoffPanel', () => {
         headers: expect.objectContaining({ 'Idempotency-Key': expect.any(String) }),
       }),
     );
+  });
+
+  it('блокирует отправку, пока выбранный отчёт загружается', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => new Response(JSON.stringify([]), { status: 200 }));
+
+    renderPanel(true);
+
+    const sendButton = await screen.findByRole('button', { name: 'Отправить отчёт тренеру' });
+    expect(sendButton).toBeDisabled();
+    fireEvent.click(sendButton);
+    expect(fetchMock.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
   });
 });

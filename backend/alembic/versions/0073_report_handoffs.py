@@ -58,6 +58,7 @@ def upgrade() -> None:
             sa.ForeignKey("notifications.id", ondelete="SET NULL"),
             nullable=True,
         ),
+        sa.Column("delivery_status", sa.String(length=16), nullable=False, server_default="pending"),
         sa.Column("delivery_attempt", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("last_retry_idempotency_key", sa.String(length=128), nullable=True),
         sa.Column(
@@ -78,6 +79,10 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "delivery_attempt >= 1",
             name="ck_report_handoffs_delivery_attempt",
+        ),
+        sa.CheckConstraint(
+            "delivery_status IN ('delivered', 'pending', 'failed')",
+            name="ck_report_handoffs_delivery_status",
         ),
         sa.UniqueConstraint(
             "sender_user_id",

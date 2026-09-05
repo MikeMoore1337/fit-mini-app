@@ -37,6 +37,10 @@ class ReportHandoff(Base):
         ),
         CheckConstraint("period_end >= period_start", name="ck_report_handoffs_period_order"),
         CheckConstraint("delivery_attempt >= 1", name="ck_report_handoffs_delivery_attempt"),
+        CheckConstraint(
+            "delivery_status IN ('delivered', 'pending', 'failed')",
+            name="ck_report_handoffs_delivery_status",
+        ),
         UniqueConstraint(
             "sender_user_id",
             "idempotency_key",
@@ -80,6 +84,9 @@ class ReportHandoff(Base):
     request_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
     notification_id: Mapped[int | None] = mapped_column(
         ForeignKey("notifications.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    delivery_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="pending", server_default="pending"
     )
     delivery_attempt: Mapped[int] = mapped_column(
         Integer, nullable=False, default=1, server_default="1"
