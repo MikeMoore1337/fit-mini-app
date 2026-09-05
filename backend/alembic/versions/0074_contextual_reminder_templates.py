@@ -17,26 +17,37 @@ depends_on: str | Sequence[str] | None = None
 
 online_rollout_phase = "expand"
 online_rollout_notes = (
-    "Adds default-off reminder flags and empty per-user template schedules; existing notification "
-    "rows are not rewritten."
+    "Adds nullable reminder flags with a constant FALSE PostgreSQL fast default for existing "
+    "rows and old writers, plus empty per-user template schedules; no populated table scan."
 )
 
 
 def upgrade() -> None:
     op.add_column(
         "notification_settings",
-        sa.Column("meal_reminders_enabled", sa.Boolean(), nullable=False, server_default=sa.false()),
-    )
-    op.add_column(
-        "notification_settings",
         sa.Column(
-            "hydration_reminders_enabled", sa.Boolean(), nullable=False, server_default=sa.false()
+            "meal_reminders_enabled",
+            sa.Boolean(),
+            nullable=True,
+            server_default=sa.text("FALSE"),
         ),
     )
     op.add_column(
         "notification_settings",
         sa.Column(
-            "movement_reminders_enabled", sa.Boolean(), nullable=False, server_default=sa.false()
+            "hydration_reminders_enabled",
+            sa.Boolean(),
+            nullable=True,
+            server_default=sa.text("FALSE"),
+        ),
+    )
+    op.add_column(
+        "notification_settings",
+        sa.Column(
+            "movement_reminders_enabled",
+            sa.Boolean(),
+            nullable=True,
+            server_default=sa.text("FALSE"),
         ),
     )
     op.create_table(
@@ -62,8 +73,18 @@ def upgrade() -> None:
         sa.Column("interval_minutes", sa.Integer(), nullable=True),
         sa.Column("max_per_day", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("minimum_spacing_minutes", sa.Integer(), nullable=False, server_default="120"),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            nullable=False,
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(),
+            nullable=False,
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+        ),
         sa.CheckConstraint(
             "template_key IN ('meal_logging', 'hydration', 'movement_break')",
             name="ck_reminder_template_schedules_key",
