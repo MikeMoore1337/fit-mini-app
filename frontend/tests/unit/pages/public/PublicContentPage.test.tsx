@@ -153,17 +153,48 @@ describe('PublicContentPage', () => {
     expect(
       screen.getByRole('heading', { name: /небольшая база без пустых страниц/i }),
     ).toBeVisible();
-    expect(document.querySelectorAll('.public-guide-card')).toHaveLength(10);
+    expect(document.querySelectorAll('.public-guide-card')).toHaveLength(14);
     expect(screen.getByText(/Опубликовано: 4/i)).toBeVisible();
-    expect(screen.getAllByText(/Опубликовано: 1/i)).toHaveLength(3);
-    expect(screen.getAllByText(/Опубликовано: 3/i)).toHaveLength(2);
+    expect(screen.getAllByText(/Опубликовано: 1/i)).toHaveLength(2);
+    expect(screen.getByText(/Опубликовано: 2/i)).toBeVisible();
+    expect(screen.getByText(/Опубликовано: 3/i)).toBeVisible();
+    expect(screen.getByText(/Опубликовано: 6/i)).toBeVisible();
     expect(
       screen.getByRole('link', { name: /full body и split: выберите схему/i }),
     ).toHaveAttribute('href', '/knowledge/training/how-to-start-strength-training');
+    expect(screen.getByRole('link', { name: /гликемический индекс/i })).toHaveAttribute(
+      'href',
+      '/knowledge/nutrition/glycemic-index',
+    );
     expect(screen.getByRole('link', { name: /^Опубликованные упражнения/ })).toHaveAttribute(
       'href',
       '/exercises',
     );
+  });
+
+  it('renders the stateless BMI calculator with validation and a rounded result', () => {
+    renderPath('/knowledge/progress/bmi-calculator');
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: /имт — скрининговый ориентир/i }),
+    ).toBeInTheDocument();
+    const form = screen.getByRole('form', { name: 'Рассчитать ИМТ' });
+    fireEvent.click(within(form).getByRole('button', { name: 'Рассчитать ИМТ' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/массу тела от 1 до 500 кг/i);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Масса тела, кг'), { target: { value: '80' } });
+    fireEvent.change(screen.getByLabelText('Рост, см'), { target: { value: '180' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Рассчитать ИМТ' }));
+
+    expect(screen.getByRole('status')).toHaveTextContent('ИМТ: 24,7');
+    expect(screen.getByRole('status')).toHaveTextContent('Нормальный диапазон для взрослых');
+
+    fireEvent.change(screen.getByLabelText('Масса тела, кг'), { target: { value: '80.99' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Рассчитать ИМТ' }));
+    expect(screen.getByRole('status')).toHaveTextContent('ИМТ: 25,0');
+    expect(screen.getByRole('status')).toHaveTextContent('Нормальный диапазон для взрослых');
+    expect(localStorage.getItem('public-bmi-calculator')).toBeNull();
   });
 
   it('renders only allowlisted public exercise cards from the domain API', async () => {

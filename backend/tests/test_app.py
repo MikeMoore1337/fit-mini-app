@@ -3589,7 +3589,7 @@ def test_robots_and_sitemap_publish_only_canonical_public_urls(client, monkeypat
         for element in root.findall("{http://www.sitemaps.org/schemas/sitemap/0.9}url")
         for element in element.findall("{http://www.sitemaps.org/schemas/sitemap/0.9}loc")
     ]
-    assert len(urls) == 20
+    assert len(urls) == 24
     assert len(urls) == len(set(urls))
     assert {
         "https://your-fitness-coach.ru/",
@@ -3598,6 +3598,10 @@ def test_robots_and_sitemap_publish_only_canonical_public_urls(client, monkeypat
         "https://your-fitness-coach.ru/knowledge/nutrition/creatine-monohydrate",
         "https://your-fitness-coach.ru/knowledge/cardio/heart-rate-zones",
         "https://your-fitness-coach.ru/knowledge/progress/how-to-read-progress",
+        "https://your-fitness-coach.ru/knowledge/nutrition/glycemic-index",
+        "https://your-fitness-coach.ru/knowledge/nutrition/food-sources-for-kbju",
+        "https://your-fitness-coach.ru/knowledge/progress/bmi-calculator",
+        "https://your-fitness-coach.ru/knowledge/nutrition/hydration-and-water",
         "https://your-fitness-coach.ru/exercises",
         "https://your-fitness-coach.ru/exercises/bench-press",
         "https://your-fitness-coach.ru/exercises/lat-pulldown",
@@ -3616,6 +3620,22 @@ def test_robots_and_sitemap_publish_only_canonical_public_urls(client, monkeypat
         ("/progress", "Прогресс, который можно проверить"),
         ("/for-trainers", "Кабинет тренера для программ"),
         ("/knowledge", "Материалы, которые помогают понять"),
+        (
+            "/knowledge/nutrition/glycemic-index",
+            "Гликемический индекс описывает продукт, а не весь приём пищи",
+        ),
+        (
+            "/knowledge/nutrition/food-sources-for-kbju",
+            "Источники КБЖУ — это варианты, а не рейтинг продуктов",
+        ),
+        (
+            "/knowledge/progress/bmi-calculator",
+            "ИМТ — скрининговый ориентир, а не диагноз",
+        ),
+        (
+            "/knowledge/nutrition/hydration-and-water",
+            "Гидратация: ориентир помогает, но не заменяет контекст",
+        ),
     ],
 )
 def test_public_content_routes_render_unique_crawlable_pages(client, monkeypatch, path, heading):

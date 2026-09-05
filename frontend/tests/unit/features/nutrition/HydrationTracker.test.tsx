@@ -160,4 +160,39 @@ describe('HydrationTracker', () => {
       .closest('section') as HTMLElement;
     expect(within(presets).getByRole('button', { name: 'Добавить' })).toBeVisible();
   });
+
+  it('requires an explicit reference sex when the profile has none', async () => {
+    apiMock.mockImplementation((path: string) => {
+      if (path === '/api/v1/me') return Promise.resolve({ profile: { sex: null } });
+      if (path.startsWith('/api/v1/nutrition/hydration?')) {
+        return Promise.resolve({ ...day, goal: null });
+      }
+      return Promise.resolve({});
+    });
+
+    renderTracker();
+    fireEvent.click(await screen.findByRole('button', { name: 'Другой напиток, история и цель' }));
+
+    const sex = screen.getByLabelText('Пол для справочного ориентира');
+    expect(sex).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Сохранить ориентир' })).toBeDisabled();
+
+    fireEvent.change(sex, { target: { value: 'male' } });
+    fireEvent.click(screen.getByLabelText('Мне 18 лет или больше'));
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить ориентир' }));
+
+    await waitFor(() =>
+      expect(apiMock).toHaveBeenCalledWith(
+        '/api/v1/nutrition/hydration/goal',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.objectContaining({
+            sex: 'male',
+            adult_confirmed: true,
+            save_sex_to_profile: false,
+          }),
+        }),
+      ),
+    );
+  });
 });

@@ -41,6 +41,22 @@ const representativePages = [
     path: '/knowledge/training/repetitions-in-reserve',
     heading: /повторы в запасе: полезная оценка/i,
   },
+  {
+    path: '/knowledge/nutrition/glycemic-index',
+    heading: /гликемический индекс описывает продукт/i,
+  },
+  {
+    path: '/knowledge/nutrition/food-sources-for-kbju',
+    heading: /источники кбжу — это варианты/i,
+  },
+  {
+    path: '/knowledge/progress/bmi-calculator',
+    heading: /имт — скрининговый ориентир/i,
+  },
+  {
+    path: '/knowledge/nutrition/hydration-and-water',
+    heading: /гидратация: ориентир помогает/i,
+  },
 ];
 
 const publicArticleCard = {
@@ -351,6 +367,36 @@ test('mobile menu, skip link and contextual navigation work without an auth wall
   await publicNavigation.getByRole('link', { name: 'Питание' }).click();
   await expect(page).toHaveURL('/nutrition');
   await expect(page.getByRole('heading', { level: 1, name: /ориентиры кбжу/i })).toBeVisible();
+});
+
+test('BMI calculator validates adult metric inputs and stays stateless on narrow screens', async ({
+  page,
+}) => {
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 360, height: 800 },
+    { width: 430, height: 932 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/knowledge/progress/bmi-calculator');
+
+    const form = page.getByRole('form', { name: 'Рассчитать ИМТ' });
+    await form.getByRole('button', { name: 'Рассчитать ИМТ' }).click();
+    await expect(page.getByRole('alert')).toContainText('массу тела от 1 до 500 кг');
+
+    await page.getByLabel('Масса тела, кг').fill('80');
+    await page.getByLabel('Рост, см').fill('180');
+    await form.getByRole('button', { name: 'Рассчитать ИМТ' }).click();
+    await expect(page.getByRole('status')).toContainText('ИМТ: 24,7');
+    await expect(page.getByRole('status')).toContainText('Нормальный диапазон для взрослых');
+    expect(
+      await page.evaluate(() => ({
+        content: document.documentElement.scrollWidth,
+        viewport: window.innerWidth,
+        stored: localStorage.getItem('public-bmi-calculator'),
+      })),
+    ).toEqual({ content: viewport.width, viewport: viewport.width, stored: null });
+  }
 });
 
 test('mobile article spacing, justified type, CTA contrast and landing theme behavior stay readable', async ({
