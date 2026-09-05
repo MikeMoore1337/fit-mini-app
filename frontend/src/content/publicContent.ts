@@ -17,7 +17,13 @@ export interface PublicContentSource {
   publisher: string;
   url: string;
   published?: string;
-  sourceType?: 'guideline' | 'systematic-review' | 'meta-analysis' | 'review' | 'domain-source';
+  sourceType?:
+    | 'guideline'
+    | 'systematic-review'
+    | 'meta-analysis'
+    | 'review'
+    | 'primary-study'
+    | 'domain-source';
 }
 
 export interface PublicContentPage {
@@ -37,6 +43,7 @@ export interface PublicContentPage {
   intro: string;
   highlights?: string[];
   sections: PublicContentSection[];
+  interactive?: 'bmi-calculator';
   related: PublicContentLink[];
   cta?: {
     label: string;

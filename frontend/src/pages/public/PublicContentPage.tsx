@@ -17,6 +17,7 @@ import { AppThemeToggle } from '../../shared/ui/AppThemeToggle';
 import { Icon } from '../../shared/ui/Icon';
 import { useWebTheme } from '../../shared/useWebTheme';
 import { applyRouteMetadata } from '../../shared/seo/metadata';
+import PublicBmiCalculator from './PublicBmiCalculator';
 import '../../shared/ui/public-shell.css';
 import '../landing/landing.css';
 import './public-content.css';
@@ -179,6 +180,11 @@ function GuideContents({ page }: { page: PublicContentPageData }) {
             <a href={`#${sectionId(page, index)}`}>{section.heading}</a>
           </li>
         ))}
+        {page.interactive === 'bmi-calculator' && (
+          <li>
+            <a href="#public-bmi-calculator">Калькулятор ИМТ</a>
+          </li>
+        )}
         {page.sources && page.sources.length > 0 && (
           <li>
             <a href="#public-sources-title">Источники</a>
@@ -508,6 +514,7 @@ export default function PublicContentPage() {
                 )}
               </section>
             ))}
+            {page.interactive === 'bmi-calculator' && <PublicBmiCalculator />}
           </div>
 
           {page.kind === 'knowledge-index' && <KnowledgeDirectory />}

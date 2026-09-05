@@ -260,7 +260,7 @@ export function HydrationTracker({
           enabled: true,
           source: goalMode === 'reference' ? 'national_academies_beverages' : 'manual',
           target_ml: goalMode === 'manual' ? Number(manualGoal) : null,
-          sex: goalMode === 'reference' ? (sex ?? currentSex ?? 'female') : null,
+          sex: goalMode === 'reference' ? sex : null,
           adult_confirmed: goalMode === 'reference' ? adultConfirmed : null,
           save_sex_to_profile: goalMode === 'reference' && saveSex,
         },
@@ -486,9 +486,12 @@ export function HydrationTracker({
                 <Field label="Пол для справочного ориентира" labelFor="hydration-sex">
                   <Select
                     id="hydration-sex"
-                    value={sex ?? currentSex ?? 'female'}
+                    value={sex ?? ''}
                     onChange={(event) => setSex(event.target.value as 'male' | 'female')}
                   >
+                    <option value="" disabled>
+                      Выберите пол для расчёта
+                    </option>
                     <option value="female">Женский — 2200 мл напитков</option>
                     <option value="male">Мужской — 3000 мл напитков</option>
                   </Select>
@@ -534,7 +537,9 @@ export function HydrationTracker({
             )}
             <div className="hydration-entry__actions">
               <Button
-                disabled={saveGoal.isPending || (goalMode === 'reference' && !adultConfirmed)}
+                disabled={
+                  saveGoal.isPending || (goalMode === 'reference' && (!adultConfirmed || !sex))
+                }
                 type="button"
                 onClick={() => saveGoal.mutate(requestKey('hydration-goal'))}
               >
