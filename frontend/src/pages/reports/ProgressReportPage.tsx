@@ -1,8 +1,14 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import type { NutritionReportPeriod, ProgressReport } from '../../shared/api/types';
+import { useOptionalAuth } from '../../app/AuthProvider';
+import type {
+  NutritionReportPeriod,
+  ProgressReport,
+  ReportHandoffView,
+} from '../../shared/api/types';
 import { api } from '../../shared/api/client';
 import { downloadProgressReport } from '../../features/reports/downloadProgressReport';
+import { ReportHandoffPanel } from '../../features/reports/ReportHandoffPanel';
 import { AppLink, useNavigation } from '../../shared/navigation/router';
 import { BrandLockup } from '../../shared/ui/BrandLogo';
 import { DataConfidence } from '../../shared/ui/DataConfidence';
@@ -41,6 +47,20 @@ function positiveClientId(search: string): number | null {
   if (!value || !/^\d+$/.test(value)) return null;
   const result = Number(value);
   return Number.isSafeInteger(result) && result > 0 ? result : null;
+}
+
+function positiveHandoffId(search: string): number | null {
+  const value = new URLSearchParams(search).get('handoff_id');
+  if (!value || !/^\d+$/.test(value)) return null;
+  const result = Number(value);
+  return Number.isSafeInteger(result) && result > 0 ? result : null;
+}
+
+function handoffReturnPath(search: string): string {
+  return new URLSearchParams(search).get('return_to') ===
+    '/app?section=profile#profile-notifications'
+    ? '/app?section=profile#profile-notifications'
+    : '/app?section=progress';
 }
 
 function initialSelection(search: string): ReportSelection {
@@ -736,6 +756,8 @@ function ReportContent({
 export default function ProgressReportPage() {
   const { navigate, search } = useNavigation();
   const clientId = positiveClientId(search);
+  const handoffId = positiveHandoffId(search);
+  const auth = useOptionalAuth();
   const [draft, setDraft] = useState<ReportSelection>(() => initialSelection(search));
   const [applied, setApplied] = useState<ReportSelection>(() => initialSelection(search));
   const [exerciseSelections, setExerciseSelections] = useState<Record<string, string[]>>({});
@@ -755,21 +777,32 @@ export default function ProgressReportPage() {
     const days = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
     return days > 366 ? 'Период не может превышать 366 дней.' : '';
   }, [draft]);
+  const handoffView = useQuery({
+    queryKey: ['report-handoff', handoffId],
+    queryFn: () => api<ReportHandoffView>(`/api/v1/report-handoffs/${handoffId}`),
+    enabled: handoffId !== null,
+  });
   const report = useQuery({
     queryKey: ['progress-report', clientId, applied],
     queryFn: () => api<ProgressReport>(reportPath(applied, clientId)),
     enabled:
-      applied.period !== 'custom' || (!customError && Boolean(applied.dateFrom && applied.dateTo)),
+      handoffId === null &&
+      (applied.period !== 'custom' ||
+        (!customError && Boolean(applied.dateFrom && applied.dateTo))),
     placeholderData: keepPreviousData,
   });
+  const displayReport = handoffView.data?.report ?? report.data;
+  const displayError = handoffId !== null ? handoffView.error : report.error;
+  const displayLoading = handoffId !== null ? handoffView.isLoading : report.isLoading;
+  const displayFetching = handoffId !== null ? handoffView.isFetching : report.isFetching;
 
   useEffect(() => {
-    if (!report.data) return;
-    document.title = `progress-report-${report.data.period_start}_${report.data.period_end}`;
+    if (!displayReport) return;
+    document.title = `progress-report-${displayReport.period_start}_${displayReport.period_end}`;
     return () => {
       document.title = 'Your Fitness Coach';
     };
-  }, [report.data]);
+  }, [displayReport]);
 
   const applySelection = (event?: FormEvent) => {
     event?.preventDefault();
@@ -787,6 +820,7 @@ export default function ProgressReportPage() {
     }
   };
   const printReport = async () => {
+    if (handoffId !== null || !displayReport) return;
     if (isTma) {
       setTmaDownload({ status: 'pending' });
       try {
@@ -799,59 +833,92 @@ export default function ProgressReportPage() {
     }
     window.print();
   };
-  const returnPath = clientId ? `/coach?client_id=${clientId}` : '/app?section=progress';
-  const reportKey = report.data
-    ? `${report.data.subject.name}:${report.data.period_start}:${report.data.period_end}`
+  const returnPath =
+    handoffId !== null
+      ? handoffReturnPath(search)
+      : clientId
+        ? `/coach?client_id=${clientId}`
+        : '/app?section=progress';
+  const reportKey = displayReport
+    ? `${displayReport.subject.name}:${displayReport.period_start}:${displayReport.period_end}`
     : '';
-  const selectedExercises = report.data
+  const selectedExercises = displayReport
     ? (exerciseSelections[reportKey] ??
-      report.data.training.exercises.slice(0, 3).map((item) => item.exercise_title))
+      displayReport.training.exercises.slice(0, 3).map((item) => item.exercise_title))
     : [];
-  const controls = report.data ? (
+  const controls = displayReport ? (
     <>
-      <section
-        className="progress-report-controls report-screen-only"
-        aria-labelledby="report-period-title"
-      >
-        <div>
-          <span className="eyebrow">Период отчёта</span>
-          <h2 id="report-period-title">Выберите фактическое окно</h2>
-          <p>Период и субъект сохраняются в адресе отчёта при возврате из печати.</p>
-        </div>
-        <SegmentedControl
-          ariaLabel="Период отчёта"
-          onChange={selectPeriod}
-          options={periodOptions}
-          value={draft.period}
-        />
-        {draft.period === 'custom' && (
-          <form className="progress-report-custom" onSubmit={applySelection}>
-            <Field label="Начало" labelFor="report-date-from">
-              <Input
-                id="report-date-from"
-                type="date"
-                value={draft.dateFrom}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, dateFrom: event.target.value }))
-                }
-              />
-            </Field>
-            <Field error={customError || undefined} label="Окончание" labelFor="report-date-to">
-              <Input
-                id="report-date-to"
-                type="date"
-                value={draft.dateTo}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, dateTo: event.target.value }))
-                }
-              />
-            </Field>
-            <Button disabled={Boolean(customError)} type="submit" variant="secondary">
-              Показать период
-            </Button>
-          </form>
-        )}
-      </section>
+      {handoffId === null && (
+        <section
+          className="progress-report-controls report-screen-only"
+          aria-labelledby="report-period-title"
+        >
+          <div>
+            <span className="eyebrow">Период отчёта</span>
+            <h2 id="report-period-title">Выберите фактическое окно</h2>
+            <p>Период и субъект сохраняются в адресе отчёта при возврате из печати.</p>
+          </div>
+          <SegmentedControl
+            ariaLabel="Период отчёта"
+            onChange={selectPeriod}
+            options={periodOptions}
+            value={draft.period}
+          />
+          {draft.period === 'custom' && (
+            <form className="progress-report-custom" onSubmit={applySelection}>
+              <Field label="Начало" labelFor="report-date-from">
+                <Input
+                  id="report-date-from"
+                  type="date"
+                  value={draft.dateFrom}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, dateFrom: event.target.value }))
+                  }
+                />
+              </Field>
+              <Field error={customError || undefined} label="Окончание" labelFor="report-date-to">
+                <Input
+                  id="report-date-to"
+                  type="date"
+                  value={draft.dateTo}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, dateTo: event.target.value }))
+                  }
+                />
+              </Field>
+              <Button disabled={Boolean(customError)} type="submit" variant="secondary">
+                Показать период
+              </Button>
+            </form>
+          )}
+        </section>
+      )}
+
+      {handoffId !== null && handoffView.data && (
+        <section className="progress-report-handoff-banner report-screen-only" role="status">
+          <div>
+            <span className="eyebrow">Отчёт отправлен тренеру</span>
+            <strong>
+              {handoffView.data.handoff.trainer.full_name ||
+                handoffView.data.handoff.trainer.username ||
+                'Текущий тренер'}{' '}
+              · живые данные
+            </strong>
+            <p>
+              Статус:{' '}
+              {handoffView.data.handoff.delivery_status === 'delivered'
+                ? 'доставлено в центр уведомлений'
+                : handoffView.data.handoff.delivery_status === 'pending'
+                  ? 'ожидает обработки'
+                  : 'не удалось доставить'}
+              .
+            </p>
+            {handoffView.data.data_changed_since_send && (
+              <p>Данные изменились после отправки; сейчас показаны актуальные факты.</p>
+            )}
+          </div>
+        </section>
+      )}
 
       {!['idle', 'pending'].includes(tmaDownload.status) && (
         <section className="progress-report-tma-fallback report-screen-only" role="status">
@@ -873,11 +940,21 @@ export default function ProgressReportPage() {
         </section>
       )}
 
-      {report.data.training.exercises.length > 0 && (
+      {handoffId === null && auth?.user && !clientId && (
+        <ReportHandoffPanel
+          dateFrom={applied.dateFrom}
+          dateTo={applied.dateTo}
+          period={applied.period}
+          report={displayReport}
+          trainer={auth.user?.trainer ?? null}
+        />
+      )}
+
+      {handoffId === null && displayReport.training.exercises.length > 0 && (
         <fieldset className="progress-report-exercise-picker report-screen-only">
           <legend>Упражнения в печатном отчёте</legend>
           <p>Выберите до четырёх. Значения показывают только записанные рабочие подходы.</p>
-          {report.data.training.exercises.slice(0, 8).map((exercise) => {
+          {displayReport.training.exercises.slice(0, 8).map((exercise) => {
             const selected = selectedExercises.includes(exercise.exercise_title);
             return (
               <label key={exercise.exercise_title}>
@@ -911,7 +988,12 @@ export default function ProgressReportPage() {
         </AppLink>
         <BrandLockup />
         <Button
-          disabled={!report.data || report.isFetching || tmaDownload.status === 'pending'}
+          disabled={
+            handoffId !== null ||
+            !displayReport ||
+            displayFetching ||
+            tmaDownload.status === 'pending'
+          }
           onClick={() => void printReport()}
           type="button"
         >
@@ -924,23 +1006,28 @@ export default function ProgressReportPage() {
         </Button>
       </div>
 
-      {report.isLoading ? (
+      {displayLoading ? (
         <LoadingState label="Собираем фактический отчёт…" />
-      ) : report.error ? (
-        <ErrorState message={(report.error as Error).message} retry={() => void report.refetch()} />
-      ) : report.data ? (
+      ) : displayError ? (
+        <ErrorState
+          message={(displayError as Error).message}
+          retry={() => void (handoffId !== null ? handoffView.refetch() : report.refetch())}
+        />
+      ) : displayReport ? (
         <>
           <ReportContent
             controls={controls}
-            report={report.data}
+            report={displayReport}
             selectedExercises={selectedExercises}
           />
-          <p className="progress-report-filename report-screen-only">
-            Предлагаемое безопасное имя файла:{' '}
-            <code>
-              progress-report-{report.data.period_start}_{report.data.period_end}.pdf
-            </code>
-          </p>
+          {handoffId === null && (
+            <p className="progress-report-filename report-screen-only">
+              Предлагаемое безопасное имя файла:{' '}
+              <code>
+                progress-report-{displayReport.period_start}_{displayReport.period_end}.pdf
+              </code>
+            </p>
+          )}
         </>
       ) : null}
     </main>

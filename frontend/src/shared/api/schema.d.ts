@@ -2519,6 +2519,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/report-handoffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get My Report Handoffs */
+        get: operations["get_my_report_handoffs_api_v1_report_handoffs_get"];
+        put?: never;
+        /** Create My Report Handoff */
+        post: operations["create_my_report_handoff_api_v1_report_handoffs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/report-handoffs/{handoff_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry My Report Handoff */
+        post: operations["retry_my_report_handoff_api_v1_report_handoffs__handoff_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/report-handoffs/{handoff_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Report Handoff */
+        get: operations["get_report_handoff_api_v1_report_handoffs__handoff_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/users": {
         parameters: {
             query?: never;
@@ -7392,6 +7444,134 @@ export interface components {
             verification_required: boolean;
             /** Verification Token */
             verification_token?: string | null;
+        };
+        /** ReportHandoffCheckIn */
+        ReportHandoffCheckIn: {
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /**
+             * Week End
+             * Format: date
+             */
+            week_end: string;
+            /**
+             * Submitted On
+             * Format: date
+             */
+            submitted_on: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "skipped";
+            /** Training Load */
+            training_load?: number | null;
+            /** Recovery */
+            recovery?: number | null;
+            /** Hunger */
+            hunger?: number | null;
+            /** Adherence Difficulty */
+            adherence_difficulty?: number | null;
+        };
+        /** ReportHandoffCreateRequest */
+        ReportHandoffCreateRequest: {
+            period: components["schemas"]["NutritionReportPeriod"];
+            /** Date From */
+            date_from?: string | null;
+            /** Date To */
+            date_to?: string | null;
+        };
+        /** ReportHandoffProgressReport */
+        ReportHandoffProgressReport: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            period: components["schemas"]["NutritionReportPeriod"];
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /** Timezone */
+            timezone: string;
+            subject: components["schemas"]["ProgressReportSubject"];
+            training: components["schemas"]["ProgressReportTraining"];
+            cardio: components["schemas"]["CardioPeriodSummary"];
+            body: components["schemas"]["BodyPeriodSummary"];
+            nutrition: components["schemas"]["NutritionReportResponse"];
+            adherence: components["schemas"]["AdherenceSummary"];
+            data_sufficiency: components["schemas"]["ProgressDataSufficiency"];
+            program?: components["schemas"]["ProgressReportProgram"] | null;
+            /** Check Ins */
+            check_ins: components["schemas"]["ReportHandoffCheckIn"][];
+            wellbeing?: components["schemas"]["DailyWellbeingReport"] | null;
+        };
+        /** ReportHandoffResponse */
+        ReportHandoffResponse: {
+            /** Id */
+            id: number;
+            trainer: components["schemas"]["ReportHandoffTrainer"];
+            period: components["schemas"]["NutritionReportPeriod"];
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /** Timezone */
+            timezone: string;
+            /** Report Contract Version */
+            report_contract_version: string;
+            /** Included Section Ids */
+            included_section_ids: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Delivery Status
+             * @enum {string}
+             */
+            delivery_status: "delivered" | "pending" | "failed";
+            /** Delivery Attempt */
+            delivery_attempt: number;
+            /**
+             * Live
+             * @default true
+             * @constant
+             */
+            live: true;
+        };
+        /** ReportHandoffTrainer */
+        ReportHandoffTrainer: {
+            /** Id */
+            id: number;
+            /** Full Name */
+            full_name?: string | null;
+            /** Username */
+            username?: string | null;
+        };
+        /** ReportHandoffViewResponse */
+        ReportHandoffViewResponse: {
+            handoff: components["schemas"]["ReportHandoffResponse"];
+            report: components["schemas"]["ReportHandoffProgressReport"];
+            /** Data Changed Since Send */
+            data_changed_since_send: boolean;
         };
         /** RirDistributionBucket */
         RirDistributionBucket: {
@@ -14224,6 +14404,125 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_report_handoffs_api_v1_report_handoffs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportHandoffResponse"][];
+                };
+            };
+        };
+    };
+    create_my_report_handoff_api_v1_report_handoffs_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportHandoffCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportHandoffResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_my_report_handoff_api_v1_report_handoffs__handoff_id__retry_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                handoff_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportHandoffResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_handoff_api_v1_report_handoffs__handoff_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                handoff_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportHandoffViewResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

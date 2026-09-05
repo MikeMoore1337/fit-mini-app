@@ -77,6 +77,10 @@ function notificationCenterReturn(value: string | null): string | null {
 
 function progressReportReturn(search: string): string {
   const params = new URLSearchParams(search);
+  const handoffId = params.get('handoff_id');
+  if (handoffId && /^\d+$/.test(handoffId) && Number(handoffId) > 0) {
+    return notificationCenterReturn(params.get('return_to')) ?? '/app?section=progress';
+  }
   const clientId = params.get('client_id');
   if (clientId && /^\d+$/.test(clientId) && Number(clientId) > 0) {
     return `/coach?client_id=${clientId}`;

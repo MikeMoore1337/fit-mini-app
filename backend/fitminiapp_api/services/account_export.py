@@ -39,6 +39,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutExercise,
 )
 from fitminiapp_api.models.recipe import Recipe
+from fitminiapp_api.models.report_handoff import ReportHandoff
 from fitminiapp_api.models.user import (
     BodyMeasurement,
     CoachClient,
@@ -52,7 +53,7 @@ if TYPE_CHECKING:
     from fitminiapp_api.models.recipe import RecipeIngredient
 
 
-ACCOUNT_EXPORT_SCHEMA_VERSION = 7
+ACCOUNT_EXPORT_SCHEMA_VERSION = 8
 
 # Every ORM table whose rows can be reached from users through ownership or actor FKs must be
 # classified here. Tests compare this inventory with SQLAlchemy metadata so a new persistent user
@@ -102,6 +103,7 @@ ACCOUNT_EXPORT_DATA_INVENTORY: dict[str, str] = {
     "workout_comment_revisions": "workout_comments",
     "notification_settings": "notification_settings",
     "notifications": "notifications",
+    "report_handoffs": "report_handoffs",
     "weekly_digest_preferences": "weekly_digest_preference",
     "weekly_digest_deliveries": "weekly_digest_deliveries",
     "audit_events": "audit_events",
@@ -675,6 +677,17 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
         .order_by(CoachClient.created_at.asc(), CoachClient.id.asc())
         .all()
     )
+    report_handoffs = (
+        db.query(ReportHandoff)
+        .filter(
+            or_(
+                ReportHandoff.sender_user_id == user.id,
+                ReportHandoff.trainer_user_id == user.id,
+            )
+        )
+        .order_by(ReportHandoff.created_at.asc(), ReportHandoff.id.asc())
+        .all()
+    )
     coach_applications = (
         db.query(CoachRoleApplication)
         .filter(CoachRoleApplication.user_id == user.id)
@@ -982,6 +995,25 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
                 "ended_reason": relation.ended_reason,
             }
             for relation in relations
+        ],
+        "report_handoffs": [
+            {
+                "id": handoff.id,
+                "role": "sender" if handoff.sender_user_id == user.id else "trainer",
+                "sender_user_id": handoff.sender_user_id,
+                "trainer_user_id": handoff.trainer_user_id,
+                "relationship_id": handoff.relationship_id,
+                "period": handoff.period,
+                "period_start": handoff.period_start,
+                "period_end": handoff.period_end,
+                "timezone": handoff.timezone,
+                "report_contract_version": handoff.report_contract_version,
+                "included_section_ids": handoff.included_section_ids,
+                "delivery_attempt": handoff.delivery_attempt,
+                "notification_id": handoff.notification_id,
+                "created_at": handoff.created_at,
+            }
+            for handoff in report_handoffs
         ],
         "workout_comments": [
             {

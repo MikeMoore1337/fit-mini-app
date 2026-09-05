@@ -21,7 +21,14 @@ from fitminiapp_api.models.check_in import WeeklyCheckIn
 from fitminiapp_api.models.feedback import WorkoutComment
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.program import UserProgram, UserWorkout
-from fitminiapp_api.models.user import BodyMeasurement, CoachClientInvite, User, UserProfile
+from fitminiapp_api.models.report_handoff import ReportHandoff
+from fitminiapp_api.models.user import (
+    BodyMeasurement,
+    CoachClient,
+    CoachClientInvite,
+    User,
+    UserProfile,
+)
 
 MAX_DELIVERY_ATTEMPTS = 5
 PROCESSING_TIMEOUT = timedelta(minutes=5)
@@ -35,6 +42,7 @@ ALLOWED_NOTIFICATION_QUERY_KEYS = frozenset(
         "workout_id",
         "comment_id",
         "workout_exercise_id",
+        "report_handoff_id",
         "weekly_review",
         "date",
         "return_to",
@@ -73,10 +81,12 @@ def normalize_notification_action_url(action_url: str | None) -> str | None:
     section = query.get("section", [None])[0]
     if section is not None and section not in ALLOWED_NOTIFICATION_SECTIONS:
         raise ValueError("unsupported notification section")
-    for key in ("workout_id", "comment_id", "workout_exercise_id"):
+    for key in ("workout_id", "comment_id", "workout_exercise_id", "report_handoff_id"):
         value = query.get(key, [None])[0]
         if value is not None and (not value.isdigit() or int(value) <= 0):
             raise ValueError("invalid notification entity identifier")
+    if query.get("report_handoff_id") is not None and section != "progress":
+        raise ValueError("report handoff must open progress section")
     weekly_review = query.get("weekly_review", [None])[0]
     if weekly_review is not None and weekly_review != "1":
         raise ValueError("invalid weekly review destination")
@@ -175,6 +185,43 @@ def resolve_notification_destination(
         return NOTIFICATION_FALLBACK, True
 
     query = parse_qs(urlsplit(destination).query)
+    report_handoff_id_value = query.get("report_handoff_id", [None])[0]
+    if report_handoff_id_value is not None:
+        if notification.category != "report_handoff":
+            return NOTIFICATION_FALLBACK, True
+        handoff = (
+            db.query(ReportHandoff)
+            .filter(
+                ReportHandoff.id == int(report_handoff_id_value),
+                ReportHandoff.notification_id == notification.id,
+                ReportHandoff.trainer_user_id == user.id,
+            )
+            .first()
+        )
+        if handoff is None:
+            return NOTIFICATION_FALLBACK, True
+        active_relation = (
+            db.query(CoachClient.id)
+            .join(User, User.id == CoachClient.coach_user_id)
+            .filter(
+                CoachClient.id == handoff.relationship_id,
+                CoachClient.coach_user_id == handoff.trainer_user_id,
+                CoachClient.client_user_id == handoff.sender_user_id,
+                CoachClient.status == "active",
+                User.id == user.id,
+                User.is_active.is_(True),
+                User.is_coach.is_(True),
+            )
+            .first()
+        )
+        sender_is_active = (
+            db.query(User.id)
+            .filter(User.id == handoff.sender_user_id, User.is_active.is_(True))
+            .first()
+            is not None
+        )
+        if active_relation is None or not sender_is_active:
+            return NOTIFICATION_FALLBACK, True
     workout_id_value = query.get("workout_id", [None])[0]
     if workout_id_value is not None:
         workout_id = int(workout_id_value)

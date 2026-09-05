@@ -57,6 +57,7 @@ from fitminiapp_api.models.program import (
     WorkoutSetMutation,
 )
 from fitminiapp_api.models.recipe import Recipe, RecipeIngredient
+from fitminiapp_api.models.report_handoff import ReportHandoff
 from fitminiapp_api.models.support import BotSupportCase
 from fitminiapp_api.models.token import RefreshToken
 from fitminiapp_api.models.user import (
@@ -129,6 +130,7 @@ __all__ = [
     "Recipe",
     "RecipeIngredient",
     "RefreshToken",
+    "ReportHandoff",
     "Subscription",
     "TrainingBlock",
     "TrainingBlockPriorityMuscle",

@@ -185,6 +185,10 @@ export default function MiniAppPage() {
       : 'today';
   });
   const section = requestedSection(search) ?? fallbackSection;
+  const reportHandoffId =
+    section === 'progress'
+      ? positiveId(new URLSearchParams(search).get('report_handoff_id'))
+      : null;
   const sectionMotion = useSemanticMotion<HTMLDivElement>(section, {
     animateInitial: section === 'progress',
   });
@@ -206,6 +210,17 @@ export default function MiniAppPage() {
   const historyFocusId =
     requestedFeedback?.workoutId ??
     (focusedWorkout?.target === 'history' ? focusedWorkout.id : null);
+
+  useEffect(() => {
+    if (reportHandoffId === null) return;
+    const params = new URLSearchParams({ handoff_id: String(reportHandoffId) });
+    if (
+      new URLSearchParams(search).get('return_to') === '/app?section=profile#profile-notifications'
+    ) {
+      params.set('return_to', '/app?section=profile#profile-notifications');
+    }
+    navigate(`/app/report?${params}`, true);
+  }, [navigate, reportHandoffId, search]);
 
   useEffect(() => {
     if (analyticsSurface === 'tma') {
