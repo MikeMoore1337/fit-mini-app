@@ -1,7 +1,7 @@
 from datetime import datetime, time
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 ReminderTemplateKey = Literal["meal_logging", "hydration", "movement_break"]
 ReminderScheduleKind = Literal["times", "interval"]
@@ -99,3 +99,37 @@ class NotificationOpenResponse(BaseModel):
 
 class NotificationReadAllResponse(BaseModel):
     updated: int
+
+
+class WebPushSubscriptionKeys(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    p256dh: str = Field(min_length=1, max_length=128)
+    auth: str = Field(min_length=1, max_length=64)
+
+
+class WebPushSubscriptionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    endpoint: str = Field(min_length=1, max_length=2048)
+    keys: WebPushSubscriptionKeys
+
+
+class WebPushSubscriptionDeleteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    endpoint: str = Field(min_length=1, max_length=2048)
+
+
+class WebPushConfigResponse(BaseModel):
+    enabled: bool
+    application_server_key: str | None = None
+
+
+class WebPushStatusResponse(BaseModel):
+    enabled: bool
+    registered: bool
+
+
+class WebPushSubscriptionResponse(BaseModel):
+    status: Literal["registered"]

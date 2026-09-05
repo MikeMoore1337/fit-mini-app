@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.api.dependencies.auth import require_user
+from fitminiapp_api.core.config import settings
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.user import User
 from fitminiapp_api.schemas.notification import (
@@ -13,6 +14,11 @@ from fitminiapp_api.schemas.notification import (
     NotificationSettingUpdate,
     ReminderTemplateResponse,
     ReminderTemplateUpdate,
+    WebPushConfigResponse,
+    WebPushStatusResponse,
+    WebPushSubscriptionDeleteRequest,
+    WebPushSubscriptionRequest,
+    WebPushSubscriptionResponse,
 )
 from fitminiapp_api.services.notifications import (
     create_manual_notification,
@@ -28,8 +34,89 @@ from fitminiapp_api.services.reminder_templates import (
     list_reminder_templates,
     update_reminder_template,
 )
+from fitminiapp_api.services.web_push import (
+    WebPushDisabledError,
+    WebPushSubscriptionError,
+    has_registered_subscription,
+    register_subscription,
+    revoke_subscription,
+)
 
 router = APIRouter()
+
+
+@router.get("/web-push/config", response_model=WebPushConfigResponse)
+def get_web_push_config(
+    current_user: User = Depends(require_user),
+):
+    del current_user
+    return WebPushConfigResponse(
+        enabled=settings.web_push_enabled,
+        application_server_key=(
+            settings.web_push_vapid_public_key if settings.web_push_enabled else None
+        ),
+    )
+
+
+@router.get("/web-push/status", response_model=WebPushStatusResponse)
+def get_web_push_status(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    return WebPushStatusResponse(
+        enabled=settings.web_push_enabled,
+        registered=has_registered_subscription(db, current_user),
+    )
+
+
+@router.post(
+    "/web-push/subscription",
+    response_model=WebPushSubscriptionResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "description": "Web Push is disabled or not configured"
+        }
+    },
+)
+def register_web_push_subscription(
+    payload: WebPushSubscriptionRequest,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        register_subscription(
+            db,
+            current_user,
+            endpoint=payload.endpoint,
+            p256dh=payload.keys.p256dh,
+            auth=payload.keys.auth,
+        )
+        db.commit()
+    except WebPushDisabledError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Уведомления браузера сейчас недоступны",
+        ) from exc
+    except WebPushSubscriptionError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Недопустимая подписка браузера",
+        ) from exc
+    return WebPushSubscriptionResponse(status="registered")
+
+
+@router.delete("/web-push/subscription", status_code=status.HTTP_204_NO_CONTENT)
+def revoke_web_push_subscription(
+    payload: WebPushSubscriptionDeleteRequest,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    revoke_subscription(db, current_user, payload.endpoint)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 def _settings_response(settings, user: User) -> NotificationSettingResponse:

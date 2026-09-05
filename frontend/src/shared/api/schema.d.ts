@@ -2415,6 +2415,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications/web-push/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Web Push Config */
+        get: operations["get_web_push_config_api_v1_notifications_web_push_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/web-push/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Web Push Status */
+        get: operations["get_web_push_status_api_v1_notifications_web_push_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/web-push/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register Web Push Subscription */
+        post: operations["register_web_push_subscription_api_v1_notifications_web_push_subscription_post"];
+        /** Revoke Web Push Subscription */
+        delete: operations["revoke_web_push_subscription_api_v1_notifications_web_push_subscription_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications/settings": {
         parameters: {
             query?: never;
@@ -8359,6 +8411,46 @@ export interface components {
             generated_with_ai: boolean;
             /** Research Assistance */
             research_assistance: boolean;
+        };
+        /** WebPushConfigResponse */
+        WebPushConfigResponse: {
+            /** Enabled */
+            enabled: boolean;
+            /** Application Server Key */
+            application_server_key?: string | null;
+        };
+        /** WebPushStatusResponse */
+        WebPushStatusResponse: {
+            /** Enabled */
+            enabled: boolean;
+            /** Registered */
+            registered: boolean;
+        };
+        /** WebPushSubscriptionDeleteRequest */
+        WebPushSubscriptionDeleteRequest: {
+            /** Endpoint */
+            endpoint: string;
+        };
+        /** WebPushSubscriptionKeys */
+        WebPushSubscriptionKeys: {
+            /** P256Dh */
+            p256dh: string;
+            /** Auth */
+            auth: string;
+        };
+        /** WebPushSubscriptionRequest */
+        WebPushSubscriptionRequest: {
+            /** Endpoint */
+            endpoint: string;
+            keys: components["schemas"]["WebPushSubscriptionKeys"];
+        };
+        /** WebPushSubscriptionResponse */
+        WebPushSubscriptionResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "registered";
         };
         /** WeeklyCheckInAdaptiveSummary */
         WeeklyCheckInAdaptiveSummary: {
@@ -14305,6 +14397,117 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["NutritionTargetHistoryResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_web_push_config_api_v1_notifications_web_push_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebPushConfigResponse"];
+                };
+            };
+        };
+    };
+    get_web_push_status_api_v1_notifications_web_push_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebPushStatusResponse"];
+                };
+            };
+        };
+    };
+    register_web_push_subscription_api_v1_notifications_web_push_subscription_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebPushSubscriptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebPushSubscriptionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Web Push is disabled or not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    revoke_web_push_subscription_api_v1_notifications_web_push_subscription_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebPushSubscriptionDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

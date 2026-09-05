@@ -22,6 +22,7 @@ SAFE_EVENT_NAMES = frozenset(
         "http_request_completed",
         "http_request_rejected",
         "notification_delivery_failed",
+        "notification_delivery_completed",
         "news_draft_generation_failed",
         "news_draft_generation_succeeded",
         "news_candidate_evaluated",
@@ -57,6 +58,7 @@ SAFE_PROVIDER_NAMES = frozenset(
         "telegram",
         "vk",
         "yandex",
+        "web_push",
     }
 )
 STRUCTURED_FIELDS = (
@@ -72,6 +74,7 @@ STRUCTURED_FIELDS = (
     "db_pool_overflow",
     "body_limit_bytes",
     "notification_ref",
+    "notification_category",
     "delivery_error",
     "provider",
     "reason",
@@ -147,6 +150,7 @@ INTEGER_FIELDS = {
 FLOAT_FIELDS = {"duration_ms", "sql_duration_ms", "latency_ms"}
 CODE_FIELDS = {
     "notification_ref",
+    "notification_category",
     "delivery_error",
     "reason",
     "pipeline_stage",

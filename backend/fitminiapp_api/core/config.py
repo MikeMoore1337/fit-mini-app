@@ -1,8 +1,12 @@
+import base64
+import binascii
 import re
 from typing import Literal
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,6 +16,34 @@ def _is_placeholder_secret(value: str) -> bool:
     return normalized in {"", "change-me", "replace-me", "secret", "test-secret"} or (
         normalized.startswith(("change-", "replace-"))
     )
+
+
+def _decode_base64url(value: str) -> bytes:
+    normalized = value.strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]+={0,2}", normalized):
+        raise ValueError
+    unpadded = normalized.rstrip("=")
+    if len(unpadded) % 4 == 1:
+        raise ValueError
+    try:
+        return base64.urlsafe_b64decode(unpadded + "=" * (-len(unpadded) % 4))
+    except (binascii.Error, ValueError) as exc:
+        raise ValueError from exc
+
+
+def _load_vapid_private_key(value: str) -> ec.EllipticCurvePrivateKey:
+    normalized = value.strip().replace("\\n", "\n")
+    if "-----BEGIN" in normalized:
+        key = serialization.load_pem_private_key(normalized.encode("utf-8"), password=None)
+    else:
+        raw = _decode_base64url(normalized)
+        if len(raw) == 32:
+            key = ec.derive_private_key(int.from_bytes(raw, "big"), ec.SECP256R1())
+        else:
+            key = serialization.load_der_private_key(raw, password=None)
+    if not isinstance(key, ec.EllipticCurvePrivateKey) or key.curve.name != "secp256r1":
+        raise ValueError
+    return key
 
 
 class Settings(BaseSettings):
@@ -86,6 +118,14 @@ class Settings(BaseSettings):
     worker_poll_seconds: int = Field(default=10, ge=1, le=3600)
     reminder_sync_seconds: int = Field(default=60, ge=10, le=3600)
     notification_delivery_concurrency: int = Field(default=8, ge=1, le=30)
+    web_push_enabled: bool = False
+    web_push_vapid_subject: str = ""
+    web_push_vapid_public_key: str = ""
+    web_push_vapid_private_key: SecretStr = SecretStr("")
+    web_push_endpoint_hosts: str = (
+        "fcm.googleapis.com,*.push.services.mozilla.com,*.push.apple.com,*.notify.windows.com"
+    )
+    web_push_delivery_timeout_seconds: float = Field(default=10, ge=3, le=30)
     audit_event_retention_days: int = Field(default=365, ge=90, le=3650)
     news_ingestion_enabled: bool = False
     news_legacy_source_fetch_enabled: bool = True
@@ -200,6 +240,84 @@ class Settings(BaseSettings):
                 )
         if self.food_usda_enabled and not self.usda_fdc_api_key.get_secret_value().strip():
             raise ValueError("USDA_FDC_API_KEY must be configured when FOOD_USDA_ENABLED is true")
+        return self
+
+    @model_validator(mode="after")
+    def validate_web_push(self) -> Settings:
+        hosts = self.web_push_endpoint_host_allowlist
+        if not hosts:
+            raise ValueError("WEB_PUSH_ENDPOINT_HOSTS must contain at least one host")
+        for host in hosts:
+            if not re.fullmatch(
+                r"(?:\*\.)?[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*",
+                host,
+            ):
+                raise ValueError("WEB_PUSH_ENDPOINT_HOSTS contains an invalid host")
+
+        if not self.web_push_enabled:
+            return self
+
+        subject = self.web_push_vapid_subject.strip()
+        try:
+            parsed_subject = urlparse(subject)
+            subject_hostname = parsed_subject.hostname
+            subject_port = parsed_subject.port
+        except ValueError as exc:
+            raise ValueError(
+                "WEB_PUSH_VAPID_SUBJECT must be an absolute credential-free mailto or HTTPS URL"
+            ) from exc
+        valid_mailto = (
+            parsed_subject.scheme == "mailto"
+            and bool(
+                re.fullmatch(
+                    r"[^@\s]+@(?:localhost|[a-z0-9%_-]+(?:\.[a-z0-9%_-]+)+)",
+                    parsed_subject.path,
+                    re.IGNORECASE,
+                )
+            )
+            and not parsed_subject.netloc
+            and not parsed_subject.query
+            and not parsed_subject.fragment
+        )
+        valid_https = (
+            parsed_subject.scheme == "https"
+            and isinstance(subject_hostname, str)
+            and (
+                subject_hostname == "localhost"
+                or "." in subject_hostname
+                or ":" in subject_hostname
+            )
+            and not parsed_subject.username
+            and not parsed_subject.password
+            and not parsed_subject.path
+            and not parsed_subject.query
+            and not parsed_subject.fragment
+            and (subject_port is None or 1 <= subject_port <= 65535)
+        )
+        if not (valid_mailto or valid_https):
+            raise ValueError(
+                "WEB_PUSH_VAPID_SUBJECT must be an absolute credential-free mailto or HTTPS URL"
+            )
+
+        try:
+            public_key = _decode_base64url(self.web_push_vapid_public_key)
+        except ValueError as exc:
+            raise ValueError("WEB_PUSH_VAPID_PUBLIC_KEY must be a base64url P-256 key") from exc
+        if len(public_key) != 65 or public_key[0] != 4:
+            raise ValueError("WEB_PUSH_VAPID_PUBLIC_KEY must be an uncompressed P-256 key")
+
+        try:
+            private_key = _load_vapid_private_key(
+                self.web_push_vapid_private_key.get_secret_value()
+            )
+            derived_public_key = private_key.public_key().public_bytes(
+                serialization.Encoding.X962,
+                serialization.PublicFormat.UncompressedPoint,
+            )
+        except Exception as exc:
+            raise ValueError("WEB_PUSH_VAPID_PRIVATE_KEY must be a valid P-256 key") from exc
+        if derived_public_key != public_key:
+            raise ValueError("WEB_PUSH_VAPID_PUBLIC_KEY does not match the private key")
         return self
 
     @model_validator(mode="after")
@@ -330,6 +448,12 @@ class Settings(BaseSettings):
     @property
     def bot_api_proxy_url(self) -> str:
         return self.telegram_bot_proxy_url
+
+    @property
+    def web_push_endpoint_host_allowlist(self) -> tuple[str, ...]:
+        return tuple(
+            host.strip().lower() for host in self.web_push_endpoint_hosts.split(",") if host.strip()
+        )
 
     @property
     def admin_telegram_id_set(self) -> set[int]:

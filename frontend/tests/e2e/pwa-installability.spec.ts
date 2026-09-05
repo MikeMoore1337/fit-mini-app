@@ -44,6 +44,13 @@ test('serves the install manifest, canonical icons and service worker contract',
   expect(serviceWorkerSource).toContain("assetPath.startsWith('providers/')");
   expect(serviceWorkerSource).toContain("assetPath.startsWith('marketing/')");
   expect(serviceWorkerSource).toContain("assetPath.startsWith('product/')");
+  expect(serviceWorkerSource).toContain("self.addEventListener('push'");
+  expect(serviceWorkerSource).toContain("self.addEventListener('notificationclick'");
+  expect(serviceWorkerSource).toContain(
+    "PUSH_NOTIFICATION_PATH = '/app?section=profile#profile-notifications'",
+  );
+  expect(serviceWorkerSource).toContain('PUSH_NOTIFICATION_BODY');
+  expect(serviceWorkerSource).toContain('private notification details are loaded only');
 
   await page.goto('/');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(

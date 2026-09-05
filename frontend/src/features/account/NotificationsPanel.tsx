@@ -15,6 +15,7 @@ import { notificationDraftStorageKey } from '../../shared/userScopedStorage';
 import { DisclosureIcon, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { DateInput, TimeInput } from '../../shared/ui/PickerInput';
+import { WebPushSettings } from './WebPushSettings';
 
 interface NotificationOpenResponse {
   destination: string;
@@ -643,6 +644,8 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (path: string)
           )
         )}
       </section>
+
+      <WebPushSettings />
 
       <details className="notification-templates profile-disclosure">
         <summary>

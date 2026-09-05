@@ -15,6 +15,11 @@ from fitminiapp_api.models.food_diary import (
     FoodDiaryDayStatus,
     FoodDiaryEntry,
 )
+from fitminiapp_api.models.notification import (
+    Notification,
+    NotificationDelivery,
+    WebPushSubscription,
+)
 from fitminiapp_api.models.recipe import Recipe, RecipeIngredient
 from fitminiapp_api.models.token import RefreshToken
 from fitminiapp_api.models.user import CoachClient, User, UserProfile
@@ -191,6 +196,35 @@ def test_account_export_includes_current_nutrition_domains_and_omits_secrets() -
             )
         )
         db.flush()
+        push_notification = Notification(
+            user_id=owner.id,
+            category="trainer_program_update",
+            event_kind="transactional",
+            title="Web Push event",
+            body="Private notification details",
+            scheduled_for=datetime(2026, 8, 19, 9),
+            scheduled_for_utc=datetime(2026, 8, 19, 6),
+            status="sent",
+        )
+        db.add(push_notification)
+        db.flush()
+        push_subscription = WebPushSubscription(
+            user_id=owner.id,
+            endpoint="https://fcm.googleapis.com/fcm/send/SECRET_ENDPOINT_CAPABILITY",
+            endpoint_hash="SECRET_ENDPOINT_HASH",
+            p256dh="SECRET_P256DH",
+            auth="SECRET_AUTH",
+        )
+        db.add(push_subscription)
+        db.flush()
+        db.add(
+            NotificationDelivery(
+                notification_id=push_notification.id,
+                subscription_id=push_subscription.id,
+                status="sent",
+            )
+        )
+        db.flush()
 
         payload = build_account_export(db, owner)
         credential_metadata = {
@@ -226,6 +260,10 @@ def test_account_export_includes_current_nutrition_domains_and_omits_secrets() -
         "SECRET_IDEMPOTENCY_KEY",
         "SECRET_REQUEST_FINGERPRINT",
         "SECRET_MANAGED_CLIENT_NAME",
+        "SECRET_ENDPOINT_CAPABILITY",
+        "SECRET_ENDPOINT_HASH",
+        "SECRET_P256DH",
+        "SECRET_AUTH",
         "Чужой приватный продукт",
     ):
         assert forbidden not in encoded
