@@ -36,6 +36,38 @@ async function installReportApi(page: Page, state: ReportState = 'full') {
   );
 }
 
+test('keeps custom date fields aligned while validation is visible', async ({ page }) => {
+  await installPlatformApi(page, { browserSession: true });
+  await installReportApi(page);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/app/report?period=days_30');
+
+  await page.getByRole('tab', { name: 'Свой период' }).click();
+  const dateFrom = page.locator('#report-date-from');
+  const dateTo = page.locator('#report-date-to');
+  await expect(dateFrom).toBeVisible();
+  await expect(dateTo).toBeVisible();
+  await expect(page.getByText('Укажите обе даты.', { exact: true })).toBeVisible();
+
+  const [fromBox, toBox] = await Promise.all([dateFrom.boundingBox(), dateTo.boundingBox()]);
+  expect(fromBox).not.toBeNull();
+  expect(toBox).not.toBeNull();
+  expect(Math.abs(fromBox!.y - toBox!.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(fromBox!.height - toBox!.height)).toBeLessThanOrEqual(1);
+});
+
+test('hides trainer handoff section when the client has no assigned trainer', async ({ page }) => {
+  await installPlatformApi(page, { browserSession: true });
+  await installReportApi(page);
+  await page.goto('/app/report?period=days_30');
+
+  await expect(page.getByRole('heading', { name: 'Факты за период' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Отправить отчёт текущему тренеру' })).toHaveCount(
+    0,
+  );
+  await expect(page.getByText('Нет доступного текущего тренера', { exact: true })).toHaveCount(0);
+});
+
 test('full report keeps a mobile-first preview and creates a valid light print document', async ({
   page,
 }) => {
