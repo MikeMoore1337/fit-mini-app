@@ -222,6 +222,34 @@ describe('product event contract', () => {
     ).toBe(true);
   });
 
+  it('keeps PWA analytics context-free and limits service-worker error categories', () => {
+    expect(isProductEvent({ name: 'pwa_install_option_shown', surface: 'mobile_web' })).toBe(true);
+    expect(isProductEvent({ name: 'pwa_workout_resume_failure', surface: 'desktop_web' })).toBe(
+      true,
+    );
+    expect(
+      isProductEvent({
+        name: 'pwa_service_worker_error',
+        surface: 'mobile_web',
+        category: 'navigation',
+      }),
+    ).toBe(true);
+    expect(
+      isProductEvent({
+        name: 'pwa_service_worker_error',
+        surface: 'mobile_web',
+        category: 'network-stack',
+      }),
+    ).toBe(false);
+    expect(
+      isProductEvent({
+        name: 'pwa_update_applied',
+        surface: 'desktop_web',
+        user_id: 7,
+      } as unknown as ProductEvent),
+    ).toBe(false);
+  });
+
   it('keeps public article analytics limited to a slug and canonical CTA destination', () => {
     expect(
       isProductEvent({

@@ -3,6 +3,8 @@ x-backend-image: &backend-image
   build:
     context: .
     dockerfile: backend/Dockerfile
+    args:
+      VITE_PWA_ENABLED: ${VITE_PWA_ENABLED:-true}
 
 x-bot-image: &bot-image
   image: ${BOT_IMAGE:-yfc-bot:local}

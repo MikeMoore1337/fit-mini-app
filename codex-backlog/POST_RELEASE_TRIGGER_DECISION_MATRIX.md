@@ -11,7 +11,8 @@
 | `83` | | | | Есть потребность в explicit handoff сверх пассивного coach access | | |
 | `84` | | | | Пользователи явно включают meal/water/movement templates; anti-spam contract принят | | |
 | `85` | | | | Есть editorial capacity, primary sources и подтверждённые вопросы пользователей | | |
-| `86` | | | | Измеримый Web return/installability gap не закрывается текущим shell | | |
+| `86` | Owner/product inputs from Task 86 continuation brief, 2026-09-05 | Web ~60%, TMA ~40%; Web users regularly return; Web is an independent primary channel | Browser/TMA return requires more actions and has worse availability; no home-screen icon/standalone UX; Telegram is not universal; active workout must survive background/lock/suspend/freeze/discard/reopen | Owner-provided evidence closes the trigger gate; quantitative analytics fields remain to be instrumented and verified in Task 86 | `Go` | 2026-09-05 |
+| `86A` | Owner/product inputs recorded for Task 86 | Web Push is product-necessary because notifications exist and Telegram is not universal | Web notification subscriptions, delivery, permission UX, backend integration and lifecycle are not covered by Task 86 | Start only after Task 86 PWA/SW foundation is complete; separate owner launch and privacy/security gate | Pending after `86` | 2026-09-05 |
 | `87` | | | | Определены конкретные AI jobs, privacy boundary, evals и допустимая стоимость | | |
 | `88` | Результат `87` | | | Только explicit owner `Go` после provider/privacy decision | | |
 | `89` | Результат `88` | | | Grounded core прошёл evals; доказана потребность в consented personal tools | | |
@@ -57,3 +58,9 @@
 
 Допустимые решения для pending: `Go`, `Defer`, `No-Go`, `Research first`. Пустая строка, номер или
 завершённая dependency не считаются согласием.
+
+Для Task `86` evidence предоставлен владельцем в continuation brief, а не production analytics
+или синтетическим user test. Не предоставлены source/period/sample/latency/browser-distribution
+поля количественной аналитики; они не выдумываются и остаются ограничениями измерения/задачами
+реализации и верификации. Это не блокирует запуск, поскольку текущий `Go` опирается на явное
+описание пользовательского gap и критического active-workout lifecycle владельцем.

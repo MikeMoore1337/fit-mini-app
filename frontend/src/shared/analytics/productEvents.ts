@@ -13,6 +13,8 @@ export type ProductCoreAction =
   | 'food_logged'
   | 'measurement_logged'
   | 'weekly_review_completed';
+export type PwaServiceWorkerErrorCategory =
+  'registration' | 'update' | 'cache' | 'navigation' | 'install' | 'activate';
 export type LandingTelegramPlacement = 'hero' | 'continuity' | 'footer';
 export type EditorialCtaDestination = 'tma' | 'web' | 'landing' | 'article';
 export type EditorialCtaCampaign = 'telegram_editorial_v1';
@@ -59,7 +61,15 @@ type ContextFreeProductEventName =
   | 'trainer_program_assigned'
   | 'trainer_comment_added'
   | 'trainer_mode_activated'
-  | 'tma_launched';
+  | 'tma_launched'
+  | 'pwa_install_option_shown'
+  | 'pwa_install_option_dismissed'
+  | 'pwa_install_option_accepted'
+  | 'pwa_standalone_launched'
+  | 'pwa_workout_resume_success'
+  | 'pwa_workout_resume_failure'
+  | 'pwa_update_available'
+  | 'pwa_update_applied';
 
 type ContextFreeProductEvent = {
   [Name in ContextFreeProductEventName]: {
@@ -116,6 +126,11 @@ export type ProductEvent =
       surface: ProductSurface;
       content_key: string;
       destination: PublicArticleCtaDestination;
+    }
+  | {
+      name: 'pwa_service_worker_error';
+      surface: ProductSurface;
+      category: PwaServiceWorkerErrorCategory;
     };
 
 export type ProductEventName = ProductEvent['name'];
@@ -194,6 +209,14 @@ const CONTEXT_FREE_EVENT_NAMES = new Set<ProductEventName>([
   'trainer_comment_added',
   'trainer_mode_activated',
   'tma_launched',
+  'pwa_install_option_shown',
+  'pwa_install_option_dismissed',
+  'pwa_install_option_accepted',
+  'pwa_standalone_launched',
+  'pwa_workout_resume_success',
+  'pwa_workout_resume_failure',
+  'pwa_update_available',
+  'pwa_update_applied',
 ]);
 const PRODUCT_SURFACES = new Set<ProductSurface>(['desktop_web', 'mobile_web', 'tma']);
 const PRODUCT_ANALYTICS_ENVIRONMENTS = new Set<ProductAnalyticsEnvironment>([
@@ -228,6 +251,14 @@ const PRODUCT_CORE_ACTIONS = new Set<ProductCoreAction>([
   'measurement_logged',
   'weekly_review_completed',
 ]);
+const PWA_SERVICE_WORKER_ERROR_CATEGORIES = new Set<PwaServiceWorkerErrorCategory>([
+  'registration',
+  'update',
+  'cache',
+  'navigation',
+  'install',
+  'activate',
+]);
 const LANDING_TELEGRAM_PLACEMENTS = new Set<LandingTelegramPlacement>([
   'hero',
   'continuity',
@@ -258,6 +289,7 @@ function eventPropertyKeys(name: string): readonly string[] {
   if (name === 'telegram_news_cta_clicked') return ['destination', 'campaign'];
   if (name === 'article_viewed') return ['content_key'];
   if (name === 'article_cta_clicked') return ['content_key', 'destination'];
+  if (name === 'pwa_service_worker_error') return ['category'];
   return [];
 }
 
@@ -298,6 +330,9 @@ function hasValidEventProperties(value: Record<string, unknown>): boolean {
       /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.content_key) &&
       ['tma', 'web', 'landing'].includes(value.destination as string)
     );
+  }
+  if (value.name === 'pwa_service_worker_error') {
+    return PWA_SERVICE_WORKER_ERROR_CATEGORIES.has(value.category as PwaServiceWorkerErrorCategory);
   }
   return false;
 }

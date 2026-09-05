@@ -51,6 +51,7 @@ dependency и отдельное решение владельца.
 |        `84` | Reminder templates                   | Переиспользует task `64` и данные hydration после `81`                                                            |
 |        `85` | Knowledge package                    | Низкий runtime risk, практичная польза и grounding для AI                                                         |
 |        `86` | PWA                                  | Улучшает возврат к тренировке при подтверждённом Web retention gap                                                |
+|       `86A` | Web Push notifications               | Отдельный follow-up на базе PWA/SW Task `86`; не зависит от Telegram как единственного канала                     |
 |     `87-91` | AI Coach beta и period insights      | Сначала privacy/provider gate, затем grounded core, tools, evals, rollout и bounded report insights               |
 |   `92A-92B` | Advanced AI                          | Memory и multiprovider остаются рядом с AI Coach, но запускаются независимо только после evidence beta            |
 |       `93A` | Deterministic import XLSX/CSV без AI | Даёт раннюю ценность через versioned template и общий безопасный preview/confirm pipeline без provider dependency |

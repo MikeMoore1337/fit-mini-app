@@ -34,7 +34,8 @@ progress photos без AI/body analysis остаются в конце.
 | `83` | Узкий in-product handoff | Отчёт передаётся текущему trainer через существующие auth/relationship boundaries; external delivery остаётся в `95B`. |
 | `84` | Расширить task `64` | Templates еды, воды и разминки default-off, с quiet hours и suppression/dedupe; второй scheduler не нужен. |
 | `85` | Bounded editorial package | GI, источники КБЖУ, BMI и HR zones требуют reviewed primary sources и честных ограничений. |
-| `86` | Conditional PWA | Только если launch/return ограничивает Web retention; PWA не обещает полный offline. |
+| `86` | Owner-confirmed PWA | Web (~60%) — независимый primary channel; browser/TMA return требует больше действий и хуже доступен, чем home-screen launch; Task сохраняет bounded offline foundation и active-workout resume без обещания полного offline. |
+| `86A` | Отдельный Web Push follow-up | Web Push нужен из-за существующих уведомлений и неуниверсальности Telegram; subscriptions, delivery, permission UX, backend integration, privacy и lifecycle не смешиваются с Task `86`. |
 | `87-89` | Строгая AI-цепочка | Сначала provider/privacy/safety/eval decision, затем grounded core и отдельно consented read-only tools. |
 | `90A-90B` | Декомпозировать | Internal UI/evals и real-user rollout имеют разные evidence gates; синтетические user results запрещены. |
 | `91` | Только после успешной beta | AI итог периода расширяет factual report; нужны consent, evidence anchors, domain evals и non-AI fallback. |

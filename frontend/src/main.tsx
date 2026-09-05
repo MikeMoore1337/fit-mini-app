@@ -18,6 +18,7 @@ import {
 import { isPublishedKnowledgePath } from './content/publicContent';
 import { applyRouteMetadata } from './shared/seo/metadata';
 import { clearAllDemoSessions } from './features/demo/demoApi';
+import { PwaProvider } from './shared/pwa/PwaProvider';
 import './styles/legacy.css';
 import './styles/react.css';
 import './styles/design-system.css';
@@ -182,22 +183,24 @@ function Root() {
   useTelegram();
   return (
     <QueryClientProvider client={queryClient}>
-      <ErrorBoundary>
-        <FeedbackProvider>
-          <NavigationProvider>
-            <OnlineStatus />
-            <Suspense
-              fallback={
-                <main className="container">
-                  <LoadingState />
-                </main>
-              }
-            >
-              <AppRoutes />
-            </Suspense>
-          </NavigationProvider>
-        </FeedbackProvider>
-      </ErrorBoundary>
+      <PwaProvider>
+        <ErrorBoundary>
+          <FeedbackProvider>
+            <NavigationProvider>
+              <OnlineStatus />
+              <Suspense
+                fallback={
+                  <main className="container">
+                    <LoadingState />
+                  </main>
+                }
+              >
+                <AppRoutes />
+              </Suspense>
+            </NavigationProvider>
+          </FeedbackProvider>
+        </ErrorBoundary>
+      </PwaProvider>
     </QueryClientProvider>
   );
 }

@@ -29,6 +29,7 @@ release 79
   -> 84 Contextual reminder templates
   -> 85 Knowledge: GI/КБЖУ/BMI/HR zones
   -> 86 PWA
+  -> 86A Web Push notifications foundation (after `86`, separate owner launch)
   -> 87 AI decision/privacy/provider
        -> 88 Grounded core
        -> 89 Read-only personal tools

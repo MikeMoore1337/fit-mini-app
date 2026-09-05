@@ -26,10 +26,25 @@ function finishAnimation(element: Element, animationName: string) {
   Object.defineProperty(event, 'animationName', { value: animationName });
   fireEvent(element, event);
 }
-const { authState, avatarFile, navigation, user } = vi.hoisted(() => ({
+const { authState, avatarFile, navigation, pwa, user } = vi.hoisted(() => ({
   authState: { missing: false },
   avatarFile: vi.fn(),
   navigation: { path: '/coach', search: '' },
+  pwa: {
+    enabled: true,
+    isStandalone: false,
+    isIosInstallSurface: false,
+    shouldShowInstallPrompt: false,
+    installPromptAvailable: false,
+    installPending: false,
+    recordAppValue: vi.fn(),
+    markInstallOptionShown: vi.fn(),
+    install: vi.fn(async () => undefined),
+    dismissInstall: vi.fn(),
+    updateAvailable: false,
+    updateBlockedByWorkout: false,
+    applyUpdate: vi.fn(),
+  },
   user: {
     id: 1,
     username: 'mikhail',
@@ -51,6 +66,10 @@ vi.mock('../../../src/shared/api/client', () => ({ apiFile: avatarFile }));
 
 vi.mock('../../../src/app/AuthProvider', () => ({
   useOptionalAuth: () => (authState.missing ? null : { user, logout }),
+}));
+
+vi.mock('../../../src/shared/pwa/PwaProvider', () => ({
+  usePwa: () => pwa,
 }));
 
 vi.mock('../../../src/shared/navigation/router', () => ({

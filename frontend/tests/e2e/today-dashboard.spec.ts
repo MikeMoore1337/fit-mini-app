@@ -287,6 +287,83 @@ async function openDashboard(page: Page) {
   await expect(page.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
 }
 
+test('shows the non-modal install option only after value on the authenticated Today surface', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    localStorage.setItem('app-theme', 'light');
+    localStorage.setItem(
+      'fit_pwa_install_v1',
+      JSON.stringify({ appOpenCount: 2, qualified: true, dismissedUntil: 0 }),
+    );
+  });
+  await mockDashboard(page, { workout: 'planned' });
+  await openDashboard(page);
+
+  await expect(page.getByTestId('pwa-install-prompt')).not.toBeAttached();
+  await page.evaluate(() => {
+    const event = new Event('beforeinstallprompt', { cancelable: true });
+    Object.defineProperty(event, 'prompt', { value: () => Promise.resolve() });
+    Object.defineProperty(event, 'userChoice', {
+      value: Promise.resolve({ outcome: 'dismissed', platform: 'web' }),
+    });
+    window.dispatchEvent(event);
+  });
+
+  const prompt = page.getByTestId('pwa-install-prompt');
+  await expect(prompt).toBeVisible();
+  await expect(prompt.getByText('Быстрый возврат к тренировке')).toBeVisible();
+  const installButton = prompt.getByRole('button', { name: 'Установить' });
+  const installBounds = await installButton.boundingBox();
+  expect(installBounds?.height).toBeGreaterThanOrEqual(44);
+  await expect(installButton).toHaveCSS('background-color', 'rgb(158, 224, 43)');
+  await expect(installButton).toHaveCSS('color', 'rgb(16, 32, 21)');
+  await expect(prompt.getByRole('button', { name: 'Не сейчас' })).toHaveCSS(
+    'color',
+    'rgb(22, 26, 23)',
+  );
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+  await expect(installButton).toHaveCSS('background-color', 'rgb(168, 232, 58)');
+  await expect(installButton).toHaveCSS('color', 'rgb(16, 32, 21)');
+  await expect(prompt.getByRole('button', { name: 'Не сейчас' })).toHaveCSS(
+    'background-color',
+    'rgb(22, 25, 22)',
+  );
+  await expect(prompt.getByRole('button', { name: 'Не сейчас' })).toHaveCSS(
+    'color',
+    'rgb(238, 240, 234)',
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  await prompt.getByRole('button', { name: 'Не сейчас' }).click();
+  await expect(prompt).not.toBeAttached();
+});
+
+test('persists active workout on suspend and refreshes Today on return', async ({ page }) => {
+  let todayRequests = 0;
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.endsWith('/workouts/today')) todayRequests += 1;
+  });
+  await mockDashboard(page, { workout: 'in_progress' });
+  await openDashboard(page);
+  await expect(page.getByRole('button', { name: 'Продолжить тренировку' })).toBeVisible();
+
+  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+  await expect
+    .poll(() =>
+      page.evaluate(() => localStorage.getItem('fit_active_workout_v1_user_7_workout_42')),
+    )
+    .not.toBeNull();
+
+  const requestsBeforeReturn = todayRequests;
+  await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
+  await expect.poll(() => todayRequests).toBeGreaterThan(requestsBeforeReturn);
+});
+
 test('core navigation keeps the locked order, labels, active state and deep links', async ({
   page,
 }) => {

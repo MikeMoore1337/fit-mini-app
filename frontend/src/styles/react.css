@@ -930,6 +930,97 @@ details[open] > summary .disclosure-icon svg {
   font-size: 0.875rem;
   font-weight: 700;
 }
+.pwa-install-prompt {
+  display: flex;
+  width: min(calc(100% - 32px), 960px);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 auto 16px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+}
+.pwa-install-prompt__content {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+.pwa-install-prompt__content p,
+.pwa-install-prompt__content ol {
+  margin: 0;
+}
+.pwa-install-prompt__content ol {
+  padding-inline-start: 20px;
+}
+.pwa-install-prompt__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pwa-install-prompt__actions button,
+.pwa-update-notice button {
+  min-height: 44px;
+}
+.pwa-install-prompt__actions button:not(.secondary),
+.pwa-update-notice button:not(.secondary) {
+  border-color: transparent;
+  background: var(--v2-lime);
+  color: var(--v2-on-lime);
+}
+.pwa-install-prompt__actions button:not(.secondary):hover:not(:disabled),
+.pwa-update-notice button:not(.secondary):hover:not(:disabled) {
+  background: var(--v2-lime-hover);
+}
+.pwa-install-prompt__actions button.secondary,
+.pwa-update-notice button.secondary {
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+}
+.pwa-install-prompt__actions button.secondary:hover:not(:disabled),
+.pwa-update-notice button.secondary:hover:not(:disabled) {
+  background: var(--v2-surface-strong);
+}
+.pwa-update-notice {
+  position: fixed;
+  z-index: 10900;
+  right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  left: max(12px, env(safe-area-inset-left, 0px));
+  display: flex;
+  width: min(calc(100% - 24px), 620px);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-inline: auto;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+  box-shadow: var(--shadow);
+}
+.pwa-update-notice p {
+  margin: 6px 0 0;
+  color: var(--v2-text-secondary);
+}
+@media (max-width: 640px) {
+  .pwa-install-prompt,
+  .pwa-update-notice {
+    flex-direction: column;
+  }
+  .pwa-install-prompt__actions {
+    width: 100%;
+  }
+  .pwa-install-prompt__actions button,
+  .pwa-update-notice button {
+    flex: 1 1 160px;
+  }
+}
 .fatal-error {
   margin: max(24px, env(safe-area-inset-top, 0px)) auto;
   max-width: 620px;
