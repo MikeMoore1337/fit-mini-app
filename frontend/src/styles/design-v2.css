@@ -5503,6 +5503,64 @@ body:has(.standalone-page--design-v2) {
   min-height: 48px;
 }
 
+.notification-web-push {
+  display: grid;
+  gap: var(--v2-space-3);
+  padding-block: var(--v2-space-4);
+  border-block: 1px solid var(--v2-border);
+}
+
+.notification-web-push__heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--v2-space-3);
+}
+
+.notification-web-push__heading h3,
+.notification-web-push__value,
+.notification-web-push__state,
+.notification-web-push__error {
+  margin: 0;
+}
+
+.notification-web-push__heading h3 {
+  font-size: 1.08rem;
+}
+
+.notification-web-push__eyebrow {
+  display: block;
+  margin-bottom: var(--v2-space-1);
+  color: var(--v2-text-secondary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notification-web-push__value,
+.notification-web-push__state {
+  max-width: 68ch;
+  color: var(--v2-text-secondary);
+}
+
+.notification-web-push__action {
+  width: min(100%, 320px);
+  min-height: 44px;
+  color: var(--v2-text-primary);
+  border-color: var(--v2-border-strong);
+  background: var(--v2-surface);
+}
+
+.notification-web-push__action--danger {
+  color: var(--v2-danger);
+  border-color: var(--v2-danger);
+}
+
+.notification-web-push__error {
+  color: var(--v2-danger);
+}
+
 .notification-templates {
   display: grid;
   gap: var(--v2-space-3);
@@ -5938,8 +5996,14 @@ button.notification-row__main:focus-visible {
 
   .notification-center__head > button,
   .notification-settings__save > button,
-  .notification-personal form > button.secondary {
+  .notification-personal form > button.secondary,
+  .notification-web-push__action {
     width: 100%;
+  }
+
+  .notification-web-push__heading {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .notification-row {

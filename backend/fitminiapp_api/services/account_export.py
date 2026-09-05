@@ -25,7 +25,12 @@ from fitminiapp_api.models.food_diary import (
     FoodDiaryEntry,
 )
 from fitminiapp_api.models.hydration import HydrationEntry, HydrationGoal, HydrationPreset
-from fitminiapp_api.models.notification import Notification, NotificationSetting
+from fitminiapp_api.models.notification import (
+    Notification,
+    NotificationDelivery,
+    NotificationSetting,
+    WebPushSubscription,
+)
 from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
 from fitminiapp_api.models.program import (
     HiddenProgramTemplate,
@@ -54,7 +59,7 @@ if TYPE_CHECKING:
     from fitminiapp_api.models.recipe import RecipeIngredient
 
 
-ACCOUNT_EXPORT_SCHEMA_VERSION = 8
+ACCOUNT_EXPORT_SCHEMA_VERSION = 9
 
 # Every ORM table whose rows can be reached from users through ownership or actor FKs must be
 # classified here. Tests compare this inventory with SQLAlchemy metadata so a new persistent user
@@ -105,6 +110,8 @@ ACCOUNT_EXPORT_DATA_INVENTORY: dict[str, str] = {
     "notification_settings": "notification_settings",
     "reminder_template_schedules": "reminder_template_schedules",
     "notifications": "notifications",
+    "web_push_subscriptions": "web_push_subscriptions",
+    "notification_deliveries": "notification_deliveries",
     "report_handoffs": "report_handoffs",
     "weekly_digest_preferences": "weekly_digest_preference",
     "weekly_digest_deliveries": "weekly_digest_deliveries",
@@ -670,6 +677,19 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
         .order_by(Notification.created_at.asc(), Notification.id.asc())
         .all()
     )
+    web_push_subscriptions = (
+        db.query(WebPushSubscription)
+        .filter(WebPushSubscription.user_id == user.id)
+        .order_by(WebPushSubscription.created_at.asc(), WebPushSubscription.id.asc())
+        .all()
+    )
+    notification_deliveries = (
+        db.query(NotificationDelivery)
+        .join(Notification, Notification.id == NotificationDelivery.notification_id)
+        .filter(Notification.user_id == user.id)
+        .order_by(NotificationDelivery.created_at.asc(), NotificationDelivery.id.asc())
+        .all()
+    )
     digest_preference = (
         db.query(WeeklyDigestPreference).filter(WeeklyDigestPreference.user_id == user.id).first()
     )
@@ -1107,6 +1127,39 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
                 ),
             )
             for row in notifications
+        ],
+        # Browser capability URLs and encryption keys are intentionally excluded from exports.
+        "web_push_subscriptions": [
+            _fields(
+                subscription,
+                (
+                    "id",
+                    "created_at",
+                    "updated_at",
+                    "last_success_at",
+                    "last_failure_at",
+                    "failure_count",
+                    "last_error",
+                ),
+            )
+            for subscription in web_push_subscriptions
+        ],
+        "notification_deliveries": [
+            _fields(
+                delivery,
+                (
+                    "id",
+                    "notification_id",
+                    "subscription_id",
+                    "channel",
+                    "status",
+                    "attempt_count",
+                    "last_error",
+                    "created_at",
+                    "sent_at",
+                ),
+            )
+            for delivery in notification_deliveries
         ],
         "weekly_digest_preference": (
             _fields(

@@ -21,7 +21,12 @@ from fitminiapp_api.models.exercise import (
 )
 from fitminiapp_api.models.feedback import WorkoutComment, WorkoutCommentRevision
 from fitminiapp_api.models.hydration import HydrationEntry, HydrationGoal, HydrationPreset
-from fitminiapp_api.models.notification import Notification, NotificationSetting
+from fitminiapp_api.models.notification import (
+    Notification,
+    NotificationDelivery,
+    NotificationSetting,
+    WebPushSubscription,
+)
 from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
 from fitminiapp_api.models.program import (
     HiddenProgramTemplate,
@@ -322,7 +327,17 @@ def delete_user_cascade(db: Session, user: User) -> None:
     db.query(HydrationGoal).filter(HydrationGoal.user_id == user.id).delete(
         synchronize_session=False
     )
+    notification_ids = [
+        row.id for row in db.query(Notification.id).filter(Notification.user_id == user.id).all()
+    ]
+    if notification_ids:
+        db.query(NotificationDelivery).filter(
+            NotificationDelivery.notification_id.in_(notification_ids)
+        ).delete(synchronize_session=False)
     db.query(Notification).filter(Notification.user_id == user.id).delete(synchronize_session=False)
+    db.query(WebPushSubscription).filter(WebPushSubscription.user_id == user.id).delete(
+        synchronize_session=False
+    )
     db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).delete(
         synchronize_session=False
     )

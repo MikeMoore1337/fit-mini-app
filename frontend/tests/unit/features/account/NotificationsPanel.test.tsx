@@ -150,6 +150,11 @@ describe('NotificationsPanel', () => {
     failTemplateSave = false;
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const path = String(input);
+      if (path === '/api/v1/notifications/web-push/config') {
+        return new Response(JSON.stringify({ enabled: false, application_server_key: null }), {
+          status: 200,
+        });
+      }
       if (path === '/api/v1/notifications/settings') {
         return new Response(
           JSON.stringify({

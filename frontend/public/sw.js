@@ -4,6 +4,10 @@ const CACHE_PREFIX = 'yfc-pwa-';
 const CACHE_MAX_ENTRIES = 80;
 const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const APP_SHELL_PATH = '/app';
+const PUSH_NOTIFICATION_TITLE = 'Your Fitness Coach';
+const PUSH_NOTIFICATION_BODY =
+  'В приложении есть новое уведомление. Откройте приложение, чтобы посмотреть.';
+const PUSH_NOTIFICATION_PATH = '/app?section=profile#profile-notifications';
 
 function sameOrigin(url) {
   return url.origin === self.location.origin;
@@ -170,6 +174,55 @@ async function deleteYfcCaches() {
     names.filter((name) => name.startsWith(CACHE_PREFIX)).map((name) => caches.delete(name)),
   );
 }
+
+function pushNotificationUrl() {
+  const url = new URL(PUSH_NOTIFICATION_PATH, self.location.origin);
+  if (
+    url.origin !== self.location.origin ||
+    url.pathname !== '/app' ||
+    url.search !== '?section=profile' ||
+    url.hash !== '#profile-notifications'
+  ) {
+    return new URL('/app?section=profile#profile-notifications', self.location.origin);
+  }
+  return url;
+}
+
+self.addEventListener('push', (event) => {
+  // The server payload is intentionally opaque: private notification details are loaded only
+  // after the application authenticates and resolves ownership in the API.
+  event.waitUntil(
+    self.registration.showNotification(PUSH_NOTIFICATION_TITLE, {
+      body: PUSH_NOTIFICATION_BODY,
+      tag: 'yfc-notification',
+      data: { url: pushNotificationUrl().toString() },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    (async () => {
+      const destination = pushNotificationUrl().toString();
+      const clients = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      });
+      for (const client of clients) {
+        if (new URL(client.url).origin !== self.location.origin) continue;
+        try {
+          await client.focus();
+          await client.navigate(destination);
+          return;
+        } catch {
+          // A window may disappear between matchAll and navigation.
+        }
+      }
+      await self.clients.openWindow(destination);
+    })().catch(() => undefined),
+  );
+});
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

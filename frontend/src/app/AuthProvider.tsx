@@ -27,6 +27,7 @@ import {
 } from '../shared/userScopedStorage';
 import { trackProductLoginCompletedIfStarted } from '../shared/analytics/productEvents';
 import { YFC_PLATFORM_ACTIVATED_EVENT } from '../shared/telegram/layout';
+import { revokeWebPushSubscription } from '../shared/notifications/webPush';
 
 function offlineWorkoutUser(): User | null {
   if (!getAccessToken()) return null;
@@ -177,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (telegram: TelegramWebApp | null = window.Telegram?.WebApp ?? null) => {
       const initData = telegram?.initData?.trim();
       if (!initData) throw new Error('Telegram не передал данные авторизации');
+      await revokeWebPushSubscription().catch(() => undefined);
       const token = await api<{ access_token: string }>('/api/v1/auth/telegram/init', {
         method: 'POST',
         body: { init_data: initData },
@@ -194,6 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const devLogin = useCallback(
     async (input: DevLoginInput) => {
+      await revokeWebPushSubscription().catch(() => undefined);
       const token = await api<{ access_token: string }>('/api/v1/auth/dev-login', {
         method: 'POST',
         body: input,
@@ -211,6 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const acceptToken = useCallback(
     async (token: { access_token: string }) => {
+      await revokeWebPushSubscription().catch(() => undefined);
       clearCurrentUserData();
       setUser(null);
       setError(null);
@@ -272,6 +276,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    const revoke = revokeWebPushSubscription().catch(() => undefined);
     const serverLogout = api('/api/v1/auth/logout', {
       method: 'POST',
       body: {},
@@ -282,7 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearAccessToken();
     setUser(null);
     queryClient.clear();
-    await serverLogout;
+    await Promise.all([serverLogout, revoke]);
   }, [clearCurrentUserData, queryClient]);
 
   useEffect(() => {
@@ -307,6 +312,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const tg = window.Telegram?.WebApp;
         if (tg?.initData?.trim()) {
+          await revokeWebPushSubscription().catch(() => undefined);
           clearCurrentUserData();
           clearAccessToken();
           setUser(null);

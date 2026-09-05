@@ -52,6 +52,13 @@ type ContextFreeProductEventName =
   | 'progression_suggestion_shown'
   | 'progression_suggestion_dismissed'
   | 'notification_preferences_changed'
+  | 'web_push_unsupported'
+  | 'web_push_permission_prompted'
+  | 'web_push_permission_granted'
+  | 'web_push_permission_denied'
+  | 'web_push_permission_dismissed'
+  | 'web_push_subscription_registered'
+  | 'web_push_subscription_revoked'
   | 'data_export_requested'
   | 'account_delete_started'
   | 'account_delete_completed'
@@ -199,6 +206,13 @@ const CONTEXT_FREE_EVENT_NAMES = new Set<ProductEventName>([
   'progression_suggestion_shown',
   'progression_suggestion_dismissed',
   'notification_preferences_changed',
+  'web_push_unsupported',
+  'web_push_permission_prompted',
+  'web_push_permission_granted',
+  'web_push_permission_denied',
+  'web_push_permission_dismissed',
+  'web_push_subscription_registered',
+  'web_push_subscription_revoked',
   'data_export_requested',
   'account_delete_started',
   'account_delete_completed',

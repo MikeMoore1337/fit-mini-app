@@ -14,6 +14,7 @@ cryptography
 PyJWT
 pwdlib[argon2]
 httpx[socks]
+pywebpush==2.5.0
 itsdangerous
 python-multipart
 qrcode[pil]

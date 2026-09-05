@@ -9,6 +9,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from fitminiapp_api.core.config import settings
 from fitminiapp_api.core.timezone import (
     local_naive_to_utc_naive,
     now_for_user_naive,
@@ -19,7 +20,12 @@ from fitminiapp_api.core.timezone import (
 )
 from fitminiapp_api.models.check_in import WeeklyCheckIn
 from fitminiapp_api.models.feedback import WorkoutComment
-from fitminiapp_api.models.notification import Notification, NotificationSetting
+from fitminiapp_api.models.notification import (
+    Notification,
+    NotificationDelivery,
+    NotificationSetting,
+    WebPushSubscription,
+)
 from fitminiapp_api.models.program import UserProgram, UserWorkout
 from fitminiapp_api.models.report_handoff import ReportHandoff
 from fitminiapp_api.models.user import (
@@ -788,6 +794,207 @@ def claim_due_notifications(db: Session, limit: int = 100) -> list[Notification]
     if not claimed_ids:
         return []
     return db.query(Notification).filter(Notification.id.in_(claimed_ids)).all()
+
+
+def enqueue_web_push_deliveries(
+    db: Session,
+    notifications: list[Notification],
+) -> int:
+    """Fan out one canonical event to each currently owned browser subscription."""
+
+    if not settings.web_push_enabled or not notifications:
+        return 0
+    user_ids = {notification.user_id for notification in notifications}
+    users = {user.id: user for user in db.query(User).filter(User.id.in_(user_ids)).all()}
+    notification_settings = {
+        setting.user_id: setting
+        for setting in db.query(NotificationSetting)
+        .filter(NotificationSetting.user_id.in_(user_ids))
+        .all()
+    }
+    subscriptions = (
+        db.query(WebPushSubscription)
+        .filter(WebPushSubscription.user_id.in_(user_ids))
+        .order_by(WebPushSubscription.id.asc())
+        .all()
+    )
+    subscriptions_by_user: dict[int, list[WebPushSubscription]] = {}
+    for subscription in subscriptions:
+        subscriptions_by_user.setdefault(subscription.user_id, []).append(subscription)
+    notification_ids = [notification.id for notification in notifications if notification.id]
+    existing_pairs = {
+        (notification_id, subscription_id)
+        for notification_id, subscription_id in db.query(
+            NotificationDelivery.notification_id,
+            NotificationDelivery.subscription_id,
+        )
+        .filter(NotificationDelivery.notification_id.in_(notification_ids))
+        .all()
+    }
+
+    created = 0
+    for notification in notifications:
+        user = users.get(notification.user_id)
+        if user is None or not user.is_active:
+            continue
+        setting = notification_settings.get(notification.user_id)
+        if notification.event_kind == "reminder" and setting is None:
+            continue
+        if setting is not None and not reminder_category_enabled(notification, setting):
+            continue
+        retry_at = (
+            None
+            if notification.event_kind == "security" or setting is None
+            else quiet_hours_retry_at(setting, user)
+        )
+        for subscription in subscriptions_by_user.get(notification.user_id, []):
+            pair = (notification.id, subscription.id)
+            if pair in existing_pairs:
+                continue
+            db.add(
+                NotificationDelivery(
+                    notification_id=notification.id,
+                    subscription_id=subscription.id,
+                    next_attempt_at=retry_at,
+                )
+            )
+            existing_pairs.add(pair)
+            created += 1
+    if created:
+        db.flush()
+    return created
+
+
+def claim_due_web_push_deliveries(db: Session, limit: int = 500) -> list[NotificationDelivery]:
+    stale_before = utcnow() - PROCESSING_TIMEOUT
+    db.query(NotificationDelivery).filter(
+        NotificationDelivery.status == "processing",
+        NotificationDelivery.processing_started_at < stale_before,
+        NotificationDelivery.attempt_count < MAX_DELIVERY_ATTEMPTS,
+    ).update(
+        {
+            NotificationDelivery.status: "queued",
+            NotificationDelivery.processing_started_at: None,
+        },
+        synchronize_session=False,
+    )
+    db.commit()
+
+    current = utcnow()
+    due = (
+        db.query(NotificationDelivery)
+        .join(Notification, Notification.id == NotificationDelivery.notification_id)
+        .filter(
+            NotificationDelivery.status == "queued",
+            Notification.scheduled_for_utc <= current,
+            or_(
+                NotificationDelivery.next_attempt_at.is_(None),
+                NotificationDelivery.next_attempt_at <= current,
+            ),
+        )
+        .order_by(Notification.scheduled_for_utc.asc(), NotificationDelivery.id.asc())
+        .limit(limit)
+        .all()
+    )
+    claimed_ids: list[int] = []
+    started_at = utcnow()
+    for delivery in due:
+        updated = (
+            db.query(NotificationDelivery)
+            .filter(
+                NotificationDelivery.id == delivery.id,
+                NotificationDelivery.status == "queued",
+            )
+            .update(
+                {
+                    NotificationDelivery.status: "processing",
+                    NotificationDelivery.processing_started_at: started_at,
+                },
+                synchronize_session=False,
+            )
+        )
+        if updated == 1:
+            claimed_ids.append(delivery.id)
+    db.commit()
+    if not claimed_ids:
+        return []
+    return db.query(NotificationDelivery).filter(NotificationDelivery.id.in_(claimed_ids)).all()
+
+
+def cancel_web_push_delivery(
+    db: Session,
+    delivery: NotificationDelivery,
+    reason: str,
+) -> None:
+    delivery.status = "cancelled"
+    delivery.last_error = reason
+    delivery.processing_started_at = None
+    delivery.next_attempt_at = None
+
+
+def mark_web_push_delivery_succeeded(
+    db: Session,
+    delivery: NotificationDelivery,
+    subscription: WebPushSubscription,
+    *,
+    commit: bool = True,
+) -> None:
+    now = now_msk_naive()
+    delivery.status = "sent"
+    delivery.sent_at = now
+    delivery.last_error = None
+    delivery.processing_started_at = None
+    delivery.next_attempt_at = None
+    subscription.last_success_at = now
+    subscription.last_error = None
+    subscription.failure_count = 0
+    if commit:
+        db.commit()
+
+
+def mark_web_push_delivery_failed(
+    db: Session,
+    delivery: NotificationDelivery,
+    error: Exception,
+    *,
+    subscription: WebPushSubscription | None = None,
+    commit: bool = True,
+) -> None:
+    delivery.attempt_count += 1
+    delivery.last_error = safe_delivery_error(error)
+    delivery.processing_started_at = None
+    now = now_msk_naive()
+    subscription = subscription or db.get(WebPushSubscription, delivery.subscription_id)
+    remove_subscription = bool(getattr(error, "remove_subscription", False))
+    if subscription is not None:
+        subscription.last_failure_at = now
+        subscription.failure_count += 1
+        subscription.last_error = delivery.last_error
+
+    terminal_status = (
+        getattr(error, "terminal_status", None)
+        if isinstance(error, NotificationDeliveryError)
+        else None
+    )
+    if remove_subscription:
+        delivery.status = "cancelled"
+        delivery.next_attempt_at = None
+        if subscription is not None:
+            db.delete(subscription)
+    elif terminal_status is not None:
+        delivery.status = terminal_status
+        delivery.next_attempt_at = None
+    elif delivery.attempt_count >= MAX_DELIVERY_ATTEMPTS:
+        delivery.status = "failed"
+        delivery.next_attempt_at = None
+    else:
+        delivery.status = "queued"
+        retry_after = error.retry_after if isinstance(error, NotificationDeliveryError) else None
+        if retry_after is None:
+            retry_after = timedelta(minutes=min(60, 2 ** (delivery.attempt_count - 1)))
+        delivery.next_attempt_at = utcnow() + retry_after
+    if commit:
+        db.commit()
 
 
 def mark_delivery_succeeded(

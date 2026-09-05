@@ -38,7 +38,12 @@ from fitminiapp_api.models.news import (
     WebArticleCandidate,
     WebArticleRevision,
 )
-from fitminiapp_api.models.notification import Notification, NotificationSetting
+from fitminiapp_api.models.notification import (
+    Notification,
+    NotificationDelivery,
+    NotificationSetting,
+    WebPushSubscription,
+)
 from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
 from fitminiapp_api.models.oauth_transaction import OAuthTransaction
 from fitminiapp_api.models.program import (
@@ -119,6 +124,7 @@ __all__ = [
     "NewsSource",
     "NewsStateTransition",
     "Notification",
+    "NotificationDelivery",
     "NotificationSetting",
     "NutritionTarget",
     "OAuthTransaction",
@@ -146,6 +152,7 @@ __all__ = [
     "WebArticle",
     "WebArticleCandidate",
     "WebArticleRevision",
+    "WebPushSubscription",
     "WeeklyCheckIn",
     "WeeklyDigestDelivery",
     "WeeklyDigestIssue",

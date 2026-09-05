@@ -81,10 +81,10 @@ worker и кэши `yfc-pwa-*`. До получения нового shell ст�
 release rollback, описанным в [production-deployment.md](production-deployment.md), без ручной
 миграции базы назад.
 
-Изменение API/schema для этой задачи не требуется: active workout queue остаётся совместимой с
+Для самого Task 86 изменение API/schema не требуется: active workout queue остаётся совместимой с
 существующим backend-контрактом. Web Push subscriptions, permission UX, delivery и backend
-notification integration намеренно вынесены в [Task 86A](../codex-backlog/tasks/86a-web-push-notifications-foundation.md)
-и не входят в Task 86.
+notification integration реализованы отдельным [Task 86A](../codex-backlog/tasks/86a-web-push-notifications-foundation.md)
+и используют уже существующий PWA service worker.
 
 ## Проверка перед release
 
